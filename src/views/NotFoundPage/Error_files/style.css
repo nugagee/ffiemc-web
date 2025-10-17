@@ -1,0 +1,53 @@
+
+.error-page {
+  padding: 30px;
+  padding-top: 0;
+}
+
+.error-page__title {
+  font-size: 60px;
+  line-height: 0.63333;
+  font-weight: 600;
+  margin-top: 107px;
+  margin-bottom: 37px;
+}
+
+@media (max-width: 1200px) {
+  .error-page__title {
+    font-size: calc(20.4px + 3.3vw) ;
+  }
+}
+
+@media only screen and (max-width: 767px) {
+  .error-page__title {
+    margin-top: 60px;
+  }
+}
+
+@media only screen and (max-width: 575px) {
+  .error-page__title {
+    margin-top: 50px;
+    margin-bottom: 25px;
+  }
+}
+
+.error-page svg {
+  max-width: 100%;
+  height: auto;
+}
+body {
+    position: relative;
+    background: #f4f5f7;
+    min-height: 100vh;
+    font-size: 16px;
+    overflow-x: hidden;
+    direction: ltr;
+}
+.color-extra-light, .badge.badge-transparent.badge-default, .atbd-button-group .btn.btn-solid, .card .card-body .dropdown svg, .card .card-body .dropdown i, .custom-checkbox.disabled input[type="checkbox"]:checked + label:before, .atbd-comment-box__content .cci__comment-actions a, .atbd-empty__text p.disabled, .ap-post-content__feedback a svg, .ap-post-attach__drop svg, .ap-post-content-comment__write a, .ap-post-cc-reply__reaction li, .ap-post-cc-reply__reaction li a, .ffp__title p, .ffp__button svg, .user-member__form svg, .tm-card-overlay .dropdown svg, .user-group-media button svg, .userDatatable_actions svg, .profile-card-3 .card-dropdown .dropdown svg, .project-progress .dropdown svg, .input-container .input-icon svg, .input-container .input-icon img, .atbd-menu.menu-horizontal .atbd-menu__item.menu-item-disabled .atbd-menu__link svg, .atbd-menu.menu-horizontal .atbd-menu__item.menu-item-disabled .atbd-menu__link img, .atbd-menu.menu-horizontal .atbd-menu__item.menu-item-disabled .atbd-menu__text, .atbd-menu__link svg, .atbd-menu__link img, .atbd-date-picker input, .atbd-steps__icon, .page-title__left .sub-title, .custom-radio.disabled input[type="radio"] + label, .drawer-profile-box__single .profile-text .author-title, .atbd-select.disabled select, .drag-drop-wrap .item svg, .drag-drop-wrap .item img, .drag-drop-wrap .item i, .project-task-list__right ul li button svg, .files-area__right .dropdown svg, .chat-body .chat-header .dropdown .dropdown-item svg, .chat-text-box__other button svg, .chat-type-text__write a svg, .image-group ul li svg, .product-item__body .product-price, .product-cart .actions button i, .payment-invoice__btn button svg, .orderDatatable_actions li a svg, .upload-product-img svg, .ordertable-btns li svg, .error-page__title, .pricing__price sup, .ai-list-item span, .atbd-mail-sidebar .mail-list li a i, .atbd-mail-sidebar .mail-list li a svg, .atbd-mail-sidebar .mail-list li a span, .atbd-mail-sidebar .mail-list li a img, .mailbox-list__single .star-toggle i, .mailbox-list__single .star-toggle svg, .contact-list .table-actions a svg, .contact-list .table-actions a img, .contact-list .table-actions a i, .contact-list .table-actions .btn-link svg {
+    color: #adb4d2;
+}
+.content-center, .media-badge, .feature-cards figcaption button, .custom-checkbox input:indeterminate ~ label::after, .revenue-chart-box__Icon, .selling-badge, .ap-nameAddress__subTitle, .user-skils-parent__item a, .db-social-parent__item a, .ap-post-attach__btn, .ffp__icon, .wig-overlay__content, .wig-overlay__iconWrapper, .account-profile-cards__button button, .account-profile #remove_pro_pic, .select2-container--default .select2-selection--multiple .select2-selection__choice, .user-member .action-btn a, .users-list__button button, .userDatatable-content-status, .icon-list-social__link, .media-ui--completed .progress-icon, .timeline-box .timeline-single__badge, .timeline-box--3.basic-timeline .timeline > li .timeline-single__buble, .timeline-box--3.basic-timeline .timeline > li .timeline-single__buble--svg, .ui-datepicker-header a.ui-corner-all, .date-picker__prev, .date-picker__next, .like-icon, .quantity .bttn, .product-cart .actions button, .wizard10 .payment-success-modal .modal-icon, .wizard9 .checkout-progress2 .step span:first-child, .payment-invoice__btn button, .order-button-group button, .orderDatatable-status span, .orderDatatable_actions li a, .order-profile-icon, .gc--gallery2 .gc__link, .gc--gallery2 .gc__link li a, .application-faqs .button-group button, .pricing__tag, .pricing__badge, .coming-social ul li a, .banner-feature--14 button, .banner-feature--15 button, .testimonial-slider-global .slider-arrow, .fileM-Modal-overlay .modal-footer button, .knowledgebase-adv__collapse .changelog__accordingArrow, .knowledgebase-help .card-body, .knowledgebase-help .card-body button, .comment-respond button, .add-card-btn, .kanban-modal__research button, .kanban-modal__list button, .bookmark__button .btn, .form-control.ih-large, .form-control.ih-medium, .form-control.ih-small, .layout-button button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
