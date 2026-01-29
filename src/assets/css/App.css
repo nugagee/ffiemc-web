@@ -1,0 +1,107 @@
+
+:root {
+  /* Brand Colors */
+  --color-primary: #d64527;
+  --color-primary-dark: #b3361d;
+  --color-accent: #f59e0b;
+  --color-bg-light: #fff6f6;
+  --color-bg-dark: #0b1220;
+  --color-text-dark: #111827;
+  --color-text-light: #f9fafb;
+  --color-muted: #6b7280;
+
+  /* Layout Spacing */
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 4rem;
+
+  /* Typography */
+  --font-heading: "Poppins", sans-serif;
+  --font-body: "Inter", sans-serif;
+
+  /* Shadows */
+  --shadow-sm: 0 4px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  /* Transitions */
+  --transition: all 0.3s ease;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-dark);
+  background: var(--color-text-light);
+  line-height: 1.6;
+}
+.section-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--color-text-dark);
+}
+.link-btn {
+  color: var(--color-primary);
+  transition: var(--transition);
+}
+.link-btn:hover {
+  color: var(--color-primary-dark);
+}
+
+.container,
+.container-lg,
+.container-md,
+.container-sm,
+.container-xl {
+  max-width: 1340px !important;
+}
+
+.color-primary {
+  color: var(--color-primary);
+}
+.bg-color-primary {
+  background-color: var(--color-primary);
+}
+.color-primary-dark {
+  color: var(--color-primary-dark);
+}
+.color-accent {
+  color: var(--color-accent);
+}
+.bg-color-accent {
+  background-color: var(--color-accent);
+}
+.bg-color-accent-hover {
+  background-color: var(--color-accent-hover);
+}
+.color-bg-light {
+  color: var(--color-bg-light);
+}
+
+.color-bg-dark {
+  color: var(--color-bg-dark);
+}
+.color-text-dark {
+  color: var(--color-text-dark);
+}
+.color-text-light {
+  color: var(--color-text-light);
+}
+.color-muted {
+  color: var(--color-muted);
+}
+
+.hover-bg {
+  transform: scale(1.1);
+}
+
+.hover-btn-link {
+  opacity: .7;
+  text-decoration: none;
+}

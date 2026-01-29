@@ -1,0 +1,45 @@
+@import "../../assets/css/App.css";
+
+nav {
+  font-family: var(--font-heading);
+}
+
+
+/* Text colors */
+.color-text-dark{
+  color: #000000!important;
+}
+
+.color-text-light {
+  color: #ffffff!important;
+}
+
+/* Logo */
+.home-logo {
+  width: 100px;
+  height: auto;
+}
+
+/* Desktop / Mobile visibility */
+.desktop-nav {
+  display: flex;
+}
+
+.mobile-toggle {
+  display: none;
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .desktop-nav {
+    display: none;
+  }
+
+  .mobile-toggle {
+    display: inline-flex;
+  }
+
+  .mobile-menu {
+    backdrop-filter: blur(10px);
+  }
+}
