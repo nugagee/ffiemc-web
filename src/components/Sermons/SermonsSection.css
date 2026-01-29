@@ -1,30 +1,231 @@
-@import "../../styles/theme.css";
+.sermons-section {
+  background: radial-gradient(circle at top, #1f2937, #020617);
+  padding: 110px 0;
+  color: #fff;
+}
 
+.modal-content iframe {
+  border-radius: 8px;
+}
+
+
+.sermons-container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.sermons-pill {
+  display: inline-block;
+  background: #dc2626;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.sermons-title {
+  font-size: 44px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.sermons-subtitle {
+  max-width: 600px;
+  margin: 0 auto 60px;
+  color: #d1d5db;
+}
+
+/* GRID */
 .sermons-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--space-lg);
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 30px;
+  margin-bottom: 60px;
 }
 
+/* CARD */
 .sermon-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
-  transition: transform 0.3s ease;
+  position: relative;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+  border-radius: 18px;
+  padding: 28px;
+  text-align: left;
+  transition: opacity 0.3s ease;
 }
 
-.sermon-card img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
+/* SERIES BADGE */
+.sermon-series {
+  display: inline-block;
+  background: #dc2626;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 14px;
 }
 
-.sermon-info {
-  padding: var(--space-md);
+/* TEXT */
+.sermon-card h3 {
+  font-size: 22px;
+  margin-bottom: 10px;
 }
 
-.sermon-info h4 {
-  color: var(--color-primary);
-  margin-bottom: var(--space-xs);
+.sermon-meta {
+  font-size: 13px;
+  color: #cbd5f5;
+  margin-bottom: 14px;
+}
+
+.sermon-desc {
+  font-size: 14px;
+  color: #e5e7eb;
+  margin-bottom: 14px;
+}
+
+.sermon-scripture {
+  font-size: 13px;
+  color: #fca5a5;
+  margin-bottom: 20px;
+}
+
+/* ACTIONS */
+.sermon-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.watch-btn {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+/* WATCH HOVER → opacity */
+.watch-btn:hover {
+  background: rgba(220, 38, 38, 0.8);
+}
+
+.listen-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* LISTEN HOVER → white bg, black text */
+.listen-btn:hover {
+  background: #fff;
+  color: #000;
+}
+
+/* PLAY ICON */
+.play-icon {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: #dc2626;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+}
+
+/* VIEW ALL */
+.view-all-btn {
+  background: #dc2626;
+  border: none;
+  padding: 14px 30px;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+/* VIEW ALL HOVER → opacity */
+.view-all-btn:hover {
+  background: rgba(220, 38, 38, 0.85);
+}
+
+
+
+/* ============SKELETON STYLES======== */
+
+.skeleton {
+  background: rgba(255, 255, 255, 0.04);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.skeleton-badge,
+.skeleton-title,
+.skeleton-meta,
+.skeleton-text,
+.skeleton-btn {
+  background: rgba(255,255,255,0.2);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.skeleton-badge { width: 80px; height: 20px; }
+.skeleton-title { height: 26px; width: 80%; }
+.skeleton-meta { height: 14px; width: 60%; }
+.skeleton-text { height: 14px; width: 100%; }
+.skeleton-text.short { width: 70%; }
+
+.skeleton-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.skeleton-btn {
+  width: 90px;
+  height: 34px;
+}
+
+
+/* ===========MODAL STYLES======= */
+
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  background: #000;
+  border-radius: 12px;
+  padding: 20px;
+  width: min(900px, 95%);
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
 }

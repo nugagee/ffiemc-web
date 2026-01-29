@@ -7,6 +7,7 @@ import SermonsSection from "../../components/Sermons/SermonsSection";
 import SocialFeedSection from "../../components/SocialFeed/SocialFeedSection";
 import TestimonialsSection from "../../components/Testimonials/TestimonialsSection";
 import AboutIntroSection from "../../components/About/AboutIntroSection";
+import EventsHighlightSection from "../../components/Events/EventsSection";
 
 const Home = () => {
   return (
@@ -19,6 +20,7 @@ const Home = () => {
         cta2="Request Prayer"
       />
       <AboutIntroSection />
+      <EventsHighlightSection />
       <SermonsSection />
       <MinistriesSection />
       <TestimonialsSection />
