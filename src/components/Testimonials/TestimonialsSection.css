@@ -1,0 +1,245 @@
+.testimonial-section {
+    padding: 100px 10%;
+    background: linear-gradient(180deg, #f4f7ff, #eef2ff);
+    text-align: center;
+  }
+  
+  .testimonial-header {
+    display: flex;
+    align-items: center;
+    max-width: 700px;
+  }
+  
+  .testimonial-badge {
+    display: inline-block;
+    background: #ffe4e4;
+    color: #e11d1d;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  
+  .testimonial-header h2 {
+    font-size: 40px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #0f172a;
+  }
+
+  .test-img-wrapper {
+    display: flex;
+    justify-content: center;
+    object-fit: contain;
+    height: 60px;
+    width: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid red;
+    margin-right: 15px;
+  }
+
+  .test-img-wrapper img {
+    height: 100%;
+    width: 100%;
+    margin: 1px;
+  }
+  
+  .testimonial-header p {
+    font-size: 17px;
+    color: #64748b;
+  }
+  
+  .testimonial-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 30px;
+    max-width: 1100px;
+    margin: auto;
+  }
+  
+  .testimonial-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 30px;
+    text-align: left;
+    transition: all 0.3s ease;
+    width: 490px;
+  }
+  
+  .testimonial-card:hover {
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.15);
+  }
+  
+  .testimonial-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .user {
+    display: flex;
+    gap: 14px;
+  }
+  
+  .user img {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .user h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  
+  .role {
+    display: block;
+    color: #e11d1d;
+    font-size: 13px;
+  }
+  
+  .since {
+    display: block;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+  
+  .quote {
+    font-size: 40px;
+    color: #facc15;
+  }
+  
+  .testimonial-text {
+    margin: 24px 0;
+    font-size: 15px;
+    color: #334155;
+    line-height: 1.7;
+    max-width: 500px;
+    font-style: italic;
+  }
+  
+  .testimonial-footer {
+    font-size: 14px;
+    color: #64748b;
+  }
+  
+  .testimonial-footer span {
+    margin-left: 8px;
+  }
+  
+  .testimonial-cta {
+    margin-top: 50px;
+  }
+  
+  .read-more-btn {
+    background: transparent;
+    border: 1.5px solid #e11d1d;
+    color: #e11d1d;
+    padding: 12px 28px;
+    font-size: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .read-more-btn:hover {
+    background: #e11d1d;
+    color: #ffffff;
+    box-shadow: 0 12px 25px rgba(225, 29, 29, 0.4);
+  }
+
+  .testimonial-carousel {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  .ant-carousel .slick-slide {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .ant-carousel .slick-dots li button {
+    background: #e11d1d;
+    opacity: 0.4;
+  }
+  
+  .ant-carousel .slick-dots li.slick-active button {
+    opacity: 1;
+  }
+  
+
+  .testimonial-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 42px;
+    height: 42px;
+    background: rgba(225, 29, 29, 0.9);
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+  }
+  
+  .testimonial-arrow.left {
+    left: -15px;
+  }
+  
+  .testimonial-arrow.right {
+    right: -15px;
+  }
+  
+  .testimonial-arrow:hover {
+    transform: translateY(-50%) scale(1.1);
+    background: #ffffff;
+    color: #e11d1d;
+  }
+  
+  /* Mobile safety */
+  @media (max-width: 768px) {
+    .testimonial-arrow.left {
+      left: 10px;
+    }
+  
+    .testimonial-arrow.right {
+      right: 10px;
+    }
+  }
+  
+  .testimonial-slide {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .testimonial-card-wrapper {
+    padding: 0 10px;
+    flex: 1;
+  }
+  
+  
+  /* CTA button hover */
+  .read-more-btn {
+    margin-top: 40px;
+    padding: 12px 28px;
+    border-radius: 999px;
+    border: 1px solid #e11d1d;
+    background: transparent;
+    color: #e11d1d;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+  
+  .read-more-btn:hover {
+    background: #e11d1d;
+    color: #ffffff;
+    box-shadow: 0 12px 25px rgba(225, 29, 29, 0.4);
+  }
+  

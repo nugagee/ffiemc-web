@@ -1,0 +1,73 @@
+.journey-cta {
+    background: linear-gradient(135deg, #e11d1d, #a10f0f);
+    padding: 100px 20px;
+    text-align: center;
+    color: #ffffff;
+  }
+  
+  .journey-content {
+    max-width: 900px;
+    margin: auto;
+  }
+  
+  .journey-badge {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  
+  .journey-content h2 {
+    font-size: 48px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  
+  .journey-content p {
+    font-size: 18px;
+    opacity: 0.9;
+    margin-bottom: 40px;
+  }
+  
+  .journey-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  
+  /* Visit This Sunday */
+  .visit-btn {
+    background: #ffffff;
+    color: #e11d1d;
+    border: none;
+    font-weight: 600;
+    padding: 14px 28px;
+    transition: all 0.3s ease;
+  }
+  
+  .visit-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    background: #ffffff !important;
+    color: #e11d1d !important;
+  }
+  
+  /* Request Prayer */
+  .prayer-btn {
+    background: transparent;
+    border: 2px solid #ffffff;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 14px 28px;
+    transition: all 0.3s ease;
+  }
+  
+  .prayer-btn:hover {
+    background: #ffffff !important;
+    color: #e11d1d !important;
+    transform: scale(1.05);
+  }
+  

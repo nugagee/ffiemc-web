@@ -45,7 +45,7 @@ const Navbar = () => {
           background: scrolled ? "rgba(255,255,255,0.85)" : "transparent",
           backdropFilter: scrolled ? "blur(10px)" : "none",
           transition: "all 0.3s ease",
-          paddingInline: "24px",
+          paddingInline: "10%",
         }}
       >
         <Flex justify="space-between" align="center">

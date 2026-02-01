@@ -1,85 +1,149 @@
-import React from "react";
-import { Layout, Row, Col, Typography } from "antd";
+import {
+  FacebookFilled,
+  TwitterOutlined,
+  YoutubeOutlined,
+  InstagramOutlined,
+  EnvironmentOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  ClockCircleOutlined,
+} from "@ant-design/icons";
+import { Row, Col } from "antd";
+import "./footer.css";
 
-const { Footer } = Layout;
-const { Title, Text, Link } = Typography;
-
-const FooterSection = () => {
+export default function Footer() {
   return (
-    <Footer
-      style={{
-        backgroundColor: "var(--color-bg-dark)",
-        color: "var(--color-text-light)",
-        padding: "60px 20px 30px",
-      }}
-    >
-      <Row gutter={[32, 32]} justify="center">
-        <Col xs={24} sm={12} md={6}>
-          <Title
-            level={4}
-            style={{ color: "var(--color-accent)", marginBottom: 12 }}
-          >
-            Fire Evangelical Church
-          </Title>
-          <Text style={{ color: "#d1d5db", lineHeight: 1.6 }}>
-            Igniting hearts and transforming lives through God’s love.
-          </Text>
-        </Col>
+    <footer className="site-footer">
+      <div className="footer-content">
+        <Row gutter={[40, 40]}>
+          {/* Church Info */}
+          <Col xs={24} md={6}>
+            <div className="footer-brand">
+              <h3>Fire-Fire Int'l</h3>
+              <span>Evangelical Church</span>
+              <p>Teach one by one another</p>
 
-        <Col xs={24} sm={12} md={6}>
-          <Title level={5} style={{ color: "#ffffff" }}>
-            Quick Links
-          </Title>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <Link href="#about" style={{ color: "#d1d5db" }}>
-              About
-            </Link>
-            <Link href="#events" style={{ color: "#d1d5db" }}>
-              Events
-            </Link>
-            <Link href="#sermons" style={{ color: "#d1d5db" }}>
-              Sermons
-            </Link>
-          </div>
-        </Col>
+              <div className="social-icons">
+                <FacebookFilled />
+                <TwitterOutlined />
+                <YoutubeOutlined />
+                <InstagramOutlined />
+              </div>
+            </div>
+          </Col>
 
-        <Col xs={24} sm={12} md={6}>
-          <Title level={5} style={{ color: "#ffffff" }}>
-            Service Times
-          </Title>
-          <Text style={{ color: "#d1d5db", lineHeight: 1.6 }}>
-            Sunday: 8:30AM & 10:30AM
-            <br />
-            Wednesday: 6:00PM
-          </Text>
-        </Col>
+          {/* Quick Links */}
+          <Col xs={24} md={6}>
+            <h4 className="footer-title">Quick Links</h4>
+            <ul className="footer-links">
+              <li>About Us</li>
+              <li>Our Services</li>
+              <li>Leadership</li>
+              <li>Ministries</li>
+              <li>Events</li>
+              <li>Contact</li>
+            </ul>
+          </Col>
 
-        <Col xs={24} sm={12} md={6}>
-          <Title level={5} style={{ color: "#ffffff" }}>
-            Contact
-          </Title>
-          <Text style={{ color: "#d1d5db", lineHeight: 1.6 }}>
-            123 Revival Ave, Lagos
-            <br />
-            info@fireevangelical.org
-          </Text>
-        </Col>
-      </Row>
+          {/* Service Times */}
+          <Col xs={24} md={6}>
+            <h4 className="footer-title">Service Times</h4>
 
-      <div
-        style={{
-          textAlign: "center",
-          marginTop: 40,
-          paddingTop: 20,
-          borderTop: "1px solid #374151",
-          color: "#9ca3af",
-          fontSize: 14,
-        }}
-      >
-        © {new Date().getFullYear()} Fire Evangelical Church. All Rights Reserved.
+            <div className="service-item">
+              <ClockCircleOutlined />
+              <div>
+                <strong>Sunday</strong>
+                <p>
+                  Sitting at the Jesus feet
+                  <br />
+                  8:00 AM - 9:00 AM
+                </p>
+              </div>
+            </div>
+
+            <div className="service-item">
+              <ClockCircleOutlined />
+              <div>
+                <strong>Sunday</strong>
+                <p>
+                  Main Service
+                  <br />
+                  9:00 AM - 12:00 PM
+                </p>
+              </div>
+            </div>
+
+            <div className="service-item">
+              <ClockCircleOutlined />
+              <div>
+                <strong>Monday</strong>
+                <p>
+                  Bible Study
+                  <br />
+                  5:00 PM - 7:00 PM
+                </p>
+              </div>
+            </div>
+
+            <div className="service-item">
+              <ClockCircleOutlined />
+              <div>
+                <strong>Wednesday</strong>
+                <p>
+                  Women's Program
+                  <br />
+                  12:00 PM - 3:00 PM
+                </p>
+              </div>
+            </div>
+
+            <div className="service-item">
+              <ClockCircleOutlined />
+              <div>
+                <strong>Wednesday</strong>
+                <p>
+                  Mid-week Service
+                  <br />
+                  6:00 PM - 8:00 PM
+                </p>
+              </div>
+            </div>
+          </Col>
+
+          {/* Contact */}
+          <Col xs={24} md={6}>
+            <h4 className="footer-title">Contact Us</h4>
+
+            <div className="contact-item">
+              <EnvironmentOutlined />
+              <span>Fire-Fire Area, Papa Agric Olomi, Ibadan</span>
+            </div>
+
+            <div className="contact-item">
+              <PhoneOutlined />
+              <span>+234 803 123 4567</span>
+            </div>
+
+            <div className="contact-item">
+              <MailOutlined />
+              <span>info@firefireintl.org</span>
+            </div>
+          </Col>
+        </Row>
       </div>
-    </Footer>
-  );
-};
 
-export default FooterSection;
+      {/* Bottom Bar */}
+      <div className="footer-bottom">
+        <span>
+          © {new Date().getFullYear()} Fire Evangelical Church. All Rights
+          Reserved.
+        </span>
+
+        <div className="legal-links">
+          <span>Privacy Policy</span>
+          <span>Terms of Service</span>
+        </div>
+      </div>
+    </footer>
+  );
+}

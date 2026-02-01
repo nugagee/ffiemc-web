@@ -8,6 +8,7 @@ import SocialFeedSection from "../../components/SocialFeed/SocialFeedSection";
 import TestimonialsSection from "../../components/Testimonials/TestimonialsSection";
 import AboutIntroSection from "../../components/About/AboutIntroSection";
 import EventsHighlightSection from "../../components/Events/EventsSection";
+import JourneyCTASection from "../../components/JourneyCTA/JourneyCTASection";
 
 const Home = () => {
   return (
@@ -23,9 +24,10 @@ const Home = () => {
       <EventsHighlightSection />
       <SermonsSection />
       <MinistriesSection />
+      <JourneyCTASection />
       <TestimonialsSection />
       <SocialFeedSection />
-      <FooterSection />
+      <FooterSection /> 
     </>
   );
 };

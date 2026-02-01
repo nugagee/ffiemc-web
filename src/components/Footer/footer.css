@@ -1,37 +1,120 @@
-@import "../../styles/theme.css";
-
-.footer {
-  background: var(--color-background-dark);
-  color: var(--color-text-light);
-  padding-top: var(--space-xl);
+.site-footer {
+  background: linear-gradient(180deg, #0b1220, #0a1020);
+  color: #cbd5e1;
+  padding-top: 70px;
 }
 
 .footer-content {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-xl);
+  max-width: 1200px;
+  margin: auto;
+  padding: 0 20px;
 }
 
-.footer-links ul {
+/* Titles */
+.footer-title {
+  color: #f87171;
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+/* Brand */
+.footer-brand h3 {
+  color: #f87171;
+  margin-bottom: 0;
+}
+
+.footer-brand span {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.footer-brand p {
+  margin: 15px 0;
+}
+
+/* Social Icons */
+.social-icons {
+  display: flex;
+  gap: 16px;
+  font-size: 18px;
+}
+
+.social-icons svg {
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.social-icons svg:hover {
+  color: #ef4444;
+}
+
+/* Links */
+.footer-links {
   list-style: none;
   padding: 0;
 }
 
 .footer-links li {
-  margin-bottom: var(--space-xs);
-  color: var(--color-text-light);
+  margin-bottom: 12px;
   cursor: pointer;
   transition: color 0.3s ease;
 }
 
 .footer-links li:hover {
-  color: var(--color-primary);
+  color: #ef4444;
 }
 
-.footer-copy {
-  text-align: center;
-  margin-top: var(--space-lg);
-  font-size: 0.9rem;
-  color: var(--color-text-light);
+/* Services */
+.service-item {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.service-item svg {
+  color: #ef4444;
+  margin-top: 4px;
+}
+
+.service-item p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* Contact */
+.contact-item {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.contact-item svg {
+  color: #ef4444;
+  margin-top: 3px;
+}
+
+/* Bottom */
+.footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 60px;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.legal-links {
+  display: flex;
+  gap: 20px;
+}
+
+.legal-links span {
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.legal-links span:hover {
+  color: #ef4444;
 }
