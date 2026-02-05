@@ -25,7 +25,8 @@ const Navbar = () => {
     { key: "ministries", label: "Ministries", href: "#ministries" },
     { key: "testimonials", label: "Testimonials", href: "#testimonials" },
     { key: "contact", label: "Contact", href: "#footer" },
-    { key: "sermons", label: "Sermons", href: "#footer" },
+    { key: "events", label: "Events", href: "#footer" },
+    { key: "blog", label: "Blog", href: "#footer" },
   ];
 
   return (
@@ -95,6 +96,7 @@ const Navbar = () => {
             icon={<MenuOutlined />}
             onClick={() => setMenuOpen(true)}
             className="mobile-toggle"
+            style={{ color: scrolled ? "#000000" : "#ffffff", fontSize: 20 }}
           />
         </Flex>
       </Header>

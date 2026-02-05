@@ -5,6 +5,10 @@ import { ChevronLeft, ChevronRight, Play, Timer } from "lucide-react";
 import hero1 from "../../assets/img/hero/home4.jpeg";
 import hero2 from "../../assets/img/hero/home3.jpeg";
 import hero3 from "../../assets/img/hero/home2.jpeg";
+import pastor from "../../assets/img/hero/go.jpg";
+import "./hero.css";
+import women from '../../assets/img/cr_2.jpg';
+import men from '../../assets/img/cr_1.jpg';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -12,7 +16,8 @@ const { Title, Text } = Typography;
 const slidesData = [
   {
     id: 1,
-    image: hero1,
+    image: men,
+    // image: hero1,
     eyebrow: "Fire-Fire International Evangelical Church",
     title: "Igniting Hearts, Transforming Lives",
     subtitle: "Experience God's Love in Our Community",
@@ -23,7 +28,8 @@ const slidesData = [
   },
   {
     id: 2,
-    image: hero2,
+    image: pastor,
+    // image: hero2,
     eyebrow: "Join Us This Sunday",
     title: "Teaching One by One Another",
     subtitle: "Growing Together in Faith.",
@@ -34,7 +40,8 @@ const slidesData = [
   },
   {
     id: 3,
-    image: hero3,
+    image: women,
+    // image: hero3,
     eyebrow: "You're Welcome Here",
     title: "Come as You Are",
     subtitle:
@@ -69,7 +76,9 @@ const HeroSection = ({
 
   return (
     <Layout>
-      <Content style={{ position: "relative", height: "95vh", overflow: "hidden" }}>
+      <Content
+        style={{ position: "relative", height: "95vh", overflow: "hidden" }}
+      >
         <AnimatePresence>
           {slides.map(
             (slide, i) =>
@@ -99,7 +108,12 @@ const HeroSection = ({
 
                   <Row
                     align="middle"
-                    style={{ height: "100%", position: "relative", padding: "0 8%", marginTop: -10 }}
+                    style={{
+                      height: "100%",
+                      position: "relative",
+                      padding: "0 8%",
+                      marginTop: -10,
+                    }}
                   >
                     <Col xs={24} md={14}>
                       <Text
@@ -115,7 +129,13 @@ const HeroSection = ({
                         {slide.eyebrow}
                       </Text>
 
-                      <Title style={{ color: "#fff", fontSize: 40, margin: "15px 0" }}>
+                      <Title
+                        style={{
+                          color: "#fff",
+                          fontSize: 40,
+                          margin: "15px 0",
+                        }}
+                      >
                         {slide.title}
                       </Title>
 
@@ -157,29 +177,43 @@ const HeroSection = ({
               )
           )}
         </AnimatePresence>
-          {/* Schedule Cards */}
-      <Content style={{ padding: "0 8%", width: "100%",  position: "absolute", bottom: 15 }}>
-        <Card bordered style={{ textAlign: "center", borderRadius: 16 }}>
-        <Title level={5} >Join Us for Worship</Title>
-        <Text level={9} type="secondary">All are welcome to experience God's love</Text>
-        <Row gutter={[16, 16]}>
-
-          {[
-            ["Sunday", "8:00 AM - 9:00 AM", "Sitting at Jesus' Feet"],
-            ["Sunday", "9:00 AM - 12:00 PM", "Main Service"],
-            ["Monday", "5:00 PM - 7:00 PM", "Bible Study"],
-            ["Wednesday", "6:00 PM - 8:00 PM", "Mid-week Service"],
-          ].map((item, i) => (
-            <Col xs={24} md={6} key={i}>
-                <Timer style={{ color: "var(--color-accent)" }} size={20} />
-                <Title level={5} >{item[2]}</Title>
-                <Title level={5} style={{ margin: "5px 0"}} type="secondary">{item[0]}</Title>
-                <Text style={{ color: "var(--color-accent)" }}>{item[1]}</Text>
-            </Col>
-          ))}
-        </Row>
-              </Card>
-      </Content>
+        {/* Schedule Cards */}
+   
+        <Content
+        className="schedule-desktop"
+          style={{
+            padding: "0 8%",
+            width: "100%",
+            position: "absolute",
+            bottom: 15,
+          }}
+        >
+          <Card className="schedule-section"  bordered style={{ textAlign: "center", borderRadius: 16 }}>
+            <Title level={5}>Join Us for Worship</Title>
+            <Text level={9} type="secondary">
+              All are welcome to experience God's love
+            </Text>
+            <Row className="schedule-cards" gutter={[16, 16]}>
+              {[
+                ["Sunday", "8:00 AM - 9:00 AM", "Sitting at Jesus' Feet"],
+                ["Sunday", "9:00 AM - 12:00 PM", "Main Service"],
+                ["Monday", "5:00 PM - 7:00 PM", "Bible Study"],
+                ["Wednesday", "9:00 AM - 2:00 PM", "Women's Program (Mo Wo Fin)"],
+              ].map((item, i) => (
+                <Col xs={24} md={6} key={i}>
+                  <Timer style={{ color: "var(--color-accent)" }} size={20} />
+                  <Title level={5}>{item[2]}</Title>
+                  <Title level={5} style={{ margin: "5px 0" }} type="secondary">
+                    {item[0]}
+                  </Title>
+                  <Text style={{ color: "var(--color-accent)" }}>
+                    {item[1]}
+                  </Text>
+                </Col>
+              ))}
+            </Row>
+          </Card>
+        </Content>
 
         {/* Navigation */}
         <Button
@@ -195,8 +229,6 @@ const HeroSection = ({
           icon={<ChevronRight />}
         />
       </Content>
-
-    
     </Layout>
   );
 };

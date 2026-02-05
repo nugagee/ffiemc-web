@@ -31,6 +31,9 @@ nav {
 
 /* Mobile styles */
 @media (max-width: 768px) {
+  .home-logo {
+    width: 80px;
+  }
   .desktop-nav {
     display: none;
   }

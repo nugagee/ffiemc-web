@@ -40,7 +40,7 @@ const testimonials = [
     name: "Brother Michael Okonkwo",
     role: "Youth Leader",
     since: "Member since 2019",
-    image: img2,
+    image: img3,
     content:
       "This church didn't just change my life – it saved it. I was heading down a wrong path as a young man, but the youth ministry here showed me a better way. Now I'm leading other young people to Christ and seeing God work miracles.",
   },
@@ -48,7 +48,7 @@ const testimonials = [
     name: "Sister Pelumi Adebayo",
     role: "Youth Leader",
     since: "Member since 2019",
-    image: img3,
+    image: img2,
     content:
       "This church didn't just change my life – it saved it. I was heading down a wrong path as a young man, but the youth ministry here showed me a better way. Now I'm leading other young people to Christ and seeing God work miracles.",
   },

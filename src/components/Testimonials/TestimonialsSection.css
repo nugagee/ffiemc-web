@@ -223,7 +223,14 @@
     padding: 0 10px;
     flex: 1;
   }
-  
+  @media (max-width: 768px) {
+    .testimonial-slide {
+      justify-content: space-around;
+    }
+    .testimonial-card {
+      width: 100%;
+    }
+    }
   
   /* CTA button hover */
   .read-more-btn {

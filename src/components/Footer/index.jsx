@@ -90,14 +90,14 @@ export default function Footer() {
               <div>
                 <strong>Wednesday</strong>
                 <p>
-                  Women's Program
+                Women's Program (Mo Wo Fin)
                   <br />
-                  12:00 PM - 3:00 PM
+                  9:00 AM - 2:00 PM
                 </p>
               </div>
             </div>
 
-            <div className="service-item">
+            {/* <div className="service-item">
               <ClockCircleOutlined />
               <div>
                 <strong>Wednesday</strong>
@@ -107,7 +107,7 @@ export default function Footer() {
                   6:00 PM - 8:00 PM
                 </p>
               </div>
-            </div>
+            </div> */}
           </Col>
 
           {/* Contact */}
@@ -116,12 +116,13 @@ export default function Footer() {
 
             <div className="contact-item">
               <EnvironmentOutlined />
-              <span>Fire-Fire Area, Papa Agric Olomi, Ibadan</span>
+              <span>
+              Fire-Fire Area, Papa Agric, Off Olojuoro Olunde Road, Olomi, Ibadan, Ibadan, Nigeria</span>
             </div>
 
             <div className="contact-item">
               <PhoneOutlined />
-              <span>+234 803 123 4567</span>
+              <span>+234 816 267 4805</span>
             </div>
 
             <div className="contact-item">

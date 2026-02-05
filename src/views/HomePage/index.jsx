@@ -9,6 +9,7 @@ import TestimonialsSection from "../../components/Testimonials/TestimonialsSecti
 import AboutIntroSection from "../../components/About/AboutIntroSection";
 import EventsHighlightSection from "../../components/Events/EventsSection";
 import JourneyCTASection from "../../components/JourneyCTA/JourneyCTASection";
+import Scheduleection from "../../components/Schedule/Schedule";
 
 const Home = () => {
   return (
@@ -20,6 +21,7 @@ const Home = () => {
         cta1="Visit This Sunday"
         cta2="Request Prayer"
       />
+      <Scheduleection />
       <AboutIntroSection />
       <EventsHighlightSection />
       <SermonsSection />
