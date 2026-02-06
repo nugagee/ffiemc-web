@@ -1,0 +1,8 @@
+---
+deployment:
+  tasks:
+    - npm install
+    - npm run build
+    - export DEPLOYPATH=/home/ueaqznef/ffiem.org/public_html/
+    - /bin/cp -R build/* $DEPLOYPATH
+ 
