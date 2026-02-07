@@ -1,0 +1,12 @@
+RewriteEngine On
+
+# Point root to /build
+RewriteCond %{REQUEST_URI} !^/build/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /build/$1 [L]
+
+# React Router fallback inside /build
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^build/.*$ /build/index.html [L]
