@@ -1,12 +1,12 @@
 RewriteEngine On
 
-# Point root to /build
-RewriteCond %{REQUEST_URI} !^/build/
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ /build/$1 [L]
+# If request already targets build folder, do nothing
+RewriteRule ^build/ - [L]
 
-# React Router fallback inside /build
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^build/.*$ /build/index.html [L]
+# If file or directory exists in root, serve normally
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Redirect everything else to build
+RewriteRule ^(.*)$ build/$1 [L]
