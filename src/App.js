@@ -3,7 +3,10 @@ import React from "react";
 // import TagManager from "react-gtm-module";
 import "./assets/css/App.css";
 import AllPages from "./routes/routes";
-import 'antd/dist/reset.css';
+import "antd/dist/reset.css";
+import { ConfigProvider } from "antd";
+import { antdTheme } from "./Theme/antdTheme";
+import { AuthProvider } from "./Admin/Auth/AuthContext";
 // import { GoogleOAuthProvider } from "@react-oauth/google";
 
 // const tagManagerArgs = {
@@ -13,13 +16,18 @@ import 'antd/dist/reset.css';
 // TagManager.initialize(tagManagerArgs);
 
 // const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-const CLIENT_ID = "131472450957-9ph13db4vdu6egn8mq9dc2d6lrf3qp4f.apps.googleusercontent.com";
+const CLIENT_ID =
+  "131472450957-9ph13db4vdu6egn8mq9dc2d6lrf3qp4f.apps.googleusercontent.com";
 
 function App() {
   return (
     <>
       {/* <GoogleOAuthProvider clientId={CLIENT_ID}> */}
-        <AllPages />
+      <ConfigProvider theme={antdTheme}>
+        <AuthProvider>
+          <AllPages />
+        </AuthProvider>
+      </ConfigProvider>
       {/* </GoogleOAuthProvider> */}
 
       {/* <CookieConsent

@@ -1,0 +1,23 @@
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+  }
+  
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+  }
+  
+  .auth-logo {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  
+  .auth-logo img {
+    max-width: 120px;
+  }
+  
