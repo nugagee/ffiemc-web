@@ -1,0 +1,67 @@
+/* About page - ensure all accents use red (no blue) */
+/* .about-page a {
+  color: var(--color-primary);
+  text-decoration: none;
+} */
+
+.about-page a:visited {
+  color: var(--color-primary);
+}
+
+.about-page a:hover {
+  color: var(--color-primary-dark);
+}
+
+/* Keep navbar links black on about page (for visibility) */
+.about-page .navbar .nav-link,
+.about-page .navbar .nav-link--dark {
+  color: #111827 !important;
+}
+
+.about-page .navbar .nav-link--dark:hover {
+  color: var(--color-primary) !important;
+}
+
+.about-page__cta,
+.about-page button.about-page__cta,
+.about-page .bg-primary,
+.about-page button.bg-primary {
+  background-color: var(--color-primary) !important;
+  color: white !important;
+}
+
+.about-page__cta:hover,
+.about-page button.about-page__cta:hover {
+  background-color: var(--color-primary-dark) !important;
+  color: white !important;
+}
+
+.about-page__cta:hover,
+.about-page .hover\:bg-primary-dark:hover {
+  background-color: var(--color-primary-dark) !important;
+  color: white !important;
+}
+
+/* Footer on about page - ensure red accents */
+.about-page .site-footer .footer-title,
+.about-page .site-footer .footer-brand h3 {
+  color: var(--color-primary) !important;
+}
+
+.about-page .site-footer .footer-link:hover,
+.about-page .site-footer .footer-links li:hover,
+.about-page .site-footer .social-icons svg:hover,
+.about-page .site-footer .service-item svg,
+.about-page .site-footer .contact-item svg,
+.about-page .site-footer .legal-links span:hover {
+  color: var(--color-primary) !important;
+}
+
+/* Override any Tailwind blue that might appear */
+.about-page .text-blue-500,
+.about-page .text-blue-600,
+.about-page .bg-blue-500,
+.about-page .bg-blue-600 {
+  color: var(--color-primary) !important;
+  background-color: var(--color-primary) !important;
+}

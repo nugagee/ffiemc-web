@@ -6,7 +6,7 @@ import AllPages from "./routes/routes";
 import "antd/dist/reset.css";
 import { ConfigProvider } from "antd";
 import { antdTheme } from "./Theme/antdTheme";
-import { AuthProvider } from "./Admin/Auth/AuthContext";
+import AuthListener from "./store/AuthListener";
 // import { GoogleOAuthProvider } from "@react-oauth/google";
 
 // const tagManagerArgs = {
@@ -24,9 +24,8 @@ function App() {
     <>
       {/* <GoogleOAuthProvider clientId={CLIENT_ID}> */}
       <ConfigProvider theme={antdTheme}>
-        <AuthProvider>
-          <AllPages />
-        </AuthProvider>
+        <AuthListener />
+        <AllPages />
       </ConfigProvider>
       {/* </GoogleOAuthProvider> */}
 

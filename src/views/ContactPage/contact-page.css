@@ -1,0 +1,105 @@
+/* Contact page - red accents, consistent with about-us */
+/* Links */
+
+
+.contact-page a:visited {
+  color: var(--color-primary);
+}
+
+.contact-page a:hover {
+  color: var(--color-primary-dark);
+}
+
+/* Navbar - black text for visibility */
+.contact-page .navbar .nav-link,
+.contact-page .navbar .nav-link--dark {
+  color: #111827 !important;
+}
+
+.contact-page .navbar .nav-link--dark:hover {
+  color: var(--color-primary) !important;
+}
+
+/* CTA section - ensure red background */
+.contact-page section.bg-primary {
+  background-color: var(--color-primary) !important;
+}
+
+/* Buttons */
+.contact-page__btn {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+.contact-page__btn:hover {
+  background-color: var(--color-primary-dark) !important;
+  border-color: var(--color-primary-dark) !important;
+  transform: scale(1.02);
+  box-shadow: 0 10px 25px rgba(214, 69, 39, 0.3);
+}
+
+.contact-page__emergency-btn {
+  color: var(--color-primary) !important;
+}
+
+.contact-page__emergency-btn:hover {
+  color: var(--color-primary-dark) !important;
+}
+
+.contact-page__prayer-btn:hover {
+  background-color: white !important;
+  color: var(--color-primary) !important;
+}
+
+/* Social links - red on hover */
+.contact-page__social-link:hover {
+  border-color: var(--color-primary) !important;
+  background-color: rgba(214, 69, 39, 0.08) !important;
+}
+
+.contact-page__social-link:hover .contact-page__social-icon {
+  color: var(--color-primary) !important;
+}
+
+.contact-page__social-icon {
+  color: #4b5563;
+}
+
+/* Footer */
+.contact-page .site-footer .footer-title,
+.contact-page .site-footer .footer-brand h3 {
+  color: var(--color-primary) !important;
+}
+
+.contact-page .site-footer .footer-link:hover,
+.contact-page .site-footer .footer-links li:hover,
+.contact-page .site-footer .social-icons svg:hover,
+.contact-page .site-footer .service-item svg,
+.contact-page .site-footer .contact-item svg,
+.contact-page .site-footer .legal-links span:hover {
+  color: var(--color-primary) !important;
+}
+
+/* Override any blue from Ant Design or Tailwind */
+.contact-page .ant-btn-primary,
+.contact-page .ant-input:hover,
+.contact-page .ant-input:focus {
+  border-color: var(--color-primary) !important;
+}
+
+.contact-page .ant-btn-primary {
+  background-color: var(--color-primary) !important;
+}
+
+.contact-page .ant-btn-primary:hover {
+  background-color: var(--color-primary-dark) !important;
+  border-color: var(--color-primary-dark) !important;
+}
+
+.contact-page .text-blue-500,
+.contact-page .text-blue-600,
+.contact-page .bg-blue-500,
+.contact-page .bg-blue-600 {
+  color: var(--color-primary) !important;
+  background-color: var(--color-primary) !important;
+}

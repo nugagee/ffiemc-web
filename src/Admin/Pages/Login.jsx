@@ -1,74 +1,30 @@
-import { Form, Input, Button, Card, message } from "antd";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { Form, Input, Button, Card, message, Spin } from "antd";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "../../services/firebase";
-import { useAuth } from "../Auth/AuthContext";
+import { useDispatch } from "react-redux";
+import { useAuth } from "../../store/hooks/useAuth";
+import { login } from "../../store/thunks/authThunks";
 import logo from "../../assets/img/Logo png.png";
 import "./index.css";
-import { doc, getDoc } from "firebase/firestore";
-import { useAuthStore } from "../Auth/authStore";
 
 export default function AdminLogin() {
-  const setUser = useAuthStore((state) => state.setUser);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const authContext = useAuth();
-
-  if (!authContext) {
-    return <div>Loading...</div>; // Handle the case where useAuth returns null
-  }
-  const { isAuthenticated } = authContext;
+  const { isAuthenticated, loading } = useAuth();
 
   const onFinish = async ({ email, password }) => {
-    // try {
-    //   await signInWithEmailAndPassword(auth, email, password);
-
-    //   message.success("Welcome back");
-    //   navigate("/admin/dashboard");
-    // } catch (err) {
-    //   message.error(
-    //     err.code === "auth/invalid-credential"
-    //       ? "Invalid email or password"
-    //       : "Unable to sign in"
-    //   );
-    // }
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const result = await dispatch(login({ email, password })).unwrap();
 
-      console.log("Login page - isAuthenticated:", cred.user);
-
-      const adminRef = doc(db, "admins", "6Vb8pXbNGFxWwQLOxSXd");
-    //   const adminRef = doc(db, "admins", cred.user.uid);
-      const adminSnap = await getDoc(adminRef);
-
-      console.log("Admin Snapshot Data:", adminSnap.data());
-
-      if (!adminSnap.exists()) {
-        message.error("You are not authorized to access the admin portal.");
-        return;
+      if (result) {
+        message.success("Login successful");
+        navigate("/admin/dashboard");
       }
-
-      const adminData = {
-        uid: cred.user.uid,
-        email: cred.user.email,
-        ...adminSnap.data(),
-      };
-
-      // Persist session
-      setUser(adminData);
-      localStorage.setItem("adminUser", JSON.stringify(adminData));
-
-      message.success("Login successful");
-      navigate("/admin/dashboard");
     } catch (err) {
-      console.error("Login error:", err);
-      message.error(
-        err.code === "auth/invalid-credential"
-          ? "Invalid email or password"
-          : "Unable to sign in. Try again."
-      );
+      message.error(err || "Unable to sign in. Try again.");
     }
   };
 
+  if (loading) return <Spin fullscreen />;
   if (isAuthenticated) {
     navigate("/admin/dashboard");
     return null;

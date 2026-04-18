@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import {
   FacebookFilled,
   TwitterOutlined,
@@ -13,7 +14,7 @@ import "./footer.css";
 
 export default function Footer() {
   return (
-    <footer className="site-footer">
+    <footer id="footer" className="site-footer">
       <div className="footer-content">
         <Row gutter={[40, 40]}>
           {/* Church Info */}
@@ -36,12 +37,12 @@ export default function Footer() {
           <Col xs={24} md={6}>
             <h4 className="footer-title">Quick Links</h4>
             <ul className="footer-links">
-              <li>About Us</li>
-              <li>Our Services</li>
+              <li><Link to="/about-us" className="footer-link">About Us</Link></li>
+              <li><Link to="/services" className="footer-link">Our Services</Link></li>
               <li>Leadership</li>
               <li>Ministries</li>
               <li>Events</li>
-              <li>Contact</li>
+              <li><Link to="/contact-us" className="footer-link">Contact</Link></li>
             </ul>
           </Col>
 

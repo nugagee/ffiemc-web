@@ -14,14 +14,24 @@ import {
   FileTextOutlined,
   SafetyOutlined,
 } from "@ant-design/icons";
-import { useAuth } from "../Auth/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { useAuth } from "../../store/hooks/useAuth";
+import { logoutUser } from "../../store/thunks/authThunks";
 import { Link } from "react-router-dom";
 
 const { Sider } = Layout;
 const { Text } = Typography;
 
 export default function Sidebar({ onNavigate }) {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { adminData } = useAuth();
+
+  const handleLogout = () => {
+    dispatch(logoutUser());
+    navigate("/admin/login");
+  };
 
   return (
     <Sider breakpoint="lg" collapsedWidth={0} width={260} theme="light">
@@ -89,10 +99,23 @@ export default function Sidebar({ onNavigate }) {
         </Menu.ItemGroup>
       </Menu>
 
-      <div style={{ padding: 16, borderTop: "1px solid #eee" }}>
-        <Avatar size={36} />
-        <Text style={{ marginLeft: 8 }}>Pastor Michael</Text>
-        <LogoutOutlined style={{ float: "right" }} />
+      <div
+        style={{
+          padding: 16,
+          borderTop: "1px solid #eee",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center" }}>
+          <Avatar size={36} />
+          <Text style={{ marginLeft: 8 }}>
+            {adminData?.displayName || adminData?.email || "Admin"}
+          </Text>
+        </span>
+        <LogoutOutlined onClick={handleLogout} />
       </div>
     </Sider>
   );

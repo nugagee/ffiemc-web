@@ -1,0 +1,60 @@
+/* Services page - red accents, consistent with about-us and contact-us */
+
+.services-page a:visited {
+  color: var(--color-primary);
+}
+
+.services-page a:hover {
+  color: var(--color-primary-dark);
+}
+
+/* Navbar - black text for visibility */
+.services-page .navbar .nav-link,
+.services-page .navbar .nav-link--dark {
+  color: #111827 !important;
+}
+
+.services-page .navbar .nav-link--dark:hover {
+  color: var(--color-primary) !important;
+}
+
+/* Regular services cards - hover 1.1 scale + shadow */
+.services-page__card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.services-page__card:hover {
+  transform: scale(1.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+/* CTA buttons on red background */
+.services-page__cta-white {
+  color: var(--color-primary) !important;
+  background-color: white !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.services-page__cta-white:hover {
+  transform: scale(1.02);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.services-page__cta-outline:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Footer red accents */
+.services-page .site-footer .footer-title,
+.services-page .site-footer .footer-brand h3 {
+  color: var(--color-primary) !important;
+}
+
+.services-page .site-footer .footer-link:hover,
+.services-page .site-footer .footer-links li:hover,
+.services-page .site-footer .social-icons svg:hover,
+.services-page .site-footer .service-item svg,
+.services-page .site-footer .contact-item svg,
+.services-page .site-footer .legal-links span:hover {
+  color: var(--color-primary) !important;
+}
