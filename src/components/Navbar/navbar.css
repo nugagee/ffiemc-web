@@ -1,0 +1,16 @@
+@import "../../assets/css/App.css";
+
+nav {
+  font-family: var(--font-heading);
+}
+
+@media (max-width: 768px) {
+  .mobile-menu {
+    backdrop-filter: blur(10px);
+  }
+}
+
+
+.home-logo {
+    width: 100px;
+  }

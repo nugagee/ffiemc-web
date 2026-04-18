@@ -1,0 +1,42 @@
+.events-section {
+    background: linear-gradient(to bottom, #fff, #fbe8e8);
+    padding: 80px 0;
+  }
+  
+  .section-title {
+    text-align: center;
+    margin-bottom: 40px;
+    font-weight: 700;
+  }
+  
+  .events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  
+  .event-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    transition: all 0.3s;
+  }
+  
+  .event-card:hover {
+    transform: translateY(-5px);
+  }
+  
+  .event-date {
+    color: #c43e23;
+    font-weight: 600;
+  }
+  
+  .event-btn {
+    background: none;
+    border: none;
+    color: #c43e23;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  

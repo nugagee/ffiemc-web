@@ -1,0 +1,20 @@
+.primary-btn {
+    background: #d64527;
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s ease;
+  }
+  
+  .primary-btn:hover {
+    background: #c43e23;
+  }
+  
+  .primary-btn.outline {
+    background: transparent;
+    border: 2px solid white;
+  }
+  

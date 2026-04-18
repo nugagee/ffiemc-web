@@ -1,0 +1,22 @@
+@import "../../assets/css/App.css";
+
+.section-wrapper {
+  padding: var(--space-xl) 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.section-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+}
+
+.section-wrapper h2,
+.section-wrapper h3 {
+  font-family: var(--font-heading);
+  text-align: center;
+  color: var(--color-text-dark);
+  margin-bottom: var(--space-lg);
+}

@@ -1,0 +1,37 @@
+@import "../../styles/theme.css";
+
+.footer {
+  background: var(--color-background-dark);
+  color: var(--color-text-light);
+  padding-top: var(--space-xl);
+}
+
+.footer-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-xl);
+}
+
+.footer-links ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-links li {
+  margin-bottom: var(--space-xs);
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.footer-links li:hover {
+  color: var(--color-primary);
+}
+
+.footer-copy {
+  text-align: center;
+  margin-top: var(--space-lg);
+  font-size: 0.9rem;
+  color: var(--color-text-light);
+}
