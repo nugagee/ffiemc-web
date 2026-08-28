@@ -4,14 +4,136 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 11 71% 49%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 11 71% 49%;
+    --radius: 0.5rem;
+    --color-primary: #d64527;
+    --color-primary-dark: #b3361d;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.blog-editor-content {
+  min-height: 420px;
+  padding: 1.35rem 1.5rem 2rem;
+  outline: none;
+}
+
+.blog-editor-content p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.blog-editor-content h2,
+.blog-prose h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 1.4rem 0 0.6rem;
+  line-height: 1.25;
+}
+
+.blog-editor-content h3,
+.blog-prose h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 1.2rem 0 0.5rem;
+}
+
+.blog-editor-content p,
+.blog-prose p {
+  margin: 0.7rem 0;
+}
+
+.blog-editor-content ul,
+.blog-prose ul {
+  list-style: disc;
+  padding-left: 1.4rem;
+  margin: 0.7rem 0;
+}
+
+.blog-editor-content ol,
+.blog-prose ol {
+  list-style: decimal;
+  padding-left: 1.4rem;
+  margin: 0.7rem 0;
+}
+
+.blog-editor-content blockquote,
+.blog-prose blockquote {
+  border-left: 3px solid #dc2626;
+  padding-left: 1rem;
+  color: #4b5563;
+  font-style: italic;
+  margin: 1rem 0;
+}
+
+.blog-editor-content a,
+.blog-prose a {
+  color: #dc2626;
+  text-decoration: underline;
+}
+
+.blog-editor-content img,
+.blog-prose img {
+  max-width: 100%;
+  border-radius: 1rem;
+  margin: 1rem 0;
+}
+
+.blog-editor-content pre,
+.blog-prose pre {
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.blog-editor-content mark,
+.blog-prose mark {
+  background: #fef08a;
+  padding: 0.1em 0.2em;
+  border-radius: 0.2em;
 }

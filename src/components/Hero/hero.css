@@ -1,5 +1,5 @@
 .hero-section {
-  background: url("/Users/user/Desktop/PROJECTS/ffiemc-web/src/assets/img/hero-bg.jpg")
+  background: url("../../assets/img/hero-bg.jpg")
     center/cover no-repeat;
   height: 85vh;
   display: flex;
