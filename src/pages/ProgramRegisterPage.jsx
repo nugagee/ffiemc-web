@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { Calendar, MapPin, Send } from "lucide-react";
 import { toast } from "sonner";
 import { formatApiError, getPublicProgram, submitProgramRegistration, markProgramRegistrationEmailed } from "../lib/api";
 import { sendProgramRegistrationEmails } from "../lib/email";
@@ -12,7 +13,9 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Calendar, MapPin, Send } from "lucide-react";
+import { PersonNameFields } from "../components/forms/PersonNameFields";
+import { PhoneField } from "../components/forms/PhoneField";
+import { withPersonPayload } from "../lib/personName";
 
 function fieldLabel(fields, name, fallback) {
   const found = (fields || []).find((f) => f.name === name);
@@ -31,7 +34,7 @@ export function ProgramRegisterPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-  const [form, setForm] = useState({ full_name: "", email: "", phone: "", branch_id: "", extras: {} });
+  const [form, setForm] = useState({ name_title: "", first_name: "", last_name: "", email: "", phone: "", branch_id: "", extras: {} });
 
   useEffect(() => {
     setDone(false);
@@ -50,9 +53,10 @@ export function ProgramRegisterPage() {
     }
     setSubmitting(true);
     try {
+      const person = withPersonPayload(form);
       const form_data = buildFormData(program.formFields, form.extras);
       const result = await submitProgramRegistration(slug, {
-        full_name: form.full_name,
+        ...person,
         email: form.email,
         phone: form.phone,
         branch_id: form.branch_id,
@@ -61,12 +65,20 @@ export function ProgramRegisterPage() {
       try {
         await sendProgramRegistrationEmails({
           programTitle: result.programTitle || program.title,
+          shortCode: result.shortCode,
           adminEmail: result.adminEmail,
-          fullName: form.full_name,
+          fullName: person.full_name,
+          firstName: person.first_name,
+          lastName: person.last_name,
+          nameTitle: person.name_title,
           email: form.email,
           phone: form.phone,
           formData: form_data,
           branchName: result.branchName,
+          venue: result.venue || program.venue,
+          startsAt: result.startsAt || program.startsAt,
+          endsAt: result.endsAt || program.endsAt,
+          confirmationId: result.id,
           fallbackAdminEmail: settings.notificationEmail,
         });
         await markProgramRegistrationEmailed(result.id);
@@ -179,18 +191,18 @@ export function ProgramRegisterPage() {
             {page.formHeading ? <h2 className="text-xl font-bold text-gray-900">{page.formHeading}</h2> : null}
             {page.formIntro ? <p className="text-sm text-gray-600 whitespace-pre-wrap">{page.formIntro}</p> : null}
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2 md:col-span-2">
-                <Label>{fieldLabel(program.formFields, "full_name", "Full Name")}{fieldRequired(program.formFields, "full_name") ? " *" : ""}</Label>
-                <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required={fieldRequired(program.formFields, "full_name")} className="focus:border-red-500" />
-              </div>
+              <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} />
               <div className="space-y-2">
                 <Label>{fieldLabel(program.formFields, "email", "Email")}{fieldRequired(program.formFields, "email") ? " *" : ""}</Label>
                 <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required={fieldRequired(program.formFields, "email")} className="focus:border-red-500" />
               </div>
-              <div className="space-y-2">
-                <Label>{fieldLabel(program.formFields, "phone", "Phone")}{fieldRequired(program.formFields, "phone") ? " *" : ""}</Label>
-                <Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required={fieldRequired(program.formFields, "phone")} className="focus:border-red-500" />
-              </div>
+              <PhoneField
+                id="program-phone"
+                label={fieldLabel(program.formFields, "phone", "Phone")}
+                value={form.phone}
+                onChange={(v) => setForm({ ...form, phone: v })}
+                required={fieldRequired(program.formFields, "phone")}
+              />
             </div>
             {page.requireBranch ? (
               <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} required />

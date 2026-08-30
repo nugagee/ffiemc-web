@@ -15,8 +15,10 @@ import { ManagedSelect } from "../components/forms/ManagedSelect";
 import { RoleMultiSelect } from "../components/forms/RoleMultiSelect";
 import { mergeFormDropdowns, MEMBER_FIELD_KEYS } from "../data/formDropdowns";
 import { DEFAULT_COUNTRY } from "../data/countries";
-import { Church, Send } from "lucide-react";
+import { PersonNameFields } from "../components/forms/PersonNameFields";
+import { withPersonPayload } from "../lib/personName";
 import { pageSection } from "../data/sitePages";
+import { Church, Send } from "lucide-react";
 
 export function ChurchMembershipPage() {
   const { settings } = useSettings();
@@ -28,7 +30,7 @@ export function ChurchMembershipPage() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [form, setForm] = useState({
-    full_name: "", email: "", phone: "", gender: "", date_of_birth: "",
+    name_title: "", first_name: "", last_name: "", email: "", phone: "", gender: "", date_of_birth: "",
     address: "", city: "", state: "", country: DEFAULT_COUNTRY,
     role_ids: [], branch_id: "", ministry: "", baptism_status: "", marital_status: "",
     occupation: "", emergency_contact_name: "", emergency_contact_phone: "", notes: "",
@@ -48,8 +50,9 @@ export function ChurchMembershipPage() {
     }
     setSubmitting(true);
     try {
+      const person = withPersonPayload(form);
       const result = await submitChurchMembership({
-        full_name: form.full_name,
+        ...person,
         email: form.email,
         phone: form.phone,
         gender: form.gender,
@@ -71,7 +74,7 @@ export function ChurchMembershipPage() {
       });
       try {
         await sendChurchMembershipEmails({
-          fullName: form.full_name,
+          fullName: person.full_name,
           email: form.email,
           phone: form.phone,
           roleName: result.roleName,
@@ -118,10 +121,7 @@ export function ChurchMembershipPage() {
           <CardContent className="p-8">
             <form onSubmit={submit} className="space-y-5">
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Full Name *</Label>
-                  <Input name="full_name" value={form.full_name} onChange={change} required className="focus:border-red-500" />
-                </div>
+                <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} />
                 <div className="space-y-2">
                   <Label>Email *</Label>
                   <Input name="email" type="email" value={form.email} onChange={change} required className="focus:border-red-500" />

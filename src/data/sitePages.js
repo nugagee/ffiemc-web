@@ -8,7 +8,7 @@ export const DASHBOARD_FEATURES = [
   { key: "church_branches", group: "Programs", label: "Church branches", hint: "Local and international branch locations", actions: ["view", "edit", "delete"] },
   { key: "church_roles", group: "Programs", label: "Church roles", hint: "Pastor, deacon, member, and other roles — members may hold more than one", actions: ["view", "edit", "delete"] },
   { key: "member_notifications", group: "Programs", label: "Member announcements", hint: "Email and SMS announcements to members by category", actions: ["view", "edit", "delete"] },
-  { key: "program_registrations", group: "Registrations", label: "Program sign-ups", hint: "View and manage event registrations", actions: ["view", "edit", "delete"] },
+  { key: "program_registrations", group: "Registrations", label: "Event registrations", hint: "FFIEYC and other program sign-ups, including registering on behalf of participants", actions: ["view", "edit", "delete"] },
   { key: "volunteer_applications", group: "Registrations", label: "Volunteer applications", hint: "Media team and ministry volunteer sign-ups", actions: ["view", "edit", "delete"] },
   { key: "church_members", group: "Registrations", label: "Church members", hint: "Pending, approved, and all member records — including multiple church roles per person", actions: ["view", "edit", "delete"] },
   { key: "form_dropdowns", group: "Registrations", label: "Form dropdowns", hint: "State, baptism, occupation and custom form options", actions: ["view", "edit"] },

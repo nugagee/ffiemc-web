@@ -87,7 +87,7 @@ export const ADMIN_NAV = [
         matchPrefix: "/admin/registrations/programs",
         feature: "program_registrations",
         children: [
-          { id: "reg-programs-signups", to: "/admin/registrations/programs", label: "Sign-ups", icon: "ClipboardList", end: true, feature: "program_registrations" },
+          { id: "reg-programs-all", to: "/admin/registrations/programs", label: "All programs", icon: "ClipboardList", end: true, feature: "program_registrations" },
         ],
       },
       {
@@ -97,7 +97,7 @@ export const ADMIN_NAV = [
         matchPrefix: "/admin/registrations/volunteers",
         feature: "volunteer_applications",
         children: [
-          { id: "reg-volunteers-apps", to: "/admin/registrations/volunteers", label: "Applications", icon: "UserPlus", end: true, feature: "volunteer_applications" },
+          { id: "reg-volunteers-apps", to: "/admin/registrations/volunteers", label: "Applications", icon: "UserPlus", end: true, feature: "volunteer_applications", badgeKey: "volunteer_unseen" },
           { id: "reg-volunteers-audit", to: "/admin/registrations/volunteers/audit", label: "Audit log", icon: "ScrollText", end: true, feature: "volunteer_applications" },
         ],
       },
@@ -128,6 +128,7 @@ export const ADMIN_NAV = [
       { feature: "member_notifications" },
     ],
     children: [
+      { id: "programs-new", to: "/admin/programs/new", label: "New event page", icon: "Plus", end: true, feature: "programs", action: "edit" },
       { id: "programs-all", to: "/admin/programs", label: "All programs", icon: "CalendarDays", end: true, feature: "programs" },
       { id: "programs-types", to: "/admin/programs/types", label: "Program types", icon: "Layers", end: true, feature: "program_types" },
       { id: "programs-branches", to: "/admin/programs/branches", label: "Branches", icon: "Church", end: true, feature: "church_branches" },
@@ -187,6 +188,35 @@ export function pathMatches(pathname, matchPrefix) {
   if (!matchPrefix) return false;
   const prefixes = Array.isArray(matchPrefix) ? matchPrefix : [matchPrefix];
   return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+/** Attach live program registration items (FFIEYC, future events) under Registrations → Programs. */
+export function withProgramRegistrationNav(nav, programNav = []) {
+  const items = Array.isArray(programNav) ? programNav : [];
+  return (nav || []).map((node) => {
+    if (node.id !== "registrations") return node;
+    return {
+      ...node,
+      children: (node.children || []).map((child) => {
+        if (child.id !== "reg-programs") return child;
+        return {
+          ...child,
+          children: [
+            ...(child.children || []),
+            ...items.map((p) => ({
+              id: `reg-program-${p.id}`,
+              to: `/admin/registrations/programs/${p.id}`,
+              label: p.short_code || p.title,
+              icon: "CalendarDays",
+              end: true,
+              feature: "program_registrations",
+              badgeKey: `program_reg_${p.id}`,
+            })),
+          ],
+        };
+      }),
+    };
+  });
 }
 
 export function flattenNavLeaves(nodes, acc = []) {

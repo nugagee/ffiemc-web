@@ -62,6 +62,8 @@ Then run `supabase/migrations/20260908_member_multiple_roles.sql` so a member ca
 
 Then run `supabase/migrations/20260909_admin_utilities.sql` for private admin notes/diary used under Utilities.
 
+Then run `supabase/migrations/20260910_event_pages_person_names.sql` for FFIEYC-style program nav, registration counts, title + first/last name on forms, and structured registration emails.
+
 Built-in lists still work from the frontend defaults if this migration is not run yet; admin “Save” falls back to updating site settings when the RPC is missing (needs permission to edit settings).
 
 **Admin:** Programs submenu (programs, types, branches, registrations, roles, members, **announcements**)

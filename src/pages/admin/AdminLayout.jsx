@@ -4,7 +4,7 @@ import { LogOut } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useSettings } from "../../context/SettingsContext";
 import { SITE_PAGES } from "../../data/sitePages";
-import { ADMIN_NAV } from "../../data/adminNav";
+import { ADMIN_NAV, withProgramRegistrationNav } from "../../data/adminNav";
 import { NestedNav, flattenVisibleLeaves } from "../../components/admin/NestedNav";
 import { AdminCountsProvider, useAdminCounts } from "../../context/AdminCountsContext";
 import { AdminActivityTracker } from "../../components/AdminActivityTracker";
@@ -128,6 +128,7 @@ function AdminLayoutInner() {
     }
   };
 
+  const navItems = withProgramRegistrationNav(ADMIN_NAV, counts.program_nav);
   const navCtx = { can, isSuperadmin, isPastor };
   const visiblePages = isPastor
     ? []
@@ -140,7 +141,7 @@ function AdminLayoutInner() {
       }));
 
   const mobileLinks = [
-    ...flattenVisibleLeaves(ADMIN_NAV, navCtx),
+    ...flattenVisibleLeaves(navItems, navCtx),
     ...visiblePages.map((page) => ({ to: page.to, label: page.label, end: true })),
   ];
 
@@ -155,7 +156,7 @@ function AdminLayoutInner() {
           </div>
         </div>
         <nav className="flex-1 min-h-0 px-3 py-5 overflow-y-auto overscroll-contain space-y-5">
-          <NestedNav items={ADMIN_NAV} can={can} isSuperadmin={isSuperadmin} isPastor={isPastor} badges={counts} />
+          <NestedNav items={navItems} can={can} isSuperadmin={isSuperadmin} isPastor={isPastor} badges={counts} />
           {visiblePages.length > 0 && <WebsitePagesNav pages={visiblePages} />}
         </nav>
         <div className="shrink-0 px-6 py-6 border-t border-white/10">

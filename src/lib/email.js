@@ -1,3 +1,32 @@
+export function parseEmailList(...values) {
+  const seen = new Set();
+  const out = [];
+  String(values.flat().filter(Boolean).join(","))
+    .split(/[,;\n]+/)
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s))
+    .forEach((email) => {
+      if (!seen.has(email)) {
+        seen.add(email);
+        out.push(email);
+      }
+    });
+  return out;
+}
+
+async function postFormSubmit(to, body) {
+  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.message || "Could not send email");
+  }
+  return response.json();
+}
+
 export async function sendContactEmails({ name, email, subject, message, phone, adminEmail }) {
   const to = adminEmail || "adenugaolajideadewale@gmail.com";
   const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
@@ -216,46 +245,77 @@ export async function sendPastorCredentialsEmail({
 /** Program registration: notify event admin + confirmation to participant. */
 export async function sendProgramRegistrationEmails({
   programTitle,
+  shortCode,
   adminEmail,
+  adminEmails,
   fullName,
+  firstName,
+  nameTitle,
+  lastName,
   email,
   phone,
   formData = {},
   branchName = "",
+  venue = "",
+  startsAt,
+  endsAt,
+  confirmationId,
   fallbackAdminEmail,
 }) {
-  const to = adminEmail || fallbackAdminEmail || "adenugaolajideadewale@gmail.com";
-  const first = (fullName || "").split(" ")[0] || fullName || "Friend";
+  const recipients = parseEmailList(adminEmails, adminEmail, fallbackAdminEmail);
+  if (!recipients.length) recipients.push("adenugaolajideadewale@gmail.com");
+  const greeting = firstName || (fullName || "").split(" ")[0] || "Friend";
+  const eventLabel = shortCode ? `${shortCode} — ${programTitle}` : programTitle;
+  const when = [startsAt, endsAt]
+    .filter(Boolean)
+    .map((d) => new Date(d).toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric" }))
+    .join(" – ");
   const extra = Object.entries(formData || {})
     .map(([k, v]) => `${k}: ${v}`)
     .join("\n");
 
-  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      name: fullName,
-      email,
-      phone: phone || "",
-      program: programTitle,
-      church_branch: branchName || "",
-      details: extra || "—",
-      _subject: `New registration: ${programTitle} — ${fullName}`,
-      _template: "table",
-      _captcha: "false",
-      _autoresponse:
-        `Hi ${first},\n\n` +
-        `Your registration for "${programTitle}" at Fire-Fire International Evangelical Church has been received.\n\n` +
-        `We look forward to seeing you. A copy of this confirmation has been sent to the program coordinator.\n\n` +
-        `— Fire-Fire International Evangelical Church`,
-    }),
-  });
+  const userCopy =
+    `Dear ${nameTitle ? `${nameTitle} ` : ""}${greeting},\n\n` +
+    `Thank you for registering for ${eventLabel} at Fire-Fire International Evangelical Church.\n\n` +
+    `REGISTRATION CONFIRMATION\n` +
+    `-------------------------\n` +
+    `Reference: ${confirmationId || "pending"}\n` +
+    `Name: ${fullName}\n` +
+    `Email: ${email}\n` +
+    `Phone: ${phone || "—"}\n` +
+    `Branch: ${branchName || "—"}\n` +
+    (venue ? `Venue: ${venue}\n` : "") +
+    (when ? `Dates: ${when}\n` : "") +
+    `\nPlease keep this email as your record. We look forward to welcoming you.\n\n` +
+    `— Fire-Fire International Evangelical Church`;
 
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.message || "Could not send registration emails");
+  const payload = {
+    _subject: `New ${shortCode || "program"} registration — ${fullName}`,
+    _template: "table",
+    _captcha: "false",
+    event: eventLabel,
+    confirmation_id: confirmationId || "",
+    title: nameTitle || "",
+    first_name: firstName || "",
+    last_name: lastName || "",
+    name: fullName,
+    email,
+    phone: phone || "",
+    church_branch: branchName || "",
+    venue: venue || "",
+    dates: when || "",
+    extra_details: extra || "—",
+    coordinators_notified: recipients.join(", "),
+  };
+
+  let last;
+  for (let i = 0; i < recipients.length; i += 1) {
+    last = await postFormSubmit(recipients[i], {
+      ...payload,
+      ...(i === 0 ? { _autoresponse: userCopy } : {}),
+    });
   }
-  return response.json();
+  return last;
 }
 
 /** Church membership: notify admin + confirmation to applicant. */

@@ -211,6 +211,14 @@ const AllPages = () => (
                 }
               />
               <Route
+                path="programs/new"
+                element={
+                  <RequirePermission feature="programs" action="edit">
+                    <ProgramsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
                 path="programs"
                 element={
                   <RequirePermission feature="programs">
@@ -318,6 +326,14 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="banners">
                     <BannerAnalyticsPage view="activity" />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="registrations/programs/:programId"
+                element={
+                  <RequirePermission feature="program_registrations">
+                    <ProgramRegistrationsPage />
                   </RequirePermission>
                 }
               />

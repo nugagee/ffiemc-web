@@ -19,6 +19,8 @@ import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Send } from "lucide-react";
 import { PhoneField } from "../components/forms/PhoneField";
+import { PersonNameFields } from "../components/forms/PersonNameFields";
+import { withPersonPayload } from "../lib/personName";
 
 export function VolunteerRegisterPage() {
   const { slug } = useParams();
@@ -28,7 +30,9 @@ export function VolunteerRegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [form, setForm] = useState({
-    full_name: "",
+    name_title: "",
+    first_name: "",
+    last_name: "",
     email: "",
     phone: "",
     branch_id: "",
@@ -54,10 +58,11 @@ export function VolunteerRegisterPage() {
     }
     setSubmitting(true);
     try {
-      const result = await submitVolunteerApplication(slug, form);
+      const person = withPersonPayload(form);
+      const result = await submitVolunteerApplication(slug, { ...form, ...person });
       try {
         await sendVolunteerApplicationEmails({
-          fullName: form.full_name,
+          fullName: person.full_name,
           email: form.email,
           phone: form.phone,
           teamName: result.teamName || team.name,
@@ -129,9 +134,8 @@ export function VolunteerRegisterPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-1">Register your interest</h2>
             <p className="text-sm text-gray-500 mb-5">Share this page with church groups. Applications stay pending until an assigned admin approves them.</p>
             <form onSubmit={submit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Full name *</Label>
-                <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+              <div className="grid sm:grid-cols-3 gap-4">
+                <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} />
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { authApi, formatApiError } from "../../../lib/api";
+import { requestOrApply } from "../../../lib/changeRequests";
 import { useAuth } from "../../../context/AuthContext";
+import { useAdminCounts } from "../../../context/AdminCountsContext";
 import { DataToolbar } from "../../../components/admin/DataToolbar";
 import { exportToCsv, filterRows } from "../../../lib/exportCsv";
 import { Button } from "../../../components/ui/button";
@@ -13,10 +15,12 @@ import { Pencil, Trash2 } from "lucide-react";
 import { TableActions } from "../../../components/admin/TableActions";
 import { TablePagination, usePagedRows } from "../../../components/admin/TablePagination";
 import { RecordViewDialog } from "../../../components/admin/RecordViewDialog";
-import { requestOrApply } from "../../../lib/changeRequests";
+import { PersonNameFields } from "../../../components/forms/PersonNameFields";
+import { personFromRow, withPersonPayload } from "../../../lib/personName";
 
 export default function VolunteersPage({ view = "applications" }) {
   const { can, isSuperadmin } = useAuth();
+  const { refreshCounts } = useAdminCounts();
   const canEdit = can("volunteer_applications", "edit");
   const canDelete = can("volunteer_applications", "delete");
   const [rows, setRows] = useState([]);
@@ -35,6 +39,12 @@ export default function VolunteersPage({ view = "applications" }) {
     ]);
     setRows(apps || []);
     setAudit(logs || []);
+    try {
+      await authApi.markVolunteerApplicationsSeen();
+      refreshCounts();
+    } catch {
+      /* optional */
+    }
   };
 
   useEffect(() => {
@@ -57,7 +67,10 @@ export default function VolunteersPage({ view = "applications" }) {
 
   const exportCsv = () => {
     exportToCsv(`volunteer-applications-${Date.now()}`, filtered, [
-      { key: "full_name", label: "Name" },
+      { key: "name_title", label: "Title" },
+      { key: "first_name", label: "First name" },
+      { key: "last_name", label: "Last name" },
+      { key: "full_name", label: "Full name" },
       { key: "email", label: "Email" },
       { key: "phone", label: "Phone" },
       { key: "team_name", label: "Team" },
@@ -74,16 +87,17 @@ export default function VolunteersPage({ view = "applications" }) {
 
   const save = async (e) => {
     e.preventDefault();
+    const person = withPersonPayload(form);
     const result = await requestOrApply({
       isSuperadmin,
       feature: "volunteer_applications",
       action: "update",
       resourceType: "volunteer_applications",
       resourceId: editRow.id,
-      title: `Update volunteer ${form.full_name}`,
-      payload: form,
+      title: `Update volunteer ${person.full_name}`,
+      payload: { ...form, ...person },
       previous: editRow,
-      apply: () => authApi.updateVolunteerApplication(editRow.id, form),
+      apply: () => authApi.updateVolunteerApplication(editRow.id, { ...form, ...person }),
     });
     if (!result.queued) toast.success("Application updated");
     setEditRow(null);
@@ -122,7 +136,9 @@ export default function VolunteersPage({ view = "applications" }) {
 
       {editRow && (
         <form onSubmit={save} className="mb-6 rounded-2xl border bg-white p-5 grid md:grid-cols-2 gap-4">
-          <div className="space-y-2 md:col-span-2"><Label>Name</Label><Input value={form.full_name || ""} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
+          <div className="md:col-span-2 grid md:grid-cols-3 gap-4">
+            <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} />
+          </div>
           <div className="space-y-2"><Label>Email</Label><Input value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
           <div className="space-y-2"><Label>Phone</Label><Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
           <div className="space-y-2"><Label>Role</Label><Input value={form.role_interest || ""} onChange={(e) => setForm({ ...form, role_interest: e.target.value })} /></div>
@@ -166,7 +182,7 @@ export default function VolunteersPage({ view = "applications" }) {
                 <td className="px-3 py-2 whitespace-nowrap">
                   <TableActions
                     onView={() => setViewRow(r)}
-                    onEdit={() => { setEditRow(r); setForm(r); }}
+                    onEdit={() => { setEditRow(r); setForm({ ...r, ...personFromRow(r) }); }}
                     canEdit={canEdit}
                     canDelete={canDelete}
                     onDelete={async () => {

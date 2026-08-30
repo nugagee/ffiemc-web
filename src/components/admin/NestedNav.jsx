@@ -118,6 +118,23 @@ function isGroupActive(node, pathname) {
   return (node.children || []).some((child) => isGroupActive(child, pathname));
 }
 
+function nodeBadge(node, badges = {}) {
+  if (node.badgeKey && Number(badges[node.badgeKey]) > 0) return Number(badges[node.badgeKey]);
+  if (node.children?.length) {
+    return node.children.reduce((sum, child) => sum + nodeBadge(child, badges), 0);
+  }
+  return 0;
+}
+
+function BadgePill({ count }) {
+  if (!Number(count)) return null;
+  return (
+    <span className="ml-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-amber-400 text-gray-900 text-[10px] font-bold flex items-center justify-center">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 function LeafLink({ node, depth, badges = {} }) {
   const location = useLocation();
   const pad = depth === 0 ? "px-4 py-2.5 text-sm gap-3" : "px-3 py-2 text-[13px] gap-2";
@@ -139,11 +156,7 @@ function LeafLink({ node, depth, badges = {} }) {
     >
       <Icon name={node.icon} size={iconSize} />
       <span className="flex-1 text-left">{node.label}</span>
-      {Number(badge) > 0 ? (
-        <span className="ml-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-amber-400 text-gray-900 text-[10px] font-bold flex items-center justify-center">
-          {badge > 99 ? "99+" : badge}
-        </span>
-      ) : null}
+      <BadgePill count={badge} />
     </NavLink>
   );
 }
@@ -160,6 +173,8 @@ function Group({ node, depth, ctx, badges }) {
   const pad = depth === 0 ? "px-4 py-2.5 text-sm gap-3 rounded-xl" : "px-3 py-2 text-[13px] gap-2 rounded-lg";
   const iconSize = depth === 0 ? 16 : 14;
 
+  const groupCount = nodeBadge(node, badges);
+
   return (
     <div>
       <button
@@ -171,6 +186,7 @@ function Group({ node, depth, ctx, badges }) {
       >
         <Icon name={node.icon} size={iconSize} />
         <span className="flex-1 text-left">{node.label}</span>
+        <BadgePill count={groupCount} />
         <ChevronDown size={14} className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
       </button>
       <AnimatePresence initial={false}>

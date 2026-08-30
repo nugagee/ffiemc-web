@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { authApi } from "../../../lib/api";
 import { useAuth } from "../../../context/AuthContext";
@@ -53,11 +53,13 @@ function registrationStatus(p) {
 
 const emptyForm = () => ({
   title: "",
+  short_code: "",
   slug: "",
   type_id: "",
   description: "",
   venue: "",
   admin_email: "",
+  coordinator_emails: [""],
   starts_at: "",
   ends_at: "",
   registration_opens_at: "",
@@ -74,6 +76,8 @@ function setPage(form, patch) {
 
 export default function ProgramsPage() {
   const { can } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const canEdit = can("programs", "edit");
   const canDelete = can("programs", "delete");
   const [types, setTypes] = useState([]);
@@ -93,6 +97,15 @@ export default function ProgramsPage() {
     load().catch((e) => toast.error(e.message));
   }, []);
 
+  useEffect(() => {
+    if (location.pathname.endsWith("/new") && canEdit) {
+      setForm(emptyForm());
+      setEditing(null);
+      setOpen(true);
+      setTab("details");
+    }
+  }, [location.pathname, canEdit]);
+
   const reset = () => {
     setForm(emptyForm());
     setEditing(null);
@@ -104,6 +117,7 @@ export default function ProgramsPage() {
     e.preventDefault();
     await authApi.upsertProgram(editing?.id || null, {
       ...form,
+      admin_email: (form.coordinator_emails || []).map((e) => String(e).trim()).filter(Boolean).join(", "),
       slug: form.slug || slugify(form.title),
       starts_at: fromLocalInput(form.starts_at) || null,
       ends_at: fromLocalInput(form.ends_at) || null,
@@ -115,6 +129,7 @@ export default function ProgramsPage() {
     toast.success(editing ? "Program updated" : "Program created");
     reset();
     load();
+    if (location.pathname.endsWith("/new")) navigate("/admin/programs");
   };
 
   const addField = () => {
@@ -137,11 +152,16 @@ export default function ProgramsPage() {
     setEditing(p);
     setForm({
       title: p.title,
+      short_code: p.short_code || "",
       slug: p.slug,
       type_id: p.type_id || "",
       description: p.description || "",
       venue: p.venue || "",
       admin_email: p.admin_email || "",
+      coordinator_emails: (() => {
+        const emails = String(p.admin_email || "").split(/[,;\n]+/).map((e) => e.trim()).filter(Boolean);
+        return emails.length ? emails : [""];
+      })(),
       starts_at: toLocalInput(p.starts_at),
       ends_at: toLocalInput(p.ends_at),
       registration_opens_at: toLocalInput(p.registration_opens_at),
@@ -180,8 +200,13 @@ export default function ProgramsPage() {
           <Button
             className="bg-red-600 hover:bg-red-700"
             onClick={() => {
-              reset();
-              setOpen(true);
+              if (location.pathname.endsWith("/new")) {
+                setForm(emptyForm());
+                setEditing(null);
+                setOpen(true);
+              } else {
+                navigate("/admin/programs/new");
+              }
             }}
           >
             <Plus size={16} className="mr-2" /> New program
@@ -217,6 +242,15 @@ export default function ProgramsPage() {
                 />
               </div>
               <div className="space-y-2">
+                <Label>Short code (sidebar)</Label>
+                <Input
+                  value={form.short_code}
+                  onChange={(e) => setForm({ ...form, short_code: e.target.value.toUpperCase() })}
+                  placeholder="e.g. FFIEYC"
+                />
+                <p className="text-xs text-gray-500">Shown under Registrations instead of “Sign-ups”.</p>
+              </div>
+              <div className="space-y-2">
                 <Label>Public URL slug</Label>
                 <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: slugify(e.target.value) })} required />
                 <p className="text-xs text-gray-500">
@@ -230,9 +264,47 @@ export default function ProgramsPage() {
                   <SelectContent>{types.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Admin / coordinator email</Label>
-                <Input type="email" value={form.admin_email} onChange={(e) => setForm({ ...form, admin_email: e.target.value })} />
+              <div className="space-y-2 md:col-span-2">
+                <Label>Coordinator emails</Label>
+                <p className="text-xs text-gray-500">Each address receives a copy of every new registration. The participant still gets one confirmation.</p>
+                <div className="space-y-2">
+                  {(form.coordinator_emails || [""]).map((addr, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <Input
+                        type="email"
+                        value={addr}
+                        placeholder="coordinator@church.org"
+                        onChange={(e) => {
+                          const next = [...(form.coordinator_emails || [""])];
+                          next[idx] = e.target.value;
+                          setForm({ ...form, coordinator_emails: next });
+                        }}
+                      />
+                      {(form.coordinator_emails || []).length > 1 ? (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="text-red-600"
+                          onClick={() => setForm({
+                            ...form,
+                            coordinator_emails: form.coordinator_emails.filter((_, i) => i !== idx),
+                          })}
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setForm({ ...form, coordinator_emails: [...(form.coordinator_emails || []), ""] })}
+                >
+                  <Plus size={14} className="mr-1" /> Add coordinator email
+                </Button>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label>Venue</Label>
@@ -339,7 +411,7 @@ export default function ProgramsPage() {
 
           {tab === "form" && (
             <div className="space-y-3">
-              <p className="text-sm text-gray-500">Name, email, and phone are always collected. Add extra questions for this program only.</p>
+              <p className="text-sm text-gray-500">Title, first name, last name, email, and phone are always collected. Home church is not used — participants pick a church branch. Add extra questions for this event only.</p>
               <ul className="text-sm text-gray-700 space-y-1">
                 {form.form_fields.map((f) => (
                   <li key={f.name} className="flex justify-between gap-3 border-b border-gray-50 py-1">
@@ -348,7 +420,7 @@ export default function ProgramsPage() {
                       {f.required ? " *" : ""}
                       {f.options?.length ? ` — ${f.options.join(", ")}` : ""}
                     </span>
-                    {!["full_name", "email", "phone"].includes(f.name) && (
+                    {!["full_name", "first_name", "last_name", "name_title", "email", "phone", "church", "home_church"].includes(f.name) && (
                       <button
                         type="button"
                         className="text-red-600 text-xs"
@@ -400,6 +472,7 @@ export default function ProgramsPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-semibold text-lg">{p.title}</h3>
+                  {p.short_code ? <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-800">{p.short_code}</span> : null}
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.tone}`}>{status.label}</span>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">{p.type_name} · {p.registration_count || 0} registrations</p>
@@ -413,7 +486,7 @@ export default function ProgramsPage() {
                 </Link>
               </div>
               <div className="flex gap-2">
-                <Button asChild variant="outline" size="sm"><Link to={`/admin/registrations/programs?program=${p.id}`}>Registrations</Link></Button>
+                <Button asChild variant="outline" size="sm"><Link to={`/admin/registrations/programs/${p.id}`}>Registrations</Link></Button>
                 {canEdit && <Button size="sm" variant="outline" onClick={() => editProgram(p)}>Edit</Button>}
                 {canDelete && (
                   <Button size="sm" variant="outline" className="text-red-600" onClick={async () => { await authApi.deleteProgram(p.id); load(); }}>

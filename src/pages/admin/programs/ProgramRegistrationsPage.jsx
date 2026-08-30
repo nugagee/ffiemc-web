@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { authApi } from "../../../lib/api";
 import { useAuth } from "../../../context/AuthContext";
 import { useSettings } from "../../../context/SettingsContext";
+import { useAdminCounts } from "../../../context/AdminCountsContext";
 import { sendProgramRegistrationEmails } from "../../../lib/email";
 import { DataToolbar } from "../../../components/admin/DataToolbar";
 import { exportToCsv, filterRows } from "../../../lib/exportCsv";
@@ -13,11 +14,15 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
-import { Pencil, Trash2 } from "lucide-react";
 import { TableActions } from "../../../components/admin/TableActions";
 import { TablePagination, usePagedRows } from "../../../components/admin/TablePagination";
 import { RecordViewDialog } from "../../../components/admin/RecordViewDialog";
+import { PageToolbar } from "../../../components/admin/PageToolbar";
+import { PersonNameFields } from "../../../components/forms/PersonNameFields";
+import { PhoneField } from "../../../components/forms/PhoneField";
+import { personFromRow, withPersonPayload } from "../../../lib/personName";
 import { requestOrApply } from "../../../lib/changeRequests";
+import { Plus } from "lucide-react";
 
 function formatDate(v) {
   return v ? new Date(v).toLocaleString("en-GB") : "—";
@@ -26,8 +31,11 @@ function formatDate(v) {
 export default function ProgramRegistrationsPage() {
   const { can, isSuperadmin } = useAuth();
   const { settings } = useSettings();
+  const { refreshCounts } = useAdminCounts();
+  const navigate = useNavigate();
+  const { programId } = useParams();
   const [searchParams] = useSearchParams();
-  const programFilter = searchParams.get("program") || "";
+  const programFilter = programId || searchParams.get("program") || "";
 
   const canEdit = can("program_registrations", "edit");
   const canDelete = can("program_registrations", "delete");
@@ -40,7 +48,7 @@ export default function ProgramRegistrationsPage() {
   const [registerOpen, setRegisterOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
   const [viewRow, setViewRow] = useState(null);
-  const [form, setForm] = useState({ full_name: "", email: "", phone: "", branch_id: "", status: "registered", extras: {} });
+  const [form, setForm] = useState({ name_title: "", first_name: "", last_name: "", email: "", phone: "", branch_id: "", status: "registered", extras: {} });
 
   const activeProgram = programs.find((p) => p.id === selectedProgram);
 
@@ -51,6 +59,14 @@ export default function ProgramRegistrationsPage() {
     ]);
     setPrograms(p);
     setRows(r);
+    if (selectedProgram) {
+      try {
+        await authApi.markProgramRegistrationsSeen(selectedProgram);
+        refreshCounts();
+      } catch {
+        /* migration may not be applied yet */
+      }
+    }
   };
 
   useEffect(() => {
@@ -63,7 +79,7 @@ export default function ProgramRegistrationsPage() {
   }, [selectedProgram, selectedBranch]);
 
   const filtered = useMemo(
-    () => filterRows(rows, query, ["full_name", "email", "phone", "program_title", "branch_name", "status", "form_data"]),
+    () => filterRows(rows, query, ["full_name", "first_name", "last_name", "email", "phone", "program_title", "branch_name", "status", "form_data"]),
     [rows, query]
   );
   const paged = usePagedRows(filtered);
@@ -71,7 +87,10 @@ export default function ProgramRegistrationsPage() {
   const exportCsv = () => {
     exportToCsv(`program-registrations-${Date.now()}`, filtered, [
       { key: "program_title", label: "Program" },
-      { key: "full_name", label: "Name" },
+      { key: "full_name", label: "Full name" },
+      { key: "name_title", label: "Title" },
+      { key: "first_name", label: "First name" },
+      { key: "last_name", label: "Last name" },
       { key: "email", label: "Email" },
       { key: "branch_name", label: "Branch" },
       { label: "Extra", value: (r) => JSON.stringify(r.form_data || {}) },
@@ -82,9 +101,10 @@ export default function ProgramRegistrationsPage() {
   const submitRegister = async (e) => {
     e.preventDefault();
     if (!activeProgram) return toast.error("Select a program first");
+    const person = withPersonPayload(form);
     const form_data = buildFormData(activeProgram.form_fields, form.extras);
     const result = await authApi.registerProgramParticipant(activeProgram.slug, {
-      full_name: form.full_name,
+      ...person,
       email: form.email,
       phone: form.phone,
       branch_id: form.branch_id,
@@ -93,12 +113,20 @@ export default function ProgramRegistrationsPage() {
     try {
       await sendProgramRegistrationEmails({
         programTitle: result.programTitle,
+        shortCode: result.shortCode,
         adminEmail: result.adminEmail,
-        fullName: form.full_name,
+        fullName: person.full_name,
+        firstName: person.first_name,
+        lastName: person.last_name,
+        nameTitle: person.name_title,
         email: form.email,
         phone: form.phone,
         formData: form_data,
         branchName: result.branchName,
+        venue: result.venue,
+        startsAt: result.startsAt,
+        endsAt: result.endsAt,
+        confirmationId: result.id,
         fallbackAdminEmail: settings.notificationEmail,
       });
       await authApi.markProgramRegistrationEmailed(result.id);
@@ -107,13 +135,14 @@ export default function ProgramRegistrationsPage() {
     }
     toast.success("Participant registered");
     setRegisterOpen(false);
-    setForm({ full_name: "", email: "", phone: "", branch_id: "", status: "registered", extras: {} });
+    setForm({ name_title: "", first_name: "", last_name: "", email: "", phone: "", branch_id: "", status: "registered", extras: {} });
     load();
   };
 
   const saveEdit = async () => {
+    const person = withPersonPayload(form);
     const payload = {
-      full_name: form.full_name,
+      ...person,
       email: form.email,
       phone: form.phone,
       branch_id: form.branch_id,
@@ -126,7 +155,7 @@ export default function ProgramRegistrationsPage() {
       action: "update",
       resourceType: "program_registrations",
       resourceId: editRow.id,
-      title: `Update registration ${form.full_name}`,
+      title: `Update registration ${person.full_name}`,
       payload,
       previous: editRow,
       apply: () => authApi.updateProgramRegistration(editRow.id, payload),
@@ -136,19 +165,49 @@ export default function ProgramRegistrationsPage() {
     load();
   };
 
+  const heading = activeProgram
+    ? (activeProgram.short_code || activeProgram.title)
+    : "All program registrations";
+
   return (
     <div>
-      <p className="text-xs uppercase tracking-[0.25em] text-red-600 font-semibold">Programs</p>
-      <h1 className="text-3xl font-bold mt-2">Registrations</h1>
+      <PageToolbar
+        align="start"
+        left={(
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-red-600 font-semibold">Registrations</p>
+            <h1 className="text-3xl font-bold mt-2">{heading}</h1>
+            <p className="text-sm text-gray-500 mt-2">
+              {activeProgram
+                ? `Register participants for ${activeProgram.title}. Public page: /register/${activeProgram.slug}`
+                : "Choose a program in the sidebar (for example FFIEYC) or filter below. New registrations show a count until you open them."}
+            </p>
+          </div>
+        )}
+        right={canEdit && activeProgram ? (
+          <Button className="bg-red-600 hover:bg-red-700" onClick={() => { setEditRow(null); setRegisterOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" /> Register participant
+          </Button>
+        ) : null}
+      />
 
       <div className="mt-6 flex flex-wrap gap-3 items-end">
         <div className="space-y-1">
           <Label className="text-xs">Filter by program</Label>
-          <Select value={selectedProgram || "all"} onValueChange={(v) => setSelectedProgram(v === "all" ? "" : v)}>
+          <Select
+            value={selectedProgram || "all"}
+            onValueChange={(v) => {
+              const id = v === "all" ? "" : v;
+              setSelectedProgram(id);
+              navigate(id ? `/admin/registrations/programs/${id}` : "/admin/registrations/programs");
+            }}
+          >
             <SelectTrigger className="w-64"><SelectValue placeholder="All programs" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All programs</SelectItem>
-              {programs.map((p) => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
+              {programs.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.short_code ? `${p.short_code} — ${p.title}` : p.title}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -156,11 +215,6 @@ export default function ProgramRegistrationsPage() {
           <Label className="text-xs">Filter by branch</Label>
           <BranchSelect value={selectedBranch} onChange={setSelectedBranch} required={false} label="" />
         </div>
-        {canEdit && activeProgram && (
-          <Button className="bg-red-600 hover:bg-red-700" onClick={() => setRegisterOpen(true)}>
-            Register participant
-          </Button>
-        )}
       </div>
 
       <div className="mt-6">
@@ -168,12 +222,21 @@ export default function ProgramRegistrationsPage() {
       </div>
 
       {(registerOpen || editRow) && canEdit && (
-        <div className="mb-6 rounded-2xl border bg-white p-5 space-y-4">
+        <form
+          className="mb-6 rounded-2xl border bg-white p-5 space-y-4"
+          onSubmit={(e) => { e.preventDefault(); editRow ? saveEdit() : submitRegister(e); }}
+        >
           <h3 className="font-semibold">{editRow ? "Edit registration" : `Register for ${activeProgram?.title}`}</h3>
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="space-y-2"><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required /></div>
+            <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} />
             <div className="space-y-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
-            <div className="space-y-2"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+            <PhoneField
+              id="admin-program-phone"
+              label="Phone"
+              value={form.phone}
+              onChange={(v) => setForm({ ...form, phone: v })}
+              required
+            />
           </div>
           <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} />
           {!editRow && activeProgram && (
@@ -195,12 +258,12 @@ export default function ProgramRegistrationsPage() {
             </div>
           )}
           <div className="flex gap-2">
-            <Button className="bg-red-600 hover:bg-red-700" onClick={editRow ? saveEdit : submitRegister}>
+            <Button type="submit" className="bg-red-600 hover:bg-red-700">
               {editRow ? "Save" : "Register & email"}
             </Button>
-            <Button variant="outline" onClick={() => { setRegisterOpen(false); setEditRow(null); }}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => { setRegisterOpen(false); setEditRow(null); }}>Cancel</Button>
           </div>
-        </div>
+        </form>
       )}
 
       <div className="rounded-2xl border bg-white overflow-x-auto">
@@ -228,7 +291,7 @@ export default function ProgramRegistrationsPage() {
                 <td className="px-4 py-3">
                   <TableActions
                     onView={() => setViewRow(row)}
-                    onEdit={() => { setEditRow(row); setForm({ full_name: row.full_name, email: row.email, phone: row.phone, branch_id: row.branch_id || "", status: row.status, extras: row.form_data || {} }); }}
+                    onEdit={() => { setEditRow(row); setForm({ ...personFromRow(row), email: row.email, phone: row.phone, branch_id: row.branch_id || "", status: row.status, extras: row.form_data || {} }); }}
                     canEdit={canEdit}
                     canDelete={canDelete}
                     onDelete={async () => {
@@ -263,6 +326,9 @@ export default function ProgramRegistrationsPage() {
         title={viewRow?.full_name || "Registration"}
         fields={viewRow ? [
           { label: "Program", value: viewRow.program_title },
+          { label: "Title", value: viewRow.name_title },
+          { label: "First name", value: viewRow.first_name },
+          { label: "Last name", value: viewRow.last_name },
           { label: "Email", value: viewRow.email },
           { label: "Phone", value: viewRow.phone },
           { label: "Branch", value: viewRow.branch_name },

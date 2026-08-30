@@ -25,10 +25,12 @@ import { TablePagination, usePagedRows } from "../../../components/admin/TablePa
 import { RoleMultiSelect, memberRoleIds, memberRoleLabel } from "../../../components/forms/RoleMultiSelect";
 import { PageToolbar } from "../../../components/admin/PageToolbar";
 import { RecordViewDialog } from "../../../components/admin/RecordViewDialog";
+import { PersonNameFields } from "../../../components/forms/PersonNameFields";
+import { personFromRow, withPersonPayload } from "../../../lib/personName";
 import { Plus } from "lucide-react";
 
 const emptyForm = {
-  full_name: "", email: "", phone: "", gender: "", date_of_birth: "",
+  name_title: "", first_name: "", last_name: "", email: "", phone: "", gender: "", date_of_birth: "",
   address: "", city: "", state: "", country: DEFAULT_COUNTRY,
   role_ids: [], branch_id: "", ministry: "", baptism_status: "", marital_status: "",
   occupation: "", emergency_contact_name: "", emergency_contact_phone: "", notes: "", status: "pending", form_data: {},
@@ -87,7 +89,10 @@ export default function ChurchMembersPage() {
 
   const exportCsv = () => {
     exportToCsv(`church-members-${Date.now()}`, filtered, [
-      { key: "full_name", label: "Name" },
+      { key: "name_title", label: "Title" },
+      { key: "first_name", label: "First name" },
+      { key: "last_name", label: "Last name" },
+      { key: "full_name", label: "Full name" },
       { key: "email", label: "Email" },
       { key: "phone", label: "Phone" },
       { key: "branch_name", label: "Branch" },
@@ -107,8 +112,10 @@ export default function ChurchMembersPage() {
       toast.error("Select at least one church role");
       return;
     }
+    const person = withPersonPayload(form);
     const payload = {
       ...form,
+      ...person,
       role_id: form.role_ids[0],
       role_names: memberRoleLabel({ role_ids: form.role_ids }, roles),
     };
@@ -119,7 +126,7 @@ export default function ChurchMembersPage() {
         action: "update",
         resourceType: "church_members",
         resourceId: editRow.id,
-        title: `Update member ${form.full_name}`,
+        title: `Update member ${person.full_name}`,
         payload,
         previous: editRow,
         apply: () => authApi.updateChurchMember(editRow.id, payload),
@@ -132,7 +139,7 @@ export default function ChurchMembersPage() {
         if (becameApproved && form.email) {
           try {
             await sendMembershipApprovedEmail({
-              fullName: form.full_name,
+              fullName: person.full_name,
               email: form.email,
               roleName: memberRoleLabel({ role_ids: form.role_ids }, roles) || editRow.role_name || "",
               branchName: editRow.branch_name || "",
@@ -145,7 +152,10 @@ export default function ChurchMembersPage() {
       }
     } else {
       const result = await authApi.registerChurchMember({
-        p_full_name: form.full_name,
+        p_full_name: person.full_name,
+        p_name_title: person.name_title,
+        p_first_name: person.first_name,
+        p_last_name: person.last_name,
         p_email: form.email,
         p_phone: form.phone,
         p_gender: form.gender,
@@ -168,7 +178,7 @@ export default function ChurchMembersPage() {
       });
       try {
         await sendChurchMembershipEmails({
-          fullName: form.full_name,
+          fullName: person.full_name,
           email: form.email,
           phone: form.phone,
           roleName: result.roleName,
@@ -190,7 +200,7 @@ export default function ChurchMembersPage() {
   const startEdit = (row) => {
     setEditRow(row);
     setForm({
-      full_name: row.full_name, email: row.email, phone: row.phone,
+      full_name: row.full_name, ...personFromRow(row), email: row.email, phone: row.phone,
       gender: row.gender || "", date_of_birth: row.date_of_birth || "",
       address: row.address || "", city: row.city || "", state: row.state || "",
       country: row.country || "Nigeria", role_ids: memberRoleIds(row), branch_id: row.branch_id || "",
@@ -267,15 +277,18 @@ export default function ChurchMembersPage() {
       {formOpen && canEdit && (
         <form onSubmit={save} className="mb-6 rounded-2xl border bg-white p-5 grid md:grid-cols-2 gap-4">
           <div className="md:col-span-2 font-semibold">{editRow ? "Edit member" : "Register member (admin)"}</div>
+          <div className="md:col-span-2 grid md:grid-cols-3 gap-4">
+            <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} />
+          </div>
           {[
-            ["full_name", "Full name"], ["email", "Email"],
+            ["email", "Email"],
             ["date_of_birth", "Date of birth", "date"],
             ["address", "Address"], ["city", "City"],
             ["emergency_contact_name", "Emergency contact name"],
           ].map(([key, label, type]) => (
             <div key={key} className="space-y-2">
               <Label>{label}</Label>
-              <Input type={type || "text"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} required={["full_name", "email"].includes(key)} />
+              <Input type={type || "text"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} required={["email"].includes(key)} />
             </div>
           ))}
           <PhoneField id="admin-member-phone" label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} required />

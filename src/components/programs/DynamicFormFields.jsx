@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Checkbox } from "../ui/checkbox";
 import { CORE_COUNTRIES, DEFAULT_COUNTRY } from "../../data/countries";
 
-const BASE_FIELDS = new Set(["full_name", "email", "phone"]);
+const BASE_FIELDS = new Set(["full_name", "first_name", "last_name", "name_title", "title", "email", "phone", "church", "home_church"]);
 
 export const GENDER_OPTIONS = ["Male", "Female"];
 
@@ -139,8 +139,5 @@ export function buildFormData(fields, values) {
 }
 
 export const DEFAULT_PROGRAM_FIELDS = [
-  { name: "full_name", label: "Full Name", type: "text", required: true },
-  { name: "email", label: "Email", type: "email", required: true },
-  { name: "phone", label: "Phone", type: "tel", required: true },
   { name: "gender", label: "Gender", type: "select", required: true, options: GENDER_OPTIONS },
 ];
