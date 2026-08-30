@@ -22,6 +22,9 @@ export function emptyPermissions() {
     contacts: { view: false, edit: false, delete: false },
     pages: {},
   };
+  DASHBOARD_FEATURES.forEach((feature) => {
+    next[feature.key] = Object.fromEntries((feature.actions || ["view"]).map((action) => [action, false]));
+  });
   SITE_PAGES.forEach((page) => {
     next.pages[page.key] = { access: false, sections: {} };
     page.sections.forEach((section) => {
@@ -34,9 +37,9 @@ export function emptyPermissions() {
 
 export function allPermissions() {
   const next = emptyPermissions();
-  next.overview.view = true;
-  next.visitors.view = true;
-  next.contacts = { view: true, edit: true, delete: true };
+  DASHBOARD_FEATURES.forEach((feature) => {
+    next[feature.key] = Object.fromEntries((feature.actions || ["view"]).map((action) => [action, true]));
+  });
   SITE_PAGES.forEach((page) => {
     next.pages[page.key].access = true;
     page.sections.forEach((section) => {
@@ -82,6 +85,18 @@ export function normalizePermissions(raw) {
     next.pages[page.key].access = Boolean(srcPage.access) || anySection;
   });
 
+  if (next.form_dropdowns && !raw.form_dropdowns && raw.church_members) {
+    next.form_dropdowns.view = Boolean(raw.church_members.view || raw.church_members.edit || raw.church_members.delete);
+    next.form_dropdowns.edit = Boolean(raw.church_members.edit);
+  }
+
+  const homeAnnouncements = next.pages.home?.sections?.announcements;
+  if (homeAnnouncements && !raw.banners) {
+    next.banners.view = Boolean(homeAnnouncements.edit || homeAnnouncements.delete || homeAnnouncements.view);
+    next.banners.edit = Boolean(homeAnnouncements.edit);
+    next.banners.delete = Boolean(homeAnnouncements.delete);
+  }
+
   Object.entries(LEGACY_SECTION).forEach(([legacy, dotted]) => {
     const [pageKey, sectionKey] = dotted.split(".");
     const src = raw[legacy];
@@ -124,8 +139,9 @@ export function hasPermission(user, feature, action = "view") {
   }
 
   const perms = normalizePermissions(user.permissions);
+  const dashboard = DASHBOARD_FEATURES.find((item) => item.key === feature);
 
-  if (feature === "overview" || feature === "visitors" || feature === "contacts") {
+  if (dashboard) {
     if (action === "view") return Boolean(perms[feature]?.view || perms[feature]?.edit || perms[feature]?.delete);
     return Boolean(perms[feature]?.[action]);
   }
@@ -156,6 +172,16 @@ export function firstAllowedPath(user) {
   if (hasPermission(user, "overview", "view")) return "/admin";
   if (hasPermission(user, "visitors", "view")) return "/admin/visitors";
   if (hasPermission(user, "contacts", "view")) return "/admin/contacts";
+  if (hasPermission(user, "banners", "view")) return "/admin/banners";
+  if (hasPermission(user, "programs", "view")) return "/admin/programs";
+  if (hasPermission(user, "program_registrations", "view")) return "/admin/registrations/programs";
+  if (hasPermission(user, "volunteer_applications", "view")) return "/admin/registrations/volunteers";
+  if (hasPermission(user, "church_members", "view")) return "/admin/registrations/members";
+  if (hasPermission(user, "church_meetings", "view")) return "/admin/utilities/meetings";
+  if (hasPermission(user, "utilities", "view")) return "/admin/utilities/notes";
+  if (hasPermission(user, "member_notifications", "view")) return "/admin/programs/notifications";
+  if (hasPermission(user, "form_dropdowns", "view")) return "/admin/registrations/form-options";
+  if (hasPermission(user, "approvals", "view")) return "/admin/approvals";
   if (hasPermission(user, "prayer.inbox", "view") || hasPermission(user, "prayer.inbox", "edit")) {
     return "/admin/prayer";
   }
@@ -163,6 +189,7 @@ export function firstAllowedPath(user) {
   const page = SITE_PAGES.find((item) => hasPermission(user, item.key, "view"));
   if (page) return page.path;
   if (user?.role === "superadmin") return "/admin/admins";
+  if (user && user !== false) return "/admin/approvals/mine";
   return null;
 }
 

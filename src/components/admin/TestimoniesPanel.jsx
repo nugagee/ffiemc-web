@@ -14,6 +14,7 @@ import { Switch } from "../ui/switch";
 import { toast } from "sonner";
 import { Check, X, Save, Trash2, Mail, Phone } from "lucide-react";
 import ImageUrlField from "./ImageUrlField";
+import { PageToolbar } from "./PageToolbar";
 
 const fmt = (d) => {
   try {
@@ -167,29 +168,27 @@ export const TestimoniesPanel = () => {
         Review public submissions, edit for formality, then publish to the website.
       </p>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="flex flex-wrap gap-2">
-          {[
-            { key: "pending", label: `Pending (${counts.pending})` },
-            { key: "published", label: `Published (${counts.published})` },
-            { key: "rejected", label: `Rejected (${counts.rejected})` },
-            { key: "all", label: `All (${counts.all})` },
-          ].map((tab) => (
-            <Button
-              key={tab.key}
-              size="sm"
-              variant={filter === tab.key ? "default" : "outline"}
-              className={filter === tab.key ? "bg-red-600 hover:bg-red-700" : ""}
-              onClick={() => setFilter(tab.key)}
-            >
-              {tab.label}
-            </Button>
-          ))}
-        </div>
-        {canEdit && (
+      <PageToolbar
+        className="mb-6"
+        left={[
+          { key: "pending", label: `Pending (${counts.pending})` },
+          { key: "published", label: `Published (${counts.published})` },
+          { key: "rejected", label: `Rejected (${counts.rejected})` },
+          { key: "all", label: `All (${counts.all})` },
+        ].map((tab) => (
           <Button
+            key={tab.key}
             size="sm"
-            variant="outline"
+            variant={filter === tab.key ? "default" : "outline"}
+            className={filter === tab.key ? "bg-red-600 hover:bg-red-700" : ""}
+            onClick={() => setFilter(tab.key)}
+          >
+            {tab.label}
+          </Button>
+        ))}
+        right={canEdit ? (
+          <Button
+            className="bg-red-600 hover:bg-red-700"
             onClick={async () => {
               try {
                 const { data } = await api.post("/testimonies", {
@@ -213,8 +212,8 @@ export const TestimoniesPanel = () => {
           >
             Add testimony
           </Button>
-        )}
-      </div>
+        ) : null}
+      />
 
       <div className="grid lg:grid-cols-12 gap-6">
         <div className="lg:col-span-5 space-y-3">

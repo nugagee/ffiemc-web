@@ -7,6 +7,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useCollection } from "../../../hooks/useCollection";
 import api, { formatApiError } from "../../../lib/api";
 import { displayDate, postStatus, statusLabel, statusTone } from "../../../lib/blog";
+import { PageToolbar } from "../../../components/admin/PageToolbar";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import {
@@ -82,46 +83,44 @@ export default function BlogPostList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-red-600 font-semibold">Blog</p>
-          <h1 className="text-3xl md:text-4xl font-bold mt-2">All posts</h1>
-          <p className="text-sm text-gray-500 mt-2">Edit, schedule, or remove stories before they go live.</p>
-        </div>
-        {canEdit && (
-          <Button asChild className="bg-red-600 hover:bg-red-700 rounded-xl h-11 px-5">
-            <Link to="/admin/blog/new">
-              <Plus size={16} /> New post
-            </Link>
-          </Button>
-        )}
+      <div>
+        <p className="text-xs uppercase tracking-[0.25em] text-red-600 font-semibold">Blog</p>
+        <h1 className="text-3xl md:text-4xl font-bold mt-2">All posts</h1>
+        <p className="text-sm text-gray-500 mt-2">Edit, schedule, or remove stories before they go live.</p>
       </div>
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search title, author, or category"
-            className="pl-9 h-11 rounded-xl"
-          />
-        </div>
-        <div className="flex gap-2 overflow-x-auto">
-          {FILTERS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setFilter(item.id)}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition-all duration-200 ${
-                filter === item.id ? "bg-gray-950 text-white shadow-sm" : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search title, author, or category"
+          className="pl-9 h-11 rounded-xl"
+        />
       </div>
+
+      <PageToolbar
+        className=""
+        left={FILTERS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setFilter(item.id)}
+            className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition-all duration-200 ${
+              filter === item.id ? "bg-gray-950 text-white shadow-sm" : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+        right={canEdit ? (
+          <Button asChild className="bg-red-600 hover:bg-red-700 rounded-xl h-11 px-5">
+            <Link to="/admin/blog/new">
+              <Plus size={16} className="mr-2" /> New post
+            </Link>
+          </Button>
+        ) : null}
+      />
 
       {loading ? (
         <div className="grid gap-4">

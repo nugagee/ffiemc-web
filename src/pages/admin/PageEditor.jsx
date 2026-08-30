@@ -301,6 +301,22 @@ export default function PageEditor() {
             </div>
           );
         }
+        if (section.cms === "announcements") {
+          return (
+            <div key={`${page.key}-${section.key}`} className="rounded-2xl bg-white border border-gray-100 p-5">
+              <h2 className="text-lg font-semibold">Event banners</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Create popup and sticky banners, then review analytics and visitor activity from the Banners workspace.
+              </p>
+              <Link
+                to="/admin/banners"
+                className="inline-flex mt-4 items-center rounded-xl bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 transition-colors"
+              >
+                Open banners workspace
+              </Link>
+            </div>
+          );
+        }
         if (section.kind === "collection" || section.kind === "inbox") {
           const Cms = CMS[section.cms];
           return Cms ? (

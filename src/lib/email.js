@@ -212,3 +212,357 @@ export async function sendPastorCredentialsEmail({
       `Please sign in and change your password after your first login.`,
   });
 }
+
+/** Program registration: notify event admin + confirmation to participant. */
+export async function sendProgramRegistrationEmails({
+  programTitle,
+  adminEmail,
+  fullName,
+  email,
+  phone,
+  formData = {},
+  branchName = "",
+  fallbackAdminEmail,
+}) {
+  const to = adminEmail || fallbackAdminEmail || "adenugaolajideadewale@gmail.com";
+  const first = (fullName || "").split(" ")[0] || fullName || "Friend";
+  const extra = Object.entries(formData || {})
+    .map(([k, v]) => `${k}: ${v}`)
+    .join("\n");
+
+  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      name: fullName,
+      email,
+      phone: phone || "",
+      program: programTitle,
+      church_branch: branchName || "",
+      details: extra || "—",
+      _subject: `New registration: ${programTitle} — ${fullName}`,
+      _template: "table",
+      _captcha: "false",
+      _autoresponse:
+        `Hi ${first},\n\n` +
+        `Your registration for "${programTitle}" at Fire-Fire International Evangelical Church has been received.\n\n` +
+        `We look forward to seeing you. A copy of this confirmation has been sent to the program coordinator.\n\n` +
+        `— Fire-Fire International Evangelical Church`,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.message || "Could not send registration emails");
+  }
+  return response.json();
+}
+
+/** Church membership: notify admin + confirmation to applicant. */
+export async function sendChurchMembershipEmails({
+  fullName,
+  email,
+  phone,
+  roleName,
+  branchName = "",
+  adminEmail,
+  fallbackAdminEmail,
+}) {
+  const to = adminEmail || fallbackAdminEmail || "adenugaolajideadewale@gmail.com";
+  const first = (fullName || "").split(" ")[0] || fullName || "Friend";
+
+  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      name: fullName,
+      email,
+      phone: phone || "",
+      role: roleName || "",
+      church_branch: branchName || "",
+      _subject: `New church membership registration — ${fullName}`,
+      _template: "table",
+      _captcha: "false",
+      _autoresponse:
+        `Hi ${first},\n\n` +
+        `Thank you for registering as a bonafide member of Fire-Fire International Evangelical Church.\n\n` +
+        `Your application has been received and will be reviewed by our leadership team.\n\n` +
+        `— Fire-Fire International Evangelical Church`,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.message || "Could not send membership emails");
+  }
+  return response.json();
+}
+
+/** Volunteer application: notify assigned admin + confirmation to applicant. */
+export async function sendVolunteerApplicationEmails({
+  fullName,
+  email,
+  phone,
+  teamName,
+  roleInterest,
+  branchName = "",
+  skills = "",
+  adminEmail,
+  fallbackAdminEmail,
+}) {
+  const to = adminEmail || fallbackAdminEmail || "adenugaolajideadewale@gmail.com";
+  const first = (fullName || "").split(" ")[0] || fullName || "Friend";
+  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      name: fullName,
+      email,
+      phone: phone || "",
+      team: teamName,
+      role: roleInterest || "",
+      church_branch: branchName || "",
+      skills: skills || "",
+      _subject: `New volunteer application — ${teamName} — ${fullName}`,
+      _template: "table",
+      _captcha: "false",
+      _autoresponse:
+        `Hi ${first},\n\n` +
+        `Thank you for registering your interest in the ${teamName} at Fire-Fire International Evangelical Church.\n\n` +
+        `We've received your application. An assigned admin will review it and you'll hear from us after approval.\n\n` +
+        `— Fire-Fire International Evangelical Church`,
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.message || "Could not send volunteer emails");
+  }
+  return response.json();
+}
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Send a single member announcement email via FormSubmit. */
+export async function sendMemberAnnouncementEmail({
+  toEmail,
+  fullName,
+  subject,
+  title,
+  body,
+  programTitle = "",
+  fromName = "Fire-Fire International Evangelical Church",
+}) {
+  if (!toEmail) throw new Error("Recipient email is required");
+  const first = (fullName || "").split(" ")[0] || fullName || "Friend";
+  const programLine = programTitle ? `\n\nProgram: ${programTitle}` : "";
+
+  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(toEmail)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      _subject: subject || title || "Church announcement",
+      _template: "box",
+      _captcha: "false",
+      _replyto: "info@firefireintl.org",
+      message:
+        `Hi ${first},\n\n${body}${programLine}\n\n` +
+        `— ${fromName}`,
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.message || "Email delivery failed");
+  }
+  return response.json();
+}
+
+/**
+ * Send SMS via configured provider (Termii-compatible API).
+ * Set REACT_APP_SMS_API_URL and REACT_APP_SMS_API_KEY in .env
+ */
+export async function sendMemberAnnouncementSms({ toPhone, message }) {
+  const apiUrl = process.env.REACT_APP_SMS_API_URL;
+  const apiKey = process.env.REACT_APP_SMS_API_KEY;
+  const senderId = process.env.REACT_APP_SMS_SENDER_ID || "FFIEMC";
+
+  if (!apiUrl || !apiKey) {
+    throw new Error("SMS is not configured. Add REACT_APP_SMS_API_URL and REACT_APP_SMS_API_KEY.");
+  }
+
+  const phone = String(toPhone || "").replace(/\s+/g, "");
+  if (!phone) throw new Error("Recipient phone is required");
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      to: phone,
+      from: senderId,
+      sms: message,
+      message,
+      type: "plain",
+      channel: "generic",
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.message || errBody.error || "SMS delivery failed");
+  }
+  return response.json();
+}
+
+/** Deliver a batch of member notification deliveries with rate limiting. */
+export async function deliverMemberNotifications({
+  notification,
+  deliveries,
+  onProgress,
+}) {
+  const results = [];
+  const title = notification?.title || "";
+  const subject = notification?.subject || notification?.title || "";
+  const body = notification?.body || "";
+  const programTitle = notification?.program_title || "";
+
+  for (let i = 0; i < deliveries.length; i += 1) {
+    const row = deliveries[i];
+    const base = {
+      delivery_id: row.id,
+      channel: row.channel,
+      status: "failed",
+      error_message: "",
+    };
+
+    try {
+      if (row.channel === "email") {
+        await sendMemberAnnouncementEmail({
+          toEmail: row.email,
+          fullName: row.full_name,
+          subject,
+          title,
+          body,
+          programTitle,
+        });
+        results.push({ ...base, status: "sent" });
+      } else if (row.channel === "sms") {
+        const smsText = `${title}\n\n${body}`.slice(0, 480);
+        await sendMemberAnnouncementSms({ toPhone: row.phone, message: smsText });
+        results.push({ ...base, status: "sent" });
+      } else {
+        results.push({ ...base, error_message: "Unknown channel" });
+      }
+    } catch (err) {
+      results.push({ ...base, error_message: err.message || "Delivery failed" });
+    }
+
+    if (onProgress) onProgress(i + 1, deliveries.length);
+    if (row.channel === "email") await delay(1200);
+    else await delay(400);
+  }
+
+  return results;
+}
+
+/** Structured congratulations after membership is approved. */
+export async function sendMembershipApprovedEmail({
+  fullName,
+  email,
+  roleName = "",
+  branchName = "",
+  siteUrl = "https://firefireintl.org",
+}) {
+  if (!email) return null;
+  const first = (fullName || "").split(" ")[0] || fullName || "Beloved";
+  const roleLine = roleName ? `Your registered role(s): ${roleName}\n` : "";
+  const branchLine = branchName ? `Your church branch: ${branchName}\n` : "";
+
+  return formSubmit(email, {
+    name: "Fire-Fire International Evangelical Church",
+    email: "info@firefireintl.org",
+    _subject: `Welcome to the FFIEMC family — your membership is approved`,
+    _template: "box",
+    _replyto: "info@firefireintl.org",
+    message:
+      `Dear ${first},\n\n` +
+      `Congratulations!\n\n` +
+      `Your membership registration with Fire-Fire International Evangelical Church has been reviewed and approved. ` +
+      `You are now a bonafide member of the FFIEMC family.\n\n` +
+      `${roleLine}${branchLine}\n` +
+      `We are glad to walk with you in faith, fellowship, and service. Stay connected for services, programmes, and church meetings.\n\n` +
+      `Visit: ${siteUrl}\n` +
+      `Website membership: ${siteUrl}/join-church\n\n` +
+      `May the Lord bless you and keep you.\n\n` +
+      `With love,\n` +
+      `The Leadership Team\n` +
+      `Fire-Fire International Evangelical Church`,
+  });
+}
+
+/** Church meeting invite with join + calendar links. */
+export async function sendMeetingInviteEmail({
+  toEmail,
+  fullName,
+  title,
+  whenLabel,
+  description,
+  meetUrl,
+  calendarUrl,
+  pageUrl,
+  fromName = "Fire-Fire International Evangelical Church",
+}) {
+  if (!toEmail) throw new Error("Recipient email is required");
+  const first = (fullName || "").split(" ")[0] || fullName || "Beloved";
+  return formSubmit(toEmail, {
+    name: fromName,
+    email: "info@firefireintl.org",
+    _subject: `You're invited: ${title}`,
+    _template: "box",
+    _replyto: "info@firefireintl.org",
+    message:
+      `Dear ${first},\n\n` +
+      `You are invited to a church meeting.\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `${title}\n` +
+      `When: ${whenLabel}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `${description ? `${description}\n\n` : ""}` +
+      `JOIN THE MEETING\n${meetUrl || pageUrl}\n\n` +
+      `ADD TO YOUR CALENDAR\n` +
+      `Google Calendar: ${calendarUrl}\n` +
+      (pageUrl ? `Apple / Outlook (open page, then Download .ics): ${pageUrl}\n\n` : "\n") +
+      `We look forward to seeing you.\n\n` +
+      `— ${fromName}`,
+  });
+}
+
+export async function deliverMeetingInvites({ meeting, invites, calendarUrl, pageUrl, onProgress }) {
+  const results = [];
+  for (let i = 0; i < (invites || []).length; i += 1) {
+    const row = invites[i];
+    const base = { invite_id: row.id, status: "failed", error_message: "" };
+    try {
+      await sendMeetingInviteEmail({
+        toEmail: row.email,
+        fullName: row.full_name,
+        title: meeting.title,
+        whenLabel: meeting.whenLabel,
+        description: meeting.description,
+        meetUrl: meeting.meet_url,
+        calendarUrl,
+        pageUrl,
+      });
+      results.push({ ...base, status: "sent" });
+    } catch (err) {
+      results.push({ ...base, error_message: err.message || "Delivery failed" });
+    }
+    if (onProgress) onProgress(i + 1, invites.length);
+    await delay(1200);
+  }
+  return results;
+}
+

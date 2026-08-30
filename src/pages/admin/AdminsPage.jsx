@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { authApi } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
-import { allPermissions, normalizePermissions } from "../../lib/permissions";
+import { allPermissions, emptyPermissions, normalizePermissions } from "../../lib/permissions";
 import { PermissionMatrix } from "../../components/admin/PermissionMatrix";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -16,13 +16,14 @@ import {
 } from "../../components/ui/dialog";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
+import { PageToolbar } from "../../components/admin/PageToolbar";
 
 const emptyForm = () => ({
   username: "",
   email: "",
   password: "",
   role: "admin",
-  permissions: allPermissions(),
+  permissions: emptyPermissions(),
 });
 
 export default function AdminsPage() {
@@ -135,27 +136,33 @@ export default function AdminsPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-red-600 font-semibold">
-            Access
-          </p>
-          <h1 className="text-3xl md:text-4xl font-bold mt-2">Admins</h1>
-          <p className="text-sm text-gray-500 mt-2 max-w-3xl">
-            Superadmins have full access. For other admins, tick the website pages
-            they may open, then tick which contents on those pages they may edit or
-            delete.
-          </p>
-        </div>
-        <Button
-          type="button"
-          onClick={openCreate}
-          className="bg-red-600 hover:bg-red-700 text-white shrink-0"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create admin
-        </Button>
-      </div>
+      <PageToolbar
+        className=""
+        align="start"
+        left={(
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-red-600 font-semibold">
+              Access
+            </p>
+            <h1 className="text-3xl md:text-4xl font-bold mt-2">Admins</h1>
+            <p className="text-sm text-gray-500 mt-2 max-w-4xl">
+              Superadmins have full access. For other admins, tick the website pages
+              they may open, then tick which contents on those pages they may edit or
+              delete.
+            </p>
+          </div>
+        )}
+        right={(
+          <Button
+            type="button"
+            onClick={openCreate}
+            className="bg-red-600 hover:bg-red-700 text-white shrink-0"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create admin
+          </Button>
+        )}
+      />
 
       {error && !passwordTarget && !editing && !createOpen && (
         <p className="mt-4 text-sm text-red-600">{error}</p>
@@ -225,7 +232,7 @@ export default function AdminsPage() {
           }
         }}
       >
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 sm:rounded-lg top-[5vh] translate-y-0 data-[state=open]:slide-in-from-top-2 data-[state=closed]:slide-out-to-top-2">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 sm:rounded-lg top-[5vh] translate-y-0 data-[state=open]:slide-in-from-top-2 data-[state=closed]:slide-out-to-top-2">
           <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b border-gray-100 pr-12">
             <DialogTitle>Create admin</DialogTitle>
           </DialogHeader>
@@ -274,10 +281,15 @@ export default function AdminsPage() {
               </div>
 
               {form.role === "admin" ? (
-                <PermissionMatrix
-                  value={form.permissions}
-                  onChange={(permissions) => setForm({ ...form, permissions })}
-                />
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-500">
+                    This account starts with no access. Use Allow all, or tick dashboard, programs, registrations, approvals, and website pages this admin may manage.
+                  </p>
+                  <PermissionMatrix
+                    value={form.permissions}
+                    onChange={(permissions) => setForm({ ...form, permissions })}
+                  />
+                </div>
               ) : (
                 <p className="text-sm text-gray-500 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
                   Superadmins skip the permission list and can use every page,
@@ -306,7 +318,7 @@ export default function AdminsPage() {
       </Dialog>
 
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 sm:rounded-lg top-[5vh] translate-y-0 data-[state=open]:slide-in-from-top-2 data-[state=closed]:slide-out-to-top-2">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 sm:rounded-lg top-[5vh] translate-y-0 data-[state=open]:slide-in-from-top-2 data-[state=closed]:slide-out-to-top-2">
           <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b border-gray-100 pr-12">
             <DialogTitle>Permissions for {editing?.username}</DialogTitle>
           </DialogHeader>

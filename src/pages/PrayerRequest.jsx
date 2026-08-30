@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Heart, Send } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
+import { BranchSelect } from '../components/programs/BranchSelect';
 
 export const PrayerRequest = () => {
   const { settings } = useSettings();
@@ -21,7 +22,7 @@ export const PrayerRequest = () => {
     return items.map((item) => item.name || item).filter(Boolean);
   }, [settings]);
   const defaultCategory = categories[0] || 'Personal Prayer Request';
-  const [form, setForm] = useState({ name: '', email: '', phone: '', category: defaultCategory, request: '', is_public: false });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', category: defaultCategory, request: '', is_public: false, branch_id: '' });
   const [submitting, setSubmitting] = useState(false);
 
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -32,7 +33,7 @@ export const PrayerRequest = () => {
     try {
       await api.post('/prayer-requests', form);
       toast.success("Your prayer request has been received. Our team will be praying for you.");
-      setForm({ name: '', email: '', phone: '', category: defaultCategory, request: '', is_public: false });
+      setForm({ name: '', email: '', phone: '', category: defaultCategory, request: '', is_public: false, branch_id: '' });
     } catch (err) {
       toast.error(formatApiError(err.response?.data?.detail) || 'Something went wrong.');
     } finally {
@@ -84,6 +85,7 @@ export const PrayerRequest = () => {
                     </Select>
                   </div>
                 </div>
+                <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} required={false} label="Church branch (optional)" />
                 <div className="space-y-2">
                   <Label htmlFor="request">Prayer Request *</Label>
                   <Textarea id="request" name="request" rows={5} value={form.request} onChange={change} required data-testid="prayer-request" className="focus:border-red-500" />

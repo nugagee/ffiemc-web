@@ -15,6 +15,7 @@ import {
 } from "../../components/ui/dialog";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
+import { PageToolbar } from "../../components/admin/PageToolbar";
 import { Navigate } from "react-router-dom";
 
 function randomPassword() {
@@ -130,16 +131,20 @@ export default function PastorsPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-red-600 font-semibold">Prayer</p>
-          <h1 className="text-3xl md:text-4xl font-bold mt-2">Pastors</h1>
-          <p className="text-sm text-gray-500 mt-2 max-w-3xl">
-            Create pastor accounts for the prayer desk. They can sign in and only see requests
-            assigned to them.
-          </p>
-        </div>
-        {canManage && (
+      <PageToolbar
+        className=""
+        align="start"
+        left={(
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-red-600 font-semibold">Prayer</p>
+            <h1 className="text-3xl md:text-4xl font-bold mt-2">Pastors</h1>
+            <p className="text-sm text-gray-500 mt-2 max-w-3xl">
+              Create pastor accounts for the prayer desk. They can sign in and only see requests
+              assigned to them.
+            </p>
+          </div>
+        )}
+        right={canManage ? (
           <Button
             type="button"
             className="bg-red-600 hover:bg-red-700"
@@ -158,8 +163,8 @@ export default function PastorsPage() {
             <Plus className="h-4 w-4 mr-2" />
             Add pastor
           </Button>
-        )}
-      </div>
+        ) : null}
+      />
 
       {error && !open && !passwordTarget && (
         <p className="mt-4 text-sm text-red-600">{error}</p>

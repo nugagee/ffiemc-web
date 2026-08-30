@@ -12,6 +12,7 @@ import { Send, Quote } from "lucide-react";
 import api, { formatApiError, authApi } from "../lib/api";
 import { sendTestimonySubmissionEmails } from "../lib/email";
 import { useSettings } from "../context/SettingsContext";
+import { BranchSelect } from "../components/programs/BranchSelect";
 
 const emptyForm = {
   name: "",
@@ -22,6 +23,7 @@ const emptyForm = {
   title: "",
   testimony: "",
   consent_public: false,
+  branch_id: "",
 };
 
 export const ShareTestimony = () => {
@@ -176,6 +178,8 @@ export const ShareTestimony = () => {
                     className="focus:border-red-500"
                   />
                 </div>
+
+                <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} required={false} label="Church branch (optional)" />
 
                 <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
                   <Checkbox

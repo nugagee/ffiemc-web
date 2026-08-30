@@ -137,3 +137,88 @@ code {
   padding: 0.1em 0.2em;
   border-radius: 0.2em;
 }
+
+:root {
+  --ffiemc-banner-h: 0px;
+}
+
+.ffiemc-sticky-banner {
+  background: linear-gradient(90deg, #7f1d1d 0%, #b91c1c 38%, #c2410c 72%, #b45309 100%);
+  box-shadow: 0 2px 12px rgba(127, 29, 29, 0.35);
+}
+
+.ffiemc-sticky-shimmer {
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    rgba(253, 224, 71, 0.18) 45%,
+    transparent 70%
+  );
+  background-size: 220% 100%;
+  animation: ffiemc-shimmer 3.6s ease-in-out infinite;
+}
+
+.ffiemc-live-dot {
+  animation: ffiemc-pulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(252, 211, 77, 0.7);
+}
+
+.ffiemc-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: ffiemc-marquee-ltr 28s linear infinite;
+}
+
+.ffiemc-sticky-banner:hover .ffiemc-marquee-track {
+  animation-play-state: paused;
+}
+
+.ffiemc-marquee-item {
+  display: inline-flex;
+  align-items: center;
+  padding-right: 4.5rem;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes ffiemc-marquee-ltr {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes ffiemc-shimmer {
+  0%,
+  100% {
+    background-position: 100% 0;
+  }
+  50% {
+    background-position: 0 0;
+  }
+}
+
+@keyframes ffiemc-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(252, 211, 77, 0.65);
+  }
+  50% {
+    opacity: 0.55;
+    box-shadow: 0 0 0 6px rgba(252, 211, 77, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ffiemc-marquee-track,
+  .ffiemc-sticky-shimmer,
+  .ffiemc-live-dot {
+    animation: none;
+  }
+}

@@ -208,6 +208,7 @@ const api = {
           p_phone: body.phone || "",
           p_subject: body.subject || "",
           p_message: body.message || "",
+          p_branch_id: body.branch_id || null,
         });
         return { data: { id } };
       }
@@ -226,6 +227,7 @@ const api = {
           p_title: body.title || "",
           p_testimony: body.testimony || body.message || "",
           p_consent_public: body.consent_public !== false && body.consentPublic !== false,
+          p_branch_id: body.branch_id || null,
         });
         return { data: { id } };
       }
@@ -238,6 +240,7 @@ const api = {
           p_category: body.category || "Personal Prayer Request",
           p_request: body.request || body.message || "",
           p_is_public: Boolean(body.is_public),
+          p_branch_id: body.branch_id || null,
         });
         return { data: { id } };
       }
@@ -370,6 +373,18 @@ export const authApi = {
     setAdminToken(null);
   },
   visitStats: () => rpc("admin_visit_stats", { p_token: getAdminToken() }),
+  analyticsReport: (range = "week", topN = 10) =>
+    rpc("admin_analytics_report", {
+      p_token: getAdminToken(),
+      p_range: range,
+      p_top_n: topN,
+    }),
+  visitorDetail: (visitorId, limit = 100) =>
+    rpc("admin_visitor_detail", {
+      p_token: getAdminToken(),
+      p_visitor_id: visitorId,
+      p_limit: limit,
+    }),
   listVisits: (limit = 200) => rpc("admin_list_visits", { p_token: getAdminToken(), p_limit: limit }),
   updateContact: (id, status, emailSent) =>
     rpc("admin_update_contact", {
@@ -468,6 +483,14 @@ export const authApi = {
       p_token: getAdminToken(),
       p_id: id,
     }),
+  announcementStats: () =>
+    rpc("admin_announcement_stats", { p_token: getAdminToken() }),
+  listAnnouncementEvents: (announcementId = null, limit = 500) =>
+    rpc("admin_list_announcement_events", {
+      p_token: getAdminToken(),
+      p_announcement_id: announcementId || null,
+      p_limit: limit,
+    }),
   logAdminActivity: (path, action = "navigate", meta = {}) =>
     rpc("admin_log_activity", {
       p_token: getAdminToken(),
@@ -482,6 +505,171 @@ export const authApi = {
       p_limit: limit,
       p_admin_id: adminId || null,
     }),
+  // Programs & registrations
+  listProgramTypes: () => rpc("admin_list_program_types", { p_token: getAdminToken() }),
+  upsertProgramType: (id, data) => rpc("admin_upsert_program_type", { p_token: getAdminToken(), p_id: id || null, p_data: data }),
+  deleteProgramType: (id) => rpc("admin_delete_program_type", { p_token: getAdminToken(), p_id: id }),
+  listPrograms: () => rpc("admin_list_programs", { p_token: getAdminToken() }),
+  upsertProgram: (id, data) => rpc("admin_upsert_program", { p_token: getAdminToken(), p_id: id || null, p_data: data }),
+  deleteProgram: (id) => rpc("admin_delete_program", { p_token: getAdminToken(), p_id: id }),
+  listProgramRegistrations: (programId = null, branchId = null) =>
+    rpc("admin_list_program_registrations", {
+      p_token: getAdminToken(),
+      p_program_id: programId || null,
+      p_branch_id: branchId || null,
+    }),
+  updateProgramRegistration: (id, data) =>
+    rpc("admin_update_program_registration", { p_token: getAdminToken(), p_id: id, p_data: data }),
+  deleteProgramRegistration: (id) => rpc("admin_delete_program_registration", { p_token: getAdminToken(), p_id: id }),
+  registerProgramParticipant: (slug, payload) =>
+    rpc("submit_program_registration", {
+      p_program_slug: slug,
+      p_full_name: payload.full_name,
+      p_email: payload.email,
+      p_phone: payload.phone,
+      p_form_data: payload.form_data || {},
+      p_branch_id: payload.branch_id || null,
+      p_by_admin: true,
+      p_admin_token: getAdminToken(),
+    }),
+  listChurchRoles: () => rpc("admin_list_church_roles", { p_token: getAdminToken() }),
+  upsertChurchRole: (id, data) => rpc("admin_upsert_church_role", { p_token: getAdminToken(), p_id: id || null, p_data: data }),
+  deleteChurchRole: (id) => rpc("admin_delete_church_role", { p_token: getAdminToken(), p_id: id }),
+  listChurchMembers: async (roleId = null, branchId = null, statusGroup = null) => {
+    try {
+      return await rpc("admin_list_church_members", {
+        p_token: getAdminToken(),
+        p_role_id: roleId || null,
+        p_branch_id: branchId || null,
+        p_status_group: statusGroup || null,
+      });
+    } catch {
+      const rows = await rpc("admin_list_church_members", {
+        p_token: getAdminToken(),
+        p_role_id: roleId || null,
+        p_branch_id: branchId || null,
+      });
+      const list = Array.isArray(rows) ? rows : [];
+      if (statusGroup === "pending") return list.filter((r) => r.status === "pending");
+      if (statusGroup === "approved") return list.filter((r) => r.status === "approved" || r.status === "active");
+      return list;
+    }
+  },
+  updateChurchMember: (id, data) =>
+    rpc("admin_update_church_member", { p_token: getAdminToken(), p_id: id, p_data: data }),
+  deleteChurchMember: (id) => rpc("admin_delete_church_member", { p_token: getAdminToken(), p_id: id }),
+  registerChurchMember: (payload) =>
+    rpc("submit_church_membership", {
+      ...payload,
+      p_by_admin: true,
+      p_admin_token: getAdminToken(),
+    }),
+  markProgramRegistrationEmailed: (id) => rpc("mark_program_registration_emailed", { p_id: id }),
+  markChurchMemberEmailed: (id) => rpc("mark_church_member_emailed", { p_id: id }),
+  listChurchBranches: () => rpc("admin_list_church_branches", { p_token: getAdminToken() }),
+  upsertChurchBranch: (id, data) => rpc("admin_upsert_church_branch", { p_token: getAdminToken(), p_id: id || null, p_data: data }),
+  deleteChurchBranch: (id) => rpc("admin_delete_church_branch", { p_token: getAdminToken(), p_id: id }),
+  listVolunteerTeams: () => rpc("admin_list_volunteer_teams", { p_token: getAdminToken() }),
+  listVolunteerApplications: (teamId = null) =>
+    rpc("admin_list_volunteer_applications", { p_token: getAdminToken(), p_team_id: teamId || null }),
+  updateVolunteerApplication: (id, data) =>
+    rpc("admin_update_volunteer_application", { p_token: getAdminToken(), p_id: id, p_data: data || {} }),
+  deleteVolunteerApplication: (id) =>
+    rpc("admin_delete_volunteer_application", { p_token: getAdminToken(), p_id: id }),
+  listVolunteerAudit: (applicationId = null) =>
+    rpc("admin_list_volunteer_audit", { p_token: getAdminToken(), p_application_id: applicationId || null }),
+  saveFormDropdowns: (catalogs) =>
+    rpc("admin_save_form_dropdowns", { p_token: getAdminToken(), p_catalogs: catalogs || [] }),
+  listNotificationCategories: () =>
+    rpc("admin_list_notification_categories", { p_token: getAdminToken() }),
+  listMemberNotifications: () =>
+    rpc("admin_list_member_notifications", { p_token: getAdminToken() }),
+  previewNotificationRecipients: (filters) =>
+    rpc("admin_preview_notification_recipients", {
+      p_token: getAdminToken(),
+      p_filters: filters || {},
+    }),
+  upsertMemberNotification: (id, data) =>
+    rpc("admin_upsert_member_notification", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data || {},
+    }),
+  deleteMemberNotification: (id) =>
+    rpc("admin_delete_member_notification", { p_token: getAdminToken(), p_id: id }),
+  startMemberNotification: (id) =>
+    rpc("admin_start_member_notification", { p_token: getAdminToken(), p_id: id }),
+  inboxCounts: () => rpc("admin_inbox_counts", { p_token: getAdminToken() }),
+  submitChangeRequest: ({ feature, action, resource_type, resource_id, title, payload, previous }) =>
+    rpc("admin_submit_change_request", {
+      p_token: getAdminToken(),
+      p_feature: feature,
+      p_action: action,
+      p_resource_type: resource_type,
+      p_resource_id: resource_id || null,
+      p_title: title || "",
+      p_payload: payload || {},
+      p_previous: previous || {},
+    }),
+  listChangeRequests: (feature = null, status = "pending", scope = "inbox") =>
+    rpc("admin_list_change_requests", {
+      p_token: getAdminToken(),
+      p_feature: feature,
+      p_status: status,
+      p_scope: scope,
+    }),
+  reviewChangeRequest: (id, decision, note = "") =>
+    rpc("admin_review_change_request", {
+      p_token: getAdminToken(),
+      p_id: id,
+      p_decision: decision,
+      p_note: note,
+    }),
+  commentChangeRequest: (id, body) =>
+    rpc("admin_add_change_request_comment", {
+      p_token: getAdminToken(),
+      p_id: id,
+      p_body: body,
+    }),
+  cancelChangeRequest: (id) =>
+    rpc("admin_cancel_change_request", {
+      p_token: getAdminToken(),
+      p_id: id,
+    }),
+  completeMemberNotification: (id, results) =>
+    rpc("admin_complete_member_notification", {
+      p_token: getAdminToken(),
+      p_id: id,
+      p_results: results || [],
+    }),
+  listChurchMeetings: (bucket = "upcoming") =>
+    rpc("admin_list_church_meetings", { p_token: getAdminToken(), p_bucket: bucket }),
+  upsertChurchMeeting: (id, data) =>
+    rpc("admin_upsert_church_meeting", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data || {},
+    }),
+  deleteChurchMeeting: (id) =>
+    rpc("admin_delete_church_meeting", { p_token: getAdminToken(), p_id: id }),
+  startMeetingInvites: (id) =>
+    rpc("admin_start_meeting_invites", { p_token: getAdminToken(), p_id: id }),
+  completeMeetingInvites: (id, results) =>
+    rpc("admin_complete_meeting_invites", {
+      p_token: getAdminToken(),
+      p_id: id,
+      p_results: results || [],
+    }),
+  listUtilityNotes: (kind = null) =>
+    rpc("admin_list_utility_notes", { p_token: getAdminToken(), p_kind: kind }),
+  upsertUtilityNote: (id, data) =>
+    rpc("admin_upsert_utility_note", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data || {},
+    }),
+  deleteUtilityNote: (id) =>
+    rpc("admin_delete_utility_note", { p_token: getAdminToken(), p_id: id }),
   listMedia: async () => {
     try {
       const rows = await rpc("admin_list_media", { p_token: getAdminToken() });
@@ -541,16 +729,179 @@ function extractContentImages(html) {
   return Array.from(String(html || "").matchAll(/<img[^>]+src=["']([^"']+)["']/gi), (match) => match[1]);
 }
 
-export async function trackPageVisit({ path, referrer, userAgent, visitorId, sessionId }) {
-  if (!isSupabaseConfigured || !getSupabase()) return;
-  const { error } = await getSupabase().from("page_visits").insert({
-    path,
-    referrer: referrer || null,
-    user_agent: userAgent || null,
-    visitor_id: visitorId || null,
-    session_id: sessionId || null,
+/** @deprecated Prefer startPageVisit + pingPageVisit for duration tracking */
+export async function trackPageVisit(payload) {
+  return startPageVisit(payload);
+}
+
+export async function startPageVisit({
+  path,
+  referrer,
+  userAgent,
+  visitorId,
+  sessionId,
+  deviceType,
+  browser,
+  os,
+  language,
+  timezone,
+  screenWidth,
+  screenHeight,
+}) {
+  if (!isSupabaseConfigured || !getSupabase()) return null;
+  try {
+    const { data, error } = await getSupabase().rpc("public_start_visit", {
+      p_path: path,
+      p_referrer: referrer || null,
+      p_user_agent: userAgent || null,
+      p_visitor_id: visitorId || null,
+      p_session_id: sessionId || null,
+      p_device_type: deviceType || null,
+      p_browser: browser || null,
+      p_os: os || null,
+      p_language: language || null,
+      p_timezone: timezone || null,
+      p_screen_width: screenWidth || null,
+      p_screen_height: screenHeight || null,
+    });
+    if (error) {
+      const { data: row, error: insertError } = await getSupabase()
+        .from("page_visits")
+        .insert({
+          path,
+          referrer: referrer || null,
+          user_agent: userAgent || null,
+          visitor_id: visitorId || null,
+          session_id: sessionId || null,
+        })
+        .select("id")
+        .maybeSingle();
+      if (insertError) {
+        console.warn("Visit tracking failed:", error.message || insertError.message);
+        return null;
+      }
+      return row?.id || null;
+    }
+    return data;
+  } catch (e) {
+    console.warn("Visit tracking failed:", e?.message || e);
+    return null;
+  }
+}
+
+export async function pingPageVisit({ visitId, visitorId, durationSeconds, finalize = false }) {
+  if (!isSupabaseConfigured || !getSupabase() || !visitId || !visitorId) return;
+  try {
+    const { error } = await getSupabase().rpc("public_ping_visit", {
+      p_id: visitId,
+      p_visitor_id: visitorId,
+      p_duration_seconds: durationSeconds,
+      p_finalize: finalize,
+    });
+    if (error) console.warn("Visit ping failed:", error.message);
+  } catch (e) {
+    console.warn("Visit ping failed:", e?.message || e);
+  }
+}
+
+export async function getPublicProgram(slug) {
+  assertConfigured();
+  return rpc("public_get_program", { p_slug: slug });
+}
+
+export async function getPublicMeeting(id) {
+  assertConfigured();
+  return rpc("public_get_meeting", { p_id: id });
+}
+
+export async function listPublicChurchRoles() {
+  assertConfigured();
+  return rpc("public_list_church_roles");
+}
+
+export async function listPublicChurchBranches() {
+  assertConfigured();
+  return rpc("public_list_church_branches");
+}
+
+export async function submitProgramRegistration(slug, payload) {
+  assertConfigured();
+  return rpc("submit_program_registration", {
+    p_program_slug: slug,
+    p_full_name: payload.full_name,
+    p_email: payload.email,
+    p_phone: payload.phone,
+    p_form_data: payload.form_data || {},
+    p_branch_id: payload.branch_id || null,
+    p_by_admin: false,
+    p_admin_token: null,
   });
-  if (error) console.warn("Visit tracking failed:", error.message);
+}
+
+export async function submitChurchMembership(payload) {
+  assertConfigured();
+  return rpc("submit_church_membership", {
+    p_full_name: payload.full_name,
+    p_email: payload.email,
+    p_phone: payload.phone,
+    p_gender: payload.gender || "",
+    p_date_of_birth: payload.date_of_birth || null,
+    p_address: payload.address || "",
+    p_city: payload.city || "",
+    p_state: payload.state || "",
+    p_country: payload.country || "Nigeria",
+    p_role_id: Array.isArray(payload.role_ids) ? payload.role_ids[0] : payload.role_id,
+    p_role_ids: Array.isArray(payload.role_ids)
+      ? payload.role_ids
+      : (payload.role_id ? [payload.role_id] : []),
+    p_ministry: payload.ministry || "",
+    p_baptism_status: payload.baptism_status || "",
+    p_marital_status: payload.marital_status || "",
+    p_occupation: payload.occupation || "",
+    p_emergency_contact_name: payload.emergency_contact_name || "",
+    p_emergency_contact_phone: payload.emergency_contact_phone || "",
+    p_notes: payload.notes || "",
+    p_form_data: payload.form_data || {},
+    p_branch_id: payload.branch_id || null,
+    p_by_admin: false,
+    p_admin_token: null,
+  });
+}
+
+export async function markProgramRegistrationEmailed(id) {
+  if (!isSupabaseConfigured || !getSupabase() || !id) return;
+  await getSupabase().rpc("mark_program_registration_emailed", { p_id: id });
+}
+
+export async function markChurchMemberEmailed(id) {
+  if (!isSupabaseConfigured || !getSupabase() || !id) return;
+  await getSupabase().rpc("mark_church_member_emailed", { p_id: id });
+}
+
+export async function getPublicVolunteerTeam(slug) {
+  assertConfigured();
+  return rpc("public_get_volunteer_team", { p_slug: slug });
+}
+
+export async function submitVolunteerApplication(slug, payload) {
+  assertConfigured();
+  return rpc("submit_volunteer_application", {
+    p_team_slug: slug,
+    p_full_name: payload.full_name,
+    p_email: payload.email,
+    p_phone: payload.phone,
+    p_branch_id: payload.branch_id || null,
+    p_role_interest: payload.role_interest || "",
+    p_skills: payload.skills || "",
+    p_experience_level: payload.experience_level || "",
+    p_availability: payload.availability || "",
+    p_notes: payload.notes || "",
+  });
+}
+
+export async function markVolunteerApplicationEmailed(id) {
+  if (!isSupabaseConfigured || !getSupabase() || !id) return;
+  await getSupabase().rpc("mark_volunteer_application_emailed", { p_id: id });
 }
 
 export default api;

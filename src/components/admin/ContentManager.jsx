@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner';
 import { GripVertical, Plus, Pencil, Trash2 } from 'lucide-react';
 import ImageUrlField, { isImageField } from './ImageUrlField';
+import { PageToolbar } from './PageToolbar';
 
 const emptyFromFields = (fields) =>
   fields.reduce((acc, f) => {
@@ -137,21 +138,25 @@ export const ContentManager = ({ title, path, fields, columns, feature }) => {
 
   return (
     <div data-testid={`manager-${title.toLowerCase()}`}>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-          <p className="text-sm text-gray-500">
-            {ordered.length} item{ordered.length !== 1 ? 's' : ''}
-            {canEdit && ordered.length > 1 ? ' · Drag the handle to rearrange' : ''}
-            {reordering ? ' · Saving…' : ''}
-          </p>
-        </div>
-        {canEdit && (
+      <PageToolbar
+        className="mb-6"
+        align="start"
+        left={(
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+            <p className="text-sm text-gray-500">
+              {ordered.length} item{ordered.length !== 1 ? 's' : ''}
+              {canEdit && ordered.length > 1 ? ' · Drag the handle to rearrange' : ''}
+              {reordering ? ' · Saving…' : ''}
+            </p>
+          </div>
+        )}
+        right={canEdit ? (
           <Button onClick={openCreate} className="bg-red-600 hover:bg-red-700" data-testid={`add-${title.toLowerCase()}-btn`}>
             <Plus className="h-4 w-4 mr-2" />Add {title}
           </Button>
-        )}
-      </div>
+        ) : null}
+      />
 
       {loading ? (
         <p className="text-gray-500">Loading...</p>

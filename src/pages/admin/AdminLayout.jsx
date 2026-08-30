@@ -1,12 +1,14 @@
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { LogOut } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { useSettings } from "../../context/SettingsContext";
+import { SITE_PAGES } from "../../data/sitePages";
+import { ADMIN_NAV } from "../../data/adminNav";
+import { NestedNav, flattenVisibleLeaves } from "../../components/admin/NestedNav";
+import { AdminCountsProvider, useAdminCounts } from "../../context/AdminCountsContext";
+import { AdminActivityTracker } from "../../components/AdminActivityTracker";
 import {
-  LayoutDashboard,
-  Users,
-  Mail,
-  Shield,
-  LogOut,
   Home,
   BookOpen,
   CalendarDays,
@@ -17,37 +19,9 @@ import {
   HeartHandshake,
   Church,
   Calendar,
-  ChevronDown,
-  Plus,
-  Newspaper,
-  ScrollText,
+  Users,
+  Mail,
 } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
-import { SITE_PAGES } from "../../data/sitePages";
-import { useSettings } from "../../context/SettingsContext";
-import { AdminActivityTracker } from "../../components/AdminActivityTracker";
-
-const dashboardTop = [
-  { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true, feature: "overview" },
-  { to: "/admin/visitors", label: "Visitors", icon: Users, feature: "visitors" },
-  { to: "/admin/contacts", label: "Messages", icon: Mail, feature: "contacts" },
-];
-
-const dashboardBottom = [
-  { to: "/admin/activity", label: "Activity log", icon: ScrollText, superadmin: true },
-  { to: "/admin/admins", label: "Admins", icon: Shield, superadmin: true },
-];
-
-const blogChildren = [
-  { to: "/admin/blog/new", label: "Create new post", icon: Plus, end: true },
-  { to: "/admin/blog", label: "All posts", icon: Newspaper, end: true },
-];
-
-const prayerChildren = [
-  { to: "/admin/prayer", label: "Requests", icon: HandHeart, end: true },
-  { to: "/admin/prayer/pastors", label: "Pastors", icon: Users, end: true },
-  { to: "/admin/pages/prayer", label: "Page content", icon: FileText, end: true },
-];
 
 const pageIcons = {
   home: Home,
@@ -62,175 +36,61 @@ const pageIcons = {
   contact: Mail,
   prayer: HandHeart,
   donate: HeartHandshake,
+  join: Users,
 };
 
-function ChurchLogo({ className }) {
-  const { settings } = useSettings();
-  const src = settings.logo;
+function ChurchLogo({ src, className }) {
   return <img src={src} alt="Fire-Fire church logo" className={className} />;
 }
 
-function LinkItem({ item }) {
-  const Icon = item.icon;
-  return (
-    <NavLink
-      to={item.to}
-      end={item.end}
-      className={({ isActive }) =>
-        `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
-          isActive ? "bg-red-600 text-white shadow-sm" : "text-white/70 hover:bg-white/10 hover:text-white"
-        }`
-      }
-    >
-      <Icon size={16} />
-      {item.label}
-    </NavLink>
-  );
+function WebsitePagesNav({ pages }) {
+  const items = [
+    {
+      id: "website",
+      label: "Website pages",
+      icon: "Globe",
+      children: pages.map((page) => ({
+        id: `page-${page.key}`,
+        to: page.to,
+        label: page.label,
+        icon: page.iconName || "FileText",
+        end: true,
+      })),
+    },
+  ];
+  return <NestedNav items={items} can={() => true} isSuperadmin={false} isPastor={false} />;
 }
 
-function BlogNav({ canEdit }) {
-  const location = useLocation();
-  const onBlog = location.pathname === "/admin/blog" || location.pathname.startsWith("/admin/blog/");
-  const [open, setOpen] = useState(onBlog);
-
-  useEffect(() => {
-    if (onBlog) setOpen(true);
-  }, [onBlog]);
-
-  const items = canEdit ? blogChildren : blogChildren.filter((item) => item.to === "/admin/blog");
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
-          onBlog ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
-        }`}
-      >
-        <FileText size={16} />
-        <span className="flex-1 text-left">Blog</span>
-        <ChevronDown size={14} className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="mt-1 ml-4 space-y-1 border-l border-white/10 pl-2">
-              {items.map((item) => {
-                const Icon = item.icon;
-                const isEditRoute = /\/admin\/blog\/[^/]+\/edit$/.test(location.pathname);
-                const active =
-                  item.to === "/admin/blog"
-                    ? location.pathname === "/admin/blog" || isEditRoute
-                    : location.pathname === item.to;
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 ${
-                      active ? "bg-red-600 text-white" : "text-white/60 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    <Icon size={14} />
-                    {item.label}
-                  </NavLink>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function PrayerNav({ isPastor, canManagePastors, canEditPage }) {
-  const location = useLocation();
-  const onPrayer =
-    location.pathname === "/admin/prayer" ||
-    location.pathname.startsWith("/admin/prayer/") ||
-    location.pathname === "/admin/pages/prayer";
-  const [open, setOpen] = useState(onPrayer);
-
-  useEffect(() => {
-    if (onPrayer) setOpen(true);
-  }, [onPrayer]);
-
-  const items = prayerChildren.filter((item) => {
-    if (item.to === "/admin/prayer") return true;
-    if (item.to === "/admin/prayer/pastors") return canManagePastors && !isPastor;
-    if (item.to === "/admin/pages/prayer") return canEditPage && !isPastor;
-    return false;
-  });
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
-          onPrayer ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
-        }`}
-      >
-        <HandHeart size={16} />
-        <span className="flex-1 text-left">Prayer</span>
-        <ChevronDown size={14} className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="mt-1 ml-4 space-y-1 border-l border-white/10 pl-2">
-              {items.map((item) => {
-                const Icon = item.icon;
-                const active =
-                  item.to === "/admin/prayer"
-                    ? location.pathname === "/admin/prayer"
-                    : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 ${
-                      active ? "bg-red-600 text-white" : "text-white/60 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    <Icon size={14} />
-                    {item.label}
-                  </NavLink>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+const PAGE_ICON_NAMES = {
+  home: "Home",
+  about: "BookOpen",
+  services: "Church",
+  leadership: "Users",
+  ministries: "Users",
+  events: "Calendar",
+  sermons: "Mic",
+  blog: "FileText",
+  testimonies: "Quote",
+  contact: "Mail",
+  prayer: "HandHeart",
+  donate: "HeartHandshake",
+  join: "Users",
+};
 
 export default function AdminLayout() {
+  return (
+    <AdminCountsProvider>
+      <AdminLayoutInner />
+    </AdminCountsProvider>
+  );
+}
+
+function AdminLayoutInner() {
   const { user, isSuperadmin, can, logout } = useAuth();
+  const { settings } = useSettings();
+  const { counts } = useAdminCounts();
   const navigate = useNavigate();
-  const showBlog = can("blog.posts", "edit") || can("blog.posts", "delete");
   const isPastor = user?.role === "pastor";
-  const showPrayer =
-    isPastor ||
-    can("prayer.inbox", "view") ||
-    can("prayer.inbox", "edit") ||
-    can("prayer", "view");
   const [pwdOpen, setPwdOpen] = useState(false);
   const [pwd, setPwd] = useState("");
   const [pwd2, setPwd2] = useState("");
@@ -268,78 +128,35 @@ export default function AdminLayout() {
     }
   };
 
-  const visibleTop = isPastor ? [] : dashboardTop.filter((item) => can(item.feature, "view"));
-  const visibleBottom = isPastor
-    ? []
-    : dashboardBottom.filter((item) => (item.superadmin ? isSuperadmin : can(item.feature, "view")));
+  const navCtx = { can, isSuperadmin, isPastor };
   const visiblePages = isPastor
     ? []
     : SITE_PAGES.filter((page) => page.key !== "prayer" && can(page.key, "view")).map((page) => ({
         to: page.path,
         label: page.label,
         icon: pageIcons[page.key] || CalendarDays,
+        iconName: PAGE_ICON_NAMES[page.key] || "FileText",
+        key: page.key,
       }));
 
   const mobileLinks = [
-    ...visibleTop,
-    ...(showBlog
-      ? [
-          { to: "/admin/blog/new", label: "New post", end: true },
-          { to: "/admin/blog", label: "Blog posts", end: true },
-        ].filter((item) => item.to !== "/admin/blog/new" || can("blog.posts", "edit"))
-      : []),
-    ...(showPrayer
-      ? [
-          { to: "/admin/prayer", label: "Prayer requests", end: true },
-          ...(!isPastor && (can("prayer.pastors", "edit") || isSuperadmin)
-            ? [{ to: "/admin/prayer/pastors", label: "Pastors", end: true }]
-            : []),
-          ...(!isPastor && can("prayer", "view")
-            ? [{ to: "/admin/pages/prayer", label: "Prayer page", end: true }]
-            : []),
-        ]
-      : []),
-    ...visibleBottom,
-    ...visiblePages,
+    ...flattenVisibleLeaves(ADMIN_NAV, navCtx),
+    ...visiblePages.map((page) => ({ to: page.to, label: page.label, end: true })),
   ];
 
   return (
     <div className="h-screen overflow-hidden bg-gray-50 text-gray-900 flex" data-testid="admin-dashboard">
       <aside className="hidden md:flex w-64 shrink-0 h-screen flex-col bg-gray-950 text-white">
         <div className="shrink-0 px-6 py-6 border-b border-white/10 flex items-center gap-3">
-          <ChurchLogo className="h-11 w-11 rounded-full object-cover bg-white p-0.5" />
+          <ChurchLogo src={settings.logo} className="h-11 w-11 rounded-full object-cover bg-white p-0.5" />
           <div>
             <div className="font-bold leading-none">Fire-Fire</div>
             <div className="text-[10px] tracking-[0.2em] uppercase text-red-400 mt-1">Admin</div>
           </div>
         </div>
         <nav className="flex-1 min-h-0 px-3 py-5 overflow-y-auto overscroll-contain space-y-5">
-          <div className="space-y-1">
-            {visibleTop.map((item) => (
-              <LinkItem key={item.to} item={item} />
-            ))}
-            {showBlog && <BlogNav canEdit={can("blog.posts", "edit")} />}
-            {showPrayer && (
-              <PrayerNav
-                isPastor={isPastor}
-                canManagePastors={isSuperadmin || can("prayer.pastors", "edit")}
-                canEditPage={can("prayer", "view")}
-              />
-            )}
-            {visibleBottom.map((item) => (
-              <LinkItem key={item.to} item={item} />
-            ))}
-          </div>
-          {visiblePages.length > 0 && (
-            <div>
-              <p className="px-4 mb-2 text-[10px] uppercase tracking-widest text-white/35">Website pages</p>
-              <div className="space-y-1">
-                {visiblePages.map((item) => (
-                  <LinkItem key={item.to} item={item} />
-                ))}
-              </div>
-            </div>
-          )}
+          <NestedNav items={ADMIN_NAV} can={can} isSuperadmin={isSuperadmin} isPastor={isPastor} badges={counts} />
+          {visiblePages.length > 0 && <WebsitePagesNav pages={visiblePages} />}
         </nav>
         <div className="shrink-0 px-6 py-6 border-t border-white/10">
           <div className="text-sm text-white/80 truncate">{user?.username || user?.email}</div>
@@ -365,7 +182,7 @@ export default function AdminLayout() {
       <div className="flex-1 min-w-0 h-screen overflow-y-auto">
         <header className="md:hidden sticky top-0 z-20 flex items-center justify-between px-5 py-4 bg-gray-950 text-white">
           <span className="font-bold flex items-center gap-2">
-            <ChurchLogo className="h-8 w-8 rounded-full object-cover bg-white p-0.5" /> FFIEMC Admin
+            <ChurchLogo src={settings.logo} className="h-8 w-8 rounded-full object-cover bg-white p-0.5" /> FFIEMC Admin
           </span>
           <button onClick={onLogout} className="text-sm text-white/70">
             Sign out
@@ -419,11 +236,7 @@ export default function AdminLayout() {
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                className="px-4 py-2 text-sm rounded-md border"
-                onClick={() => setPwdOpen(false)}
-              >
+              <button type="button" className="px-4 py-2 text-sm rounded-md border" onClick={() => setPwdOpen(false)}>
                 Cancel
               </button>
               <button

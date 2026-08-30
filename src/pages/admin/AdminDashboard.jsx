@@ -2,7 +2,7 @@ import React from 'react';
 import { ContentManager } from '../../components/admin/ContentManager';
 import { PrayerPanel } from '../../components/admin/Panels';
 import { TestimoniesPanel } from '../../components/admin/TestimoniesPanel';
-import { AnnouncementsPanel } from '../../components/admin/AnnouncementsPanel';
+import AnnouncementsPanel from '../../components/admin/AnnouncementsPanel';
 
 const BLOG_FIELDS = [
   { name: 'title', label: 'Title', type: 'text' },

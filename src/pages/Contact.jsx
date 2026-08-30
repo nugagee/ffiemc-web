@@ -12,6 +12,7 @@ import { sendContactEmails } from '../lib/email';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
+import { BranchSelect } from '../components/programs/BranchSelect';
 
 export const Contact = () => {
   const { settings } = useSettings();
@@ -24,7 +25,8 @@ export const Contact = () => {
     email: '',
     phone: '',
     subject: '',
-    message: ''
+    message: '',
+    branch_id: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -45,7 +47,7 @@ export const Contact = () => {
         console.warn('Email send failed:', emailErr.message);
       }
       toast.success("Thank you for your message! We'll get back to you soon.");
-      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '', branch_id: '' });
     } catch (err) {
       toast.error(formatApiError(err.response?.data?.detail) || 'Something went wrong.');
     } finally {
@@ -216,6 +218,13 @@ export const Contact = () => {
                         />
                       </div>
                     </div>
+
+                    <BranchSelect
+                      value={formData.branch_id}
+                      onChange={(v) => setFormData({ ...formData, branch_id: v })}
+                      required={false}
+                      label="Church branch (optional)"
+                    />
 
                     <div className="space-y-2">
                       <Label htmlFor="message">Message</Label>

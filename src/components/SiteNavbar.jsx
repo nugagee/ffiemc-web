@@ -62,17 +62,18 @@ export const Navbar = () => {
   return (
     <>
       <nav
-        className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ease-out ${
+        className={`fixed inset-x-0 z-50 transition-all duration-300 ease-out ${
           solid
             ? 'bg-white/95 backdrop-blur-md shadow-md border-b border-gray-100'
             : 'bg-transparent border-b border-transparent'
         }`}
+        style={{ top: 'var(--ffiemc-banner-h, 0px)' }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20 md:h-24">
+          <div className="relative flex items-center justify-between h-20 md:h-24">
             <Link
               to="/"
-              className="flex items-center shrink-0 mr-3 md:mr-6"
+              className="flex items-center shrink-0 mr-3 md:mr-6 z-10"
               aria-label={settings.name || 'Home'}
             >
               <img
@@ -83,6 +84,27 @@ export const Navbar = () => {
                 }`}
               />
             </Link>
+
+            {/* Mobile-only brand: centered between logo and hamburger */}
+            <div
+              className="lg:hidden absolute inset-x-0 flex flex-col items-center justify-center pointer-events-none px-14 sm:px-16 text-center"
+              aria-hidden="true"
+            >
+              <span
+                className={`text-[0.7rem] sm:text-sm font-semibold leading-tight tracking-wide ${
+                  solid ? 'text-gray-900' : 'text-white'
+                }`}
+              >
+                Fire-Fire International
+              </span>
+              <span
+                className={`text-[0.65rem] sm:text-xs font-medium leading-tight mt-0.5 ${
+                  solid ? 'text-red-600' : 'text-amber-200'
+                }`}
+              >
+                Evangelical Church
+              </span>
+            </div>
 
             <div className="hidden lg:flex items-center space-x-1 xl:space-x-2">
               {navigationItems.map((item) => (
@@ -138,7 +160,7 @@ export const Navbar = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={`lg:hidden h-11 w-11 ${
+                  className={`relative z-10 lg:hidden h-11 w-11 ${
                     solid
                       ? 'text-gray-900 hover:bg-gray-100'
                       : 'text-white hover:bg-white/15'
@@ -242,7 +264,13 @@ export const Navbar = () => {
           </div>
         </div>
       </nav>
-      {!isHome && <div className="h-20 md:h-24" aria-hidden />}
+      {!isHome && (
+        <div
+          className="h-20 md:h-24"
+          style={{ marginTop: 'var(--ffiemc-banner-h, 0px)' }}
+          aria-hidden
+        />
+      )}
     </>
   );
 };

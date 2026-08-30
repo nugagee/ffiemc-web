@@ -31,6 +31,7 @@ import { Testimonies } from "../pages/Testimonies";
 import { ShareTestimony } from "../pages/ShareTestimony";
 import { VisitorTracker } from "../components/VisitorTracker";
 import { AnnouncementPopup } from "../components/AnnouncementPopup";
+import { StickyEventBanner } from "../components/StickyEventBanner";
 import { Login } from "../pages/Login";
 import AdminLayout from "../pages/admin/AdminLayout";
 import { AdminHome, RequirePermission } from "../components/RequirePermission";
@@ -43,6 +44,27 @@ import BlogPostList from "../pages/admin/blog/BlogPostList";
 import BlogPostEditor from "../pages/admin/blog/BlogPostEditor";
 import PrayerInboxPage from "../pages/admin/PrayerInboxPage";
 import PastorsPage from "../pages/admin/PastorsPage";
+import ProgramsPage from "../pages/admin/programs/ProgramsPage";
+import ProgramTypesPage from "../pages/admin/programs/ProgramTypesPage";
+import ProgramRegistrationsPage from "../pages/admin/programs/ProgramRegistrationsPage";
+import ChurchRolesPage from "../pages/admin/programs/ChurchRolesPage";
+import ChurchMembersPage from "../pages/admin/programs/ChurchMembersPage";
+import ChurchBranchesPage from "../pages/admin/programs/ChurchBranchesPage";
+import MemberNotificationsPage from "../pages/admin/programs/MemberNotificationsPage";
+import { ProgramRegisterPage } from "../pages/ProgramRegisterPage";
+import { ChurchMembershipPage } from "../pages/ChurchMembershipPage";
+import { VolunteerRegisterPage } from "../pages/VolunteerRegisterPage";
+import VolunteersPage from "../pages/admin/programs/VolunteersPage";
+import FormDropdownsPage from "../pages/admin/programs/FormDropdownsPage";
+import ApprovalsPage from "../pages/admin/ApprovalsPage";
+import MeetingsPage from "../pages/admin/programs/MeetingsPage";
+import SpeechToTextPage from "../pages/admin/utilities/SpeechToTextPage";
+import NotesDiaryPage from "../pages/admin/utilities/NotesDiaryPage";
+import TranslatePage from "../pages/admin/utilities/TranslatePage";
+import TextToolsPage from "../pages/admin/utilities/TextToolsPage";
+import { MeetingJoinPage } from "../pages/MeetingJoinPage";
+import AnnouncementsPanel from "../components/admin/AnnouncementsPanel";
+import BannerAnalyticsPage from "../components/admin/BannerAnalyticsPage";
 import { BlogPreview } from "../pages/BlogPreview";
 
 const PublicShell = () => {
@@ -53,6 +75,7 @@ const PublicShell = () => {
   return (
     <div className={`${isAdminShell ? "h-screen overflow-hidden" : "min-h-screen w-full max-w-full overflow-x-hidden"} flex flex-col bg-white`}>
       {!isAdminShell && <VisitorTracker />}
+      {!isAdminShell && <StickyEventBanner />}
       {!isAdminShell && <AnnouncementPopup />}
       {!isAdminShell && <Navbar />}
       <main className={isAdminShell ? "flex-1 min-h-0 overflow-hidden" : "flex-1 w-full max-w-full"}>
@@ -91,6 +114,10 @@ const AllPages = () => (
             <Route path="/donate/callback" element={<PaymentCallback />} />
             <Route path="/testimonies" element={<Testimonies />} />
             <Route path="/share-testimony" element={<ShareTestimony />} />
+            <Route path="/register/:slug" element={<ProgramRegisterPage />} />
+            <Route path="/join-church" element={<ChurchMembershipPage />} />
+            <Route path="/volunteer/:slug" element={<VolunteerRegisterPage />} />
+            <Route path="/meeting/:id" element={<MeetingJoinPage />} />
             <Route path="/login" element={<Login />} />
             <Route
               path="/admin"
@@ -119,6 +146,30 @@ const AllPages = () => (
               />
               <Route path="admins" element={<AdminsPage />} />
               <Route path="activity" element={<AdminActivityPage />} />
+              <Route
+                path="approvals/mine"
+                element={<ApprovalsPage mine />}
+              />
+              <Route
+                path="approvals/mine/:featureKey"
+                element={<ApprovalsPage mine />}
+              />
+              <Route
+                path="approvals"
+                element={
+                  <RequirePermission feature="approvals">
+                    <ApprovalsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="approvals/:featureKey"
+                element={
+                  <RequirePermission feature="approvals">
+                    <ApprovalsPage />
+                  </RequirePermission>
+                }
+              />
               <Route
                 path="blog/new"
                 element={
@@ -156,6 +207,173 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="prayer.inbox" action="view">
                     <PastorsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="programs"
+                element={
+                  <RequirePermission feature="programs">
+                    <ProgramsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="programs/types"
+                element={
+                  <RequirePermission feature="program_types">
+                    <ProgramTypesPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="programs/branches"
+                element={
+                  <RequirePermission feature="church_branches">
+                    <ChurchBranchesPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="programs/roles"
+                element={
+                  <RequirePermission feature="church_roles">
+                    <ChurchRolesPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="programs/notifications"
+                element={
+                  <RequirePermission feature="member_notifications">
+                    <MemberNotificationsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="programs/meetings"
+                element={<Navigate to="/admin/utilities/meetings" replace />}
+              />
+              <Route
+                path="utilities/meetings"
+                element={
+                  <RequirePermission feature="church_meetings">
+                    <MeetingsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="utilities/speech"
+                element={
+                  <RequirePermission feature="utilities">
+                    <SpeechToTextPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="utilities/notes"
+                element={
+                  <RequirePermission feature="utilities">
+                    <NotesDiaryPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="utilities/translate"
+                element={
+                  <RequirePermission feature="utilities">
+                    <TranslatePage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="utilities/text"
+                element={
+                  <RequirePermission feature="utilities">
+                    <TextToolsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route path="programs/registrations" element={<Navigate to="/admin/registrations/programs" replace />} />
+              <Route path="programs/members" element={<Navigate to="/admin/registrations/members" replace />} />
+              <Route path="programs/volunteers" element={<Navigate to="/admin/registrations/volunteers" replace />} />
+              <Route
+                path="banners"
+                element={
+                  <RequirePermission feature="banners">
+                    <AnnouncementsPanel />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="banners/analytics"
+                element={
+                  <RequirePermission feature="banners">
+                    <BannerAnalyticsPage view="analytics" />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="banners/activity"
+                element={
+                  <RequirePermission feature="banners">
+                    <BannerAnalyticsPage view="activity" />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="registrations/programs"
+                element={
+                  <RequirePermission feature="program_registrations">
+                    <ProgramRegistrationsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="registrations/volunteers"
+                element={
+                  <RequirePermission feature="volunteer_applications">
+                    <VolunteersPage view="applications" />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="registrations/volunteers/audit"
+                element={
+                  <RequirePermission feature="volunteer_applications">
+                    <VolunteersPage view="audit" />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="registrations/members/pending"
+                element={
+                  <RequirePermission feature="church_members">
+                    <ChurchMembersPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="registrations/members/approved"
+                element={
+                  <RequirePermission feature="church_members">
+                    <ChurchMembersPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="registrations/members"
+                element={
+                  <RequirePermission feature="church_members">
+                    <ChurchMembersPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="registrations/form-options"
+                element={
+                  <RequirePermission feature="form_dropdowns">
+                    <FormDropdownsPage />
                   </RequirePermission>
                 }
               />

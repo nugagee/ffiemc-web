@@ -1,7 +1,20 @@
 export const DASHBOARD_FEATURES = [
-  { key: "overview", label: "Overview / analytics", hint: "Dashboard charts and totals", actions: ["view"] },
-  { key: "visitors", label: "Visitor tracking", hint: "Recent public page views", actions: ["view"] },
-  { key: "contacts", label: "Contact messages inbox", hint: "Messages submitted on Contact", actions: ["view", "edit", "delete"] },
+  { key: "overview", group: "Dashboard", label: "Overview / analytics", hint: "Dashboard charts and totals", actions: ["view"] },
+  { key: "visitors", group: "Dashboard", label: "Visitor tracking", hint: "Recent public page views", actions: ["view"] },
+  { key: "contacts", group: "Dashboard", label: "Contact messages inbox", hint: "Messages submitted on Contact", actions: ["view", "edit", "delete"] },
+  { key: "banners", group: "Banners", label: "Banners", hint: "Popup and sticky banners, analytics, and activity log", actions: ["view", "edit", "delete"] },
+  { key: "program_types", group: "Programs", label: "Program types", hint: "Convention, conference, outreach categories", actions: ["view", "edit", "delete"] },
+  { key: "programs", group: "Programs", label: "Church programs", hint: "Create programs with registration forms", actions: ["view", "edit", "delete"] },
+  { key: "church_branches", group: "Programs", label: "Church branches", hint: "Local and international branch locations", actions: ["view", "edit", "delete"] },
+  { key: "church_roles", group: "Programs", label: "Church roles", hint: "Pastor, deacon, member, and other roles — members may hold more than one", actions: ["view", "edit", "delete"] },
+  { key: "member_notifications", group: "Programs", label: "Member announcements", hint: "Email and SMS announcements to members by category", actions: ["view", "edit", "delete"] },
+  { key: "program_registrations", group: "Registrations", label: "Program sign-ups", hint: "View and manage event registrations", actions: ["view", "edit", "delete"] },
+  { key: "volunteer_applications", group: "Registrations", label: "Volunteer applications", hint: "Media team and ministry volunteer sign-ups", actions: ["view", "edit", "delete"] },
+  { key: "church_members", group: "Registrations", label: "Church members", hint: "Pending, approved, and all member records — including multiple church roles per person", actions: ["view", "edit", "delete"] },
+  { key: "form_dropdowns", group: "Registrations", label: "Form dropdowns", hint: "State, baptism, occupation and custom form options", actions: ["view", "edit"] },
+  { key: "approvals", group: "Approvals", label: "Approval requests", hint: "Review changes submitted by other admins", actions: ["view", "edit"] },
+  { key: "church_meetings", group: "Utilities", label: "Church meetings", hint: "Schedule meetings, invite members, video join and calendar", actions: ["view", "edit", "delete"] },
+  { key: "utilities", group: "Utilities", label: "Admin utilities", hint: "Speech to text, notes & diary, Google Translate, and text tools", actions: ["view", "edit", "delete"] },
 ];
 
 const copy = (fields) => ({ kind: "copy", fields });
@@ -17,8 +30,8 @@ export const SITE_PAGES = [
       { key: "hero", label: "Homepage banners", hint: "Hero carousel slides — upload images, edit headlines, reorder", ...collection("hero") },
       {
         key: "announcements",
-        label: "Announcement popups",
-        hint: "Site-wide popup banners with validity dates, image, and link",
+        label: "Event banners",
+        hint: "Managed under Banners in the sidebar — popup, sticky, analytics, and activity",
         kind: "inbox",
         cms: "announcements",
         actions: ["edit", "delete"],
@@ -378,6 +391,18 @@ export const SITE_PAGES = [
     ],
   },
   {
+    key: "join",
+    label: "Join the church",
+    path: "/admin/pages/join",
+    sections: [
+      { key: "hero", label: "Membership page header", hint: "Public /join-church copy. Registrants can select more than one church role.", ...copy([
+        { name: "badge", label: "Badge" },
+        { name: "headline", label: "Headline" },
+        { name: "intro", label: "Intro text", type: "textarea" },
+      ]) },
+    ],
+  },
+  {
     key: "donate",
     label: "Donate",
     path: "/admin/pages/donate",
@@ -692,6 +717,13 @@ export const DEFAULT_PAGE_CONTENT = {
         { name: "Community/Nation" },
         { name: "Thanksgiving" },
       ],
+    },
+  },
+  join: {
+    hero: {
+      badge: "Membership",
+      headline: "Join Fire-Fire International",
+      intro: "Register as a bonafide member of the church. Pastors, workers, and members can complete this form with full details.",
     },
   },
   donate: {

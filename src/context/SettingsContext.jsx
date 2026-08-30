@@ -45,6 +45,7 @@ const FALLBACK = {
   motto: defaultMission.motto || "",
   mission: defaultMission.mission || "",
   pages: mergePageContent({}),
+  formDropdowns: [],
 };
 
 const SettingsContext = createContext({
@@ -111,6 +112,7 @@ export const SettingsProvider = ({ children }) => {
       stats: statsItems?.length ? statsItems : (data.stats?.length ? data.stats : FALLBACK.stats),
       serviceTimes: times?.length ? times : (data.serviceTimes?.length ? data.serviceTimes : FALLBACK.serviceTimes),
       programmes: programmes?.length ? programmes : (data.programmes?.length ? data.programmes : FALLBACK.programmes),
+      formDropdowns: data.formDropdowns || [],
     });
   }, []);
 

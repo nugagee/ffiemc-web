@@ -80,7 +80,7 @@ export const Home = () => {
                     <div className="absolute inset-0 bg-gradient-to-r from-red-900/80 via-red-800/60 to-transparent" />
                   </div>
 
-                  <div className="relative h-full w-full flex items-end sm:items-center pt-20 pb-28 sm:pt-24 sm:pb-32 md:pb-36">
+                  <div className="relative h-full w-full flex items-end sm:items-center pt-[calc(5rem+var(--ffiemc-banner-h,0px))] pb-28 sm:pt-[calc(6rem+var(--ffiemc-banner-h,0px))] sm:pb-32 md:pb-36">
                     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                       <div className="w-full max-w-3xl text-white space-y-4 sm:space-y-8">
                         <div className="space-y-2.5 sm:space-y-4">
