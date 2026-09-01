@@ -159,14 +159,19 @@ export const ChurchInfoPanel = () => {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">Programmes / special services</CardTitle>
-          <Button size="sm" variant="outline" onClick={() => setForm({ ...form, programmes: [...(form.programmes || []), { title: '', description: '', frequency: '' }] })} disabled={!canEdit}>
+          <CardTitle className="text-lg">Church activities & special events</CardTitle>
+          <Button size="sm" variant="outline" onClick={() => setForm({ ...form, programmes: [...(form.programmes || []), { group: '', title: '', description: '', frequency: '' }] })} disabled={!canEdit}>
             <Plus className="h-4 w-4 mr-1" />Add
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           {(form.programmes || []).map((p, i) => (
-            <div key={i} className="grid md:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end border-b pb-4">
+            <div key={i} className="grid md:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end border-b pb-4">
+              <div className="space-y-1"><Label className="text-xs">Category</Label><Input placeholder="Monthly, Mountain Programs, Yearly" value={p.group || ''} onChange={(e) => {
+                const programmes = [...form.programmes];
+                programmes[i] = { ...p, group: e.target.value };
+                setForm({ ...form, programmes });
+              }} /></div>
               <div className="space-y-1"><Label className="text-xs">Title</Label><Input value={p.title} onChange={(e) => {
                 const programmes = [...form.programmes];
                 programmes[i] = { ...p, title: e.target.value };

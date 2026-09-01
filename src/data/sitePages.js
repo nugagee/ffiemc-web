@@ -1,3 +1,5 @@
+import { catechismCmsDefaults, doctrinesCmsDefaults, historyCmsDefaults } from "./aboutDefaults";
+
 export const DASHBOARD_FEATURES = [
   { key: "overview", group: "Dashboard", label: "Overview / analytics", hint: "Dashboard charts and totals", actions: ["view"] },
   { key: "visitors", group: "Dashboard", label: "Visitor tracking", hint: "Recent public page views", actions: ["view"] },
@@ -5,7 +7,7 @@ export const DASHBOARD_FEATURES = [
   { key: "banners", group: "Banners", label: "Banners", hint: "Popup and sticky banners, analytics, and activity log", actions: ["view", "edit", "delete"] },
   { key: "program_types", group: "Programs", label: "Program types", hint: "Convention, conference, outreach categories", actions: ["view", "edit", "delete"] },
   { key: "programs", group: "Programs", label: "Church programs", hint: "Create programs with registration forms", actions: ["view", "edit", "delete"] },
-  { key: "church_branches", group: "Programs", label: "Church branches", hint: "Local and international branch locations", actions: ["view", "edit", "delete"] },
+  { key: "church_branches", group: "Programs", label: "Branches & districts", hint: "Headquarters, assemblies, campus fellowships, and district groupings", actions: ["view", "edit", "delete"] },
   { key: "church_roles", group: "Programs", label: "Church roles", hint: "Pastor, deacon, member, and other roles — members may hold more than one", actions: ["view", "edit", "delete"] },
   { key: "member_notifications", group: "Programs", label: "Member announcements", hint: "Email and SMS announcements to members by category", actions: ["view", "edit", "delete"] },
   { key: "program_registrations", group: "Registrations", label: "Event registrations", hint: "FFIEYC and other program sign-ups, including registering on behalf of participants", actions: ["view", "edit", "delete"] },
@@ -20,6 +22,7 @@ export const DASHBOARD_FEATURES = [
 const copy = (fields) => ({ kind: "copy", fields });
 const list = (itemFields, extra = {}) => ({ kind: "list", itemFields, ...extra });
 const collection = (cms, actions = ["edit", "delete"]) => ({ kind: "collection", cms, actions });
+const structured = (kind) => ({ kind });
 
 export const SITE_PAGES = [
   {
@@ -55,6 +58,11 @@ export const SITE_PAGES = [
         { name: "body", label: "Intro text", type: "textarea" },
       ]) },
       { key: "sermonsPreview", label: "Sermons preview heading", ...copy([
+        { name: "badge", label: "Badge" },
+        { name: "heading", label: "Heading" },
+        { name: "body", label: "Intro text", type: "textarea" },
+      ]) },
+      { key: "blogPreview", label: "Blog preview heading", ...copy([
         { name: "badge", label: "Badge" },
         { name: "heading", label: "Heading" },
         { name: "body", label: "Intro text", type: "textarea" },
@@ -106,23 +114,14 @@ export const SITE_PAGES = [
         { name: "mission", label: "Mission", type: "textarea" },
         { name: "vision", label: "Vision", type: "textarea" },
       ]) },
-      { key: "values", label: "Core values", ...list([
-        { name: "title", label: "Title" },
-        { name: "description", label: "Description", type: "textarea" },
-      ], { headingFields: [
+      { key: "values", label: "Doctrines section heading", ...copy([
         { name: "badge", label: "Badge" },
         { name: "heading", label: "Heading" },
         { name: "intro", label: "Intro", type: "textarea" },
-      ] }) },
-      { key: "history", label: "History timeline", ...list([
-        { name: "year", label: "Year" },
-        { name: "title", label: "Title" },
-        { name: "description", label: "Description", type: "textarea" },
-      ], { headingFields: [
-        { name: "badge", label: "Badge" },
-        { name: "heading", label: "Heading" },
-        { name: "intro", label: "Intro", type: "textarea" },
-      ] }) },
+      ]) },
+      { key: "doctrines", label: "Church doctrines", ...structured("doctrines") },
+      { key: "catechism", label: "Catechism", ...structured("catechism") },
+      { key: "history", label: "Church history", ...structured("history") },
       { key: "pastor", label: "Pastor's message", ...copy([
         { name: "badge", label: "Badge" },
         { name: "heading", label: "Heading" },
@@ -158,9 +157,10 @@ export const SITE_PAGES = [
         { name: "heading", label: "Heading" },
         { name: "intro", label: "Intro", type: "textarea" },
       ] }) },
-      { key: "programmes", label: "Programmes / special services", ...list([
+      { key: "programmes", label: "Church activities & special events", ...list([
+        { name: "group", label: "Category (Monthly, Mountain Programs, Yearly)" },
         { name: "title", label: "Title" },
-        { name: "frequency", label: "Frequency" },
+        { name: "frequency", label: "Schedule" },
         { name: "description", label: "Description", type: "textarea" },
       ], { headingFields: [
         { name: "badge", label: "Badge" },
@@ -247,6 +247,40 @@ export const SITE_PAGES = [
         { name: "accent", label: "Accent line" },
         { name: "intro", label: "Intro text", type: "textarea" },
       ]) },
+      { key: "network", label: "Branches & districts intro", ...copy([
+        { name: "body", label: "Network section intro", type: "textarea" },
+      ]) },
+      { key: "departments", label: "Ministry departments heading", ...copy([
+        { name: "badge", label: "Badge" },
+        { name: "heading", label: "Heading" },
+        { name: "body", label: "Intro text", type: "textarea" },
+      ]) },
+      {
+        key: "bibleSchool",
+        label: "Bible School (GOSBC)",
+        hint: "God's Quarry Site Bible College — admission, description, and contact details",
+        ...list(
+          [{ name: "question", label: "Engagement question", type: "textarea" }],
+          {
+            headingFields: [
+              { name: "badge", label: "Section badge" },
+              { name: "headline", label: "Headline" },
+              { name: "accent", label: "Accent line" },
+              { name: "collegeName", label: "College full name" },
+              { name: "motto", label: "Motto / tagline under title" },
+              { name: "announcement", label: "Admission announcement" },
+              { name: "formPrice", label: "Form price (e.g. ₦1,000)" },
+              { name: "formInstructions", label: "How to get a form", type: "textarea" },
+              { name: "description", label: "About the college", type: "textarea" },
+              { name: "tagline", label: "Motivational tagline", type: "textarea" },
+              { name: "scriptureRef", label: "Scripture reference" },
+              { name: "image", label: "Flyer / hero image", type: "image" },
+              { name: "contactHeading", label: "Contact heading" },
+              { name: "phones", label: "Phone numbers (one per line)", type: "textarea" },
+            ],
+          }
+        ),
+      },
       { key: "list", label: "Ministry listings", ...collection("ministries") },
     ],
   },
@@ -261,7 +295,7 @@ export const SITE_PAGES = [
         { name: "accent", label: "Accent line" },
         { name: "intro", label: "Intro text", type: "textarea" },
       ]) },
-      { key: "list", label: "Event listings", ...collection("events") },
+      { key: "list", label: "Event listings", hint: "Upload an image per event and drag rows to set homepage card order", ...collection("events") },
     ],
   },
   {
@@ -433,21 +467,26 @@ export const DEFAULT_PAGE_CONTENT = {
     },
     stats: {
       items: [
-        { value: "15+", label: "Years Serving" },
+        { value: "35+", label: "Years Serving" },
         { value: "500+", label: "Members Reached" },
-        { value: "12", label: "Ministries" },
+        { value: "17+", label: "Branches & Assemblies" },
         { value: "4", label: "Weekly Services" },
       ],
     },
     eventsPreview: {
       badge: "What's Happening",
       heading: "Upcoming Events",
-      body: "Join us for these exciting opportunities to worship, learn, and grow together in faith.",
+      body: "Don't miss FFYC'26 — The Refiner. Join us for worship, teaching, and renewal across every branch and campus.",
     },
     sermonsPreview: {
       badge: "Messages",
       heading: "Latest Sermons",
       body: "Be encouraged and inspired by powerful messages from God's Word.",
+    },
+    blogPreview: {
+      badge: "From the Blog",
+      heading: "Latest Articles & Stories",
+      body: "Teaching, inspiration, and church news — fresh from our ministry and convention resources.",
     },
     ministriesPreview: {
       badge: "Get Involved",
@@ -507,7 +546,7 @@ export const DEFAULT_PAGE_CONTENT = {
       badge: "About Us",
       headline: "Our Story of",
       accent: "Faith & Fire",
-      intro: "Discover how God has been working through Fire-Fire International Evangelical Church to transform lives and build His kingdom in our community.",
+      intro: "Discover how God has been working through Fire-Fire International Evangelical Church since April 3, 1991 — transforming lives and building His kingdom in our community.",
     },
     mission: {
       motto: "Teach one by one another",
@@ -515,28 +554,13 @@ export const DEFAULT_PAGE_CONTENT = {
       vision: "To be a thriving, Spirit-filled church that makes disciples, transforms communities, and impacts nations for the glory of God. We envision a church where every member is equipped to serve, every heart is ignited with God's love, and every life reflects the character of Christ.",
     },
     values: {
-      badge: "Our Values",
+      badge: "Our Doctrines",
       heading: "What We Stand For",
-      intro: "These core values guide everything we do as a church family and shape our ministry approach.",
-      items: [
-        { title: "Love & Compassion", description: "We demonstrate God's love through genuine care and service to our community and beyond." },
-        { title: "Biblical Truth", description: "We base all our teachings and practices on the solid foundation of God's Word." },
-        { title: "Community & Fellowship", description: "We foster meaningful relationships and build a strong, supportive church family." },
-        { title: "Spiritual Fire", description: "We maintain passion and zeal for God's kingdom and His transforming power." },
-      ],
+      intro: "Thirty foundational teachings from God's Word — the backbone of our faith, practice, and proclamation as Fire-Fire International Evangelical Church.",
     },
-    history: {
-      badge: "Our Journey",
-      heading: "God's Faithfulness Through the Years",
-      intro: "See how God has been working in and through our church from the beginning.",
-      items: [
-        { year: "2010", title: "Church Founded", description: "Fire-Fire International Evangelical Church was established with a vision to ignite hearts for God." },
-        { year: "2015", title: "New Building", description: "God blessed us with our current facility to better serve our growing congregation." },
-        { year: "2018", title: "Youth Ministry Launch", description: "Started our dedicated youth ministry to reach the next generation." },
-        { year: "2020", title: "Online Ministry", description: "Expanded our reach through digital ministry during challenging times." },
-        { year: "2023", title: "Community Outreach", description: "Launched extensive community programs and evangelistic outreaches." },
-      ],
-    },
+    doctrines: doctrinesCmsDefaults(),
+    catechism: catechismCmsDefaults(),
+    history: historyCmsDefaults(),
     pastor: {
       badge: "Pastor's Message",
       heading: "A Word from Our Pastor",
@@ -563,20 +587,30 @@ export const DEFAULT_PAGE_CONTENT = {
       items: [
         { name: "Sitting at the Jesus feet", day: "Sunday", time: "8:00 AM - 9:00 AM", description: "A time of intimate worship and reflection where we sit quietly at Jesus' feet.", features: "Quiet Worship, Personal Prayer, Meditation, Scripture Reading" },
         { name: "Main Service", day: "Sunday", time: "9:00 AM - 12:00 PM", description: "Our primary worship service featuring dynamic worship, powerful preaching, prayer, and fellowship.", features: "Praise & Worship, Biblical Preaching, Prayer Time, Fellowship" },
-        { name: "Mid-week Service", day: "Wednesday", time: "6:00 PM - 8:00 PM", description: "Join us midweek for Bible study, prayer, and spiritual growth.", features: "Bible Study, Prayer Meeting, Testimonies, Small Groups" },
+        { name: "Bible Study", day: "Monday", time: "5:00 PM - 7:00 PM", description: "Deep dive into God's Word and biblical teachings.", features: "Scripture Study, Teaching, Discussion, Prayer" },
+        { name: "Revival Hour", day: "Wednesday", time: "5:00 PM - 7:00 PM", description: "A midweek revival gathering for prayer, worship, and spiritual renewal.", features: "Worship, Prayer, Teaching, Testimonies" },
+        { name: "Men's Program", day: "Friday", time: "9:00 AM - 3:00 PM", description: "Weekly men's gathering for prayer, teaching, fellowship, and spiritual growth as we come up higher in Christ.", features: "Prayer, Teaching, Fellowship, Men's Ministry" },
+        { name: "Night Vigil", day: "Friday", time: "12:00 AM - 5:00 AM", description: "Overnight prayer and worship as we seek God's face through the night.", features: "Prayer, Worship, Intercession, Communion with God" },
       ],
     },
     programmes: {
-      badge: "Special Events",
-      heading: "Special Services & Events",
-      intro: "Throughout the year, we host special services and events for spiritual growth and community building.",
+      badge: "Church Calendar",
+      heading: "Church Activities & Special Events",
+      intro: "Monthly gatherings, mountain prayer meetings, and annual conventions that shape our church life throughout the year.",
       items: [
-        { title: "Holy Ghost Fire Conference", description: "Annual conference focused on receiving the baptism of the Holy Spirit", frequency: "Annually" },
-        { title: "Revival Services", description: "Special revival meetings for spiritual renewal and awakening", frequency: "Quarterly" },
-        { title: "Prayer & Fasting", description: "Corporate prayer and fasting sessions for breakthrough", frequency: "Monthly" },
-        { title: "Youth Services", description: "Dynamic services designed specifically for young people", frequency: "Weekly" },
-        { title: "Women's Fellowship", description: "Special services for women's ministry and empowerment", frequency: "Bi-weekly" },
-        { title: "Men's Fellowship", description: "Gathering for men to grow in godliness and leadership", frequency: "Monthly" },
+        { group: "Monthly", title: "Workers Meeting", frequency: "Every third Sunday of the month", description: "Fellowship and coordination for church workers and ministry leaders." },
+        { group: "Monthly", title: "Brother's Vigil", frequency: "Last Thursday of the month", description: "A night of prayer and intercession for the men of the church." },
+        { group: "Monthly", title: "Sister's Vigil", frequency: "Third Thursday of the month", description: "A night of prayer and intercession for the women of the church." },
+        { group: "Mountain Programs", title: "Daily Prayer Meeting", frequency: "Daily", description: "Corporate prayer on the mountain — seeking God's face together every day." },
+        { group: "Mountain Programs", title: "Mowoofin", frequency: "Every Wednesday", description: "Prayer meeting for women on the mountain." },
+        { group: "Mountain Programs", title: "Coming Up Higher", frequency: "Every Friday", description: "Prayer meeting for men on the mountain." },
+        { group: "Yearly", title: "Beginning With God", frequency: "First Wednesday–Friday of the year", description: "Opening the year with consecration, prayer, and seeking the Lord together." },
+        { group: "Yearly", title: "Annual Convention", frequency: "Usually Easter weekend / period", description: "Our flagship annual convention — worship, teaching, and revival." },
+        { group: "Yearly", title: "August Revival", frequency: "11th–31st August every year", description: "A season of intensive revival, prayer, and spiritual renewal." },
+        { group: "Yearly", title: "Men Annual Convention", frequency: "September", description: "Annual gathering for men — teaching, prayer, and empowerment." },
+        { group: "Yearly", title: "Youth Convention", frequency: "September", description: "Annual youth convention — faith, fire, and purpose for the next generation." },
+        { group: "Yearly", title: "Women Annual Convention", frequency: "November", description: "Annual gathering for women — worship, teaching, and fellowship." },
+        { group: "Yearly", title: "Good Morning Jesus (GMJ)", frequency: "1st–21st December every year", description: "Twenty-one days of morning devotion and prayer to close the year in God's presence." },
       ],
     },
     expect: {
@@ -639,7 +673,7 @@ export const DEFAULT_PAGE_CONTENT = {
       body: "Our leaders are called to serve with humility, integrity, and a heart for God's people. They exemplify the character of Christ in their daily lives and ministry.",
       quote: "Leadership is not about being served, but about serving others. We lead by example, showing God's love through our actions and walking humbly before Him.",
       cite: "Pastor S.O. Moronranti",
-      stat1Value: "15+",
+      stat1Value: "35+",
       stat1Label: "Years of Ministry",
       stat2Value: "6",
       stat2Label: "Ministry Departments",
@@ -655,7 +689,44 @@ export const DEFAULT_PAGE_CONTENT = {
     },
   },
   ministries: {
-    hero: { badge: "Get Involved", headline: "Our", accent: "Ministries", intro: "Find your place to serve, grow, and make a difference in God's kingdom." },
+    hero: {
+      badge: "Our Network",
+      headline: "Branches &",
+      accent: "Districts",
+      intro: "From headquarters in Olomi to assemblies across Ibadan and campus fellowships at OOU and AAUA — discover where Fire-Fire gathers.",
+    },
+    network: {
+      body: "Explore our districts, local assemblies, and campus fellowships. Every branch is part of one family on mission to teach one by one another.",
+    },
+    departments: {
+      badge: "Serve & Grow",
+      heading: "Ministry Departments",
+      body: "Beyond our branch network, find your place in youth, women, men, and children's ministries.",
+    },
+    bibleSchool: {
+      badge: "Bible College",
+      headline: "God's Quarry Site",
+      accent: "Bible College",
+      collegeName: "God's Quarry Site Bible College (GOSBC)",
+      motto: "Teach one to one another",
+      announcement: "Admission form is out again",
+      formPrice: "₦1,000",
+      formInstructions: "You can purchase a form at the College Office.",
+      description:
+        "GOSBC is a theology institution — a private, non-sectarian educational and training institution for pastors and evangelists.",
+      tagline: "You need Biblical teaching to fulfil your Christian calling and ministry.",
+      scriptureRef: "1 Kings 6:7; 1 Peter 2:5",
+      image: "/gosbc-admission-flyer.png",
+      contactHeading: "For enquiries",
+      phones: "08161761657\n07045819878",
+      items: [
+        { question: "Do you want to be a firebrand in the hand of the Almighty?" },
+        {
+          question:
+            "Do you want God to hew your stone and make you ready before bringing you into His house?",
+        },
+      ],
+    },
   },
   events: {
     hero: { badge: "What's Happening", headline: "Upcoming", accent: "Events", intro: "Join us for these opportunities to worship, learn, and grow together in faith." },

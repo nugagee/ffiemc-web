@@ -12,6 +12,9 @@ import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
 import { Card } from "../../components/ui/card";
 import ImageUrlField, { isImageField } from "../../components/admin/ImageUrlField";
+import { AboutHistoryEditor } from "../../components/admin/about/AboutHistoryEditor";
+import { AboutCatechismEditor } from "../../components/admin/about/AboutCatechismEditor";
+import { AboutDoctrinesEditor } from "../../components/admin/about/AboutDoctrinesEditor";
 import {
   HeroCms,
   EventsCms,
@@ -324,6 +327,15 @@ export default function PageEditor() {
               <Cms />
             </div>
           ) : null;
+        }
+        if (section.kind === "history") {
+          return <AboutHistoryEditor key={`${page.key}-${section.key}`} canEdit={canEdit} />;
+        }
+        if (section.kind === "doctrines") {
+          return <AboutDoctrinesEditor key={`${page.key}-${section.key}`} canEdit={canEdit} />;
+        }
+        if (section.kind === "catechism") {
+          return <AboutCatechismEditor key={`${page.key}-${section.key}`} canEdit={canEdit} />;
         }
         if (section.kind === "list") {
           return <ListEditor key={`${page.key}-${section.key}`} pageKey={page.key} section={section} canEdit={canEdit} />;

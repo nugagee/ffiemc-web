@@ -74,6 +74,7 @@ create table if not exists public.events (
   time text not null default '',
   location text not null default '',
   description text not null default '',
+  image text not null default '',
   featured boolean not null default false,
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
@@ -133,6 +134,7 @@ create table if not exists public.ministries (
 );
 
 alter table public.events add column if not exists sort_order integer not null default 0;
+alter table public.events add column if not exists image text not null default '';
 alter table public.sermons add column if not exists sort_order integer not null default 0;
 alter table public.testimonies add column if not exists sort_order integer not null default 0;
 alter table public.testimonies add column if not exists status text not null default 'published';
@@ -813,7 +815,7 @@ begin
     returning to_jsonb(public.blog_posts.*) into v_row;
 
   elsif p_collection = 'events' then
-    insert into public.events (id, title, date, time, location, description, featured, sort_order, updated_at)
+    insert into public.events (id, title, date, time, location, description, image, featured, sort_order, updated_at)
     values (
       v_id,
       coalesce(p_data->>'title', ''),
@@ -821,6 +823,7 @@ begin
       coalesce(p_data->>'time', ''),
       coalesce(p_data->>'location', ''),
       coalesce(p_data->>'description', ''),
+      coalesce(p_data->>'image', ''),
       coalesce((p_data->>'featured')::boolean, false),
       coalesce(
         (p_data->>'sort_order')::integer,
@@ -832,6 +835,7 @@ begin
     on conflict (id) do update set
       title = excluded.title, date = excluded.date, time = excluded.time,
       location = excluded.location, description = excluded.description,
+      image = excluded.image,
       featured = excluded.featured,
       sort_order = case when p_data ? 'sort_order' then excluded.sort_order else public.events.sort_order end,
       updated_at = now()

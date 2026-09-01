@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../lib/api';
+import { CONVENTION_BLOG_POSTS } from '../data/conventionContent';
 import { BlogPostArticle } from '../components/blog/BlogPostArticle';
 import { Button } from '../components/ui/button';
 import { Flame } from 'lucide-react';
@@ -11,10 +12,17 @@ export const BlogPost = () => {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    const seeded = CONVENTION_BLOG_POSTS.find((p) => String(p.id) === String(id) || p.slug === id);
+    if (seeded) {
+      setPost(seeded);
+      setNotFound(false);
+      return undefined;
+    }
     api
       .get(`/blog/${id}`)
       .then((res) => setPost(res.data))
       .catch(() => setNotFound(true));
+    return undefined;
   }, [id]);
 
   if (notFound) {

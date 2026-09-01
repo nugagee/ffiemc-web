@@ -1,9 +1,13 @@
 Options -MultiViews
+DirectorySlash Off
 RewriteEngine On
 
-# Don't rewrite real files or directories
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
+# /admin is a React route, not a server folder. If cPanel has an /admin
+# directory, DirectorySlash + !-d would 404 or list files instead of the SPA.
+RewriteRule ^admin(/.*)?$ index.html [L,QSA]
 
-# Serve the React app for all client-side routes (e.g. /admin)
+# Don't rewrite real files (js, css, images)
+RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ index.html [QSA,L]
+
+ErrorDocument 404 /index.html

@@ -3,22 +3,24 @@ import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Heart, Users, BookOpen, Flame, MapPin, Clock, Calendar } from 'lucide-react';
+import { MapPin, Clock, Calendar } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
-
-const VALUE_ICONS = [Heart, BookOpen, Users, Flame];
+import { resolveCatechismContent, resolveDoctrinesContent, resolveHistoryContent } from '../data/aboutDefaults';
+import { DoctrinesSection } from '../components/About/DoctrinesSection';
+import { CatechismSection } from '../components/About/CatechismSection';
+import { ChurchHistorySection } from '../components/About/ChurchHistorySection';
 
 export const About = () => {
   const { settings } = useSettings();
   const hero = pageSection(settings, 'about', 'hero');
   const mission = pageSection(settings, 'about', 'mission');
   const valuesBlock = pageSection(settings, 'about', 'values');
-  const historyBlock = pageSection(settings, 'about', 'history');
   const pastor = pageSection(settings, 'about', 'pastor');
   const visit = pageSection(settings, 'about', 'visit');
-  const values = valuesBlock.items || [];
-  const history = historyBlock.items || [];
+  const doctrinesContent = resolveDoctrinesContent(settings);
+  const catechismContent = resolveCatechismContent(settings);
+  const historyContent = resolveHistoryContent(settings);
   const serviceTimes = settings.serviceTimes || [];
 
   return (
@@ -73,87 +75,40 @@ export const About = () => {
         </div>
       </section>
 
-      {/* Core Values */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <Badge className="bg-red-100 text-red-700 hover:bg-red-100 mb-4">{valuesBlock.badge}</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {valuesBlock.heading}
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              {valuesBlock.intro}
-            </p>
-          </div>
+      {/* Church Doctrines */}
+      <DoctrinesSection
+        badge={valuesBlock.badge}
+        heading={valuesBlock.heading}
+        intro={valuesBlock.intro}
+        purpose={doctrinesContent.purpose}
+        acronyms={doctrinesContent.acronyms}
+        doctrines={doctrinesContent.doctrines}
+      />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {values.map((value, index) => {
-              const Icon = VALUE_ICONS[index % VALUE_ICONS.length];
-              return (
-              <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
-                <CardHeader>
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-red-100 p-3 rounded-lg">
-                      <Icon className="h-6 w-6 text-red-600" />
-                    </div>
-                    <CardTitle className="text-xl">{value.title}</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-gray-600 text-base">
-                    {value.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            );
-            })}
-          </div>
-        </div>
-      </section>
+      {/* Catechism */}
+      <CatechismSection
+        badge={catechismContent.badge}
+        heading={catechismContent.heading}
+        intro={catechismContent.intro}
+        items={catechismContent.items}
+        oldTestament={catechismContent.oldTestament}
+        newTestament={catechismContent.newTestament}
+      />
 
-      {/* Church History Timeline */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <Badge className="bg-red-100 text-red-700 hover:bg-red-100 mb-4">{historyBlock.badge}</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {historyBlock.heading}
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              {historyBlock.intro}
-            </p>
-          </div>
-
-          <div className="relative">
-            <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-red-200"></div>
-            <div className="space-y-12">
-              {history.map((milestone, index) => (
-                <div key={index} className={`flex items-center ${index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
-                  <div className={`w-1/2 ${index % 2 === 0 ? 'pr-8 text-right' : 'pl-8 text-left'}`}>
-                    <Card className="hover:shadow-lg transition-shadow duration-200">
-                      <CardHeader>
-                        <div className="flex items-center space-x-3">
-                          <Badge className="bg-red-600 text-white">{milestone.year}</Badge>
-                        </div>
-                        <CardTitle className="text-xl">{milestone.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="text-gray-600">
-                          {milestone.description}
-                        </CardDescription>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  <div className="relative z-10 flex items-center justify-center w-8 h-8 bg-red-600 rounded-full border-4 border-white shadow">
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
-                  </div>
-                  <div className="w-1/2"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Church History */}
+      <ChurchHistorySection
+        badge={historyContent.badge}
+        heading={historyContent.heading}
+        intro={historyContent.intro}
+        foundedDate={historyContent.foundedDate}
+        founder={historyContent.founder}
+        foundingPlace={historyContent.foundingPlace}
+        headquarters={historyContent.headquarters}
+        openingQuote={historyContent.openingQuote}
+        story={historyContent.story}
+        pillars={historyContent.pillars}
+        timeline={historyContent.timeline}
+      />
 
       {/* Pastor's Message */}
       <section className="py-16 bg-red-600 text-white">

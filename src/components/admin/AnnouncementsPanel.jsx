@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import ImageUrlField from "./ImageUrlField";
 import { PageToolbar } from "./PageToolbar";
+import { MonthWelcomeBannerPanel } from "./MonthWelcomeBannerPanel";
 
 function toLocalInput(value) {
   if (!value) return "";
@@ -429,6 +430,10 @@ export function AnnouncementsPanel() {
 
   return (
     <div data-testid="manager-announcements">
+      <Card className="p-5 mb-8 border-amber-100 bg-gradient-to-br from-amber-50/40 to-white">
+        <MonthWelcomeBannerPanel canEdit={canEdit} />
+      </Card>
+
       <PageToolbar
         className="mb-6"
         align="start"

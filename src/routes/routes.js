@@ -31,6 +31,8 @@ import { Testimonies } from "../pages/Testimonies";
 import { ShareTestimony } from "../pages/ShareTestimony";
 import { VisitorTracker } from "../components/VisitorTracker";
 import { AnnouncementPopup } from "../components/AnnouncementPopup";
+import { MonthWelcomePopup } from "../components/MonthWelcomePopup";
+import { PopupPriorityProvider } from "../context/PopupPriorityContext";
 import { StickyEventBanner } from "../components/StickyEventBanner";
 import { Login } from "../pages/Login";
 import AdminLayout from "../pages/admin/AdminLayout";
@@ -42,6 +44,7 @@ import AdminActivityPage from "../pages/admin/AdminActivityPage";
 import PageEditor from "../pages/admin/PageEditor";
 import BlogPostList from "../pages/admin/blog/BlogPostList";
 import BlogPostEditor from "../pages/admin/blog/BlogPostEditor";
+import ChurchResourcesPage from "../pages/admin/blog/ChurchResourcesPage";
 import PrayerInboxPage from "../pages/admin/PrayerInboxPage";
 import PastorsPage from "../pages/admin/PastorsPage";
 import ProgramsPage from "../pages/admin/programs/ProgramsPage";
@@ -76,7 +79,12 @@ const PublicShell = () => {
     <div className={`${isAdminShell ? "h-screen overflow-hidden" : "min-h-screen w-full max-w-full overflow-x-hidden"} flex flex-col bg-white`}>
       {!isAdminShell && <VisitorTracker />}
       {!isAdminShell && <StickyEventBanner />}
-      {!isAdminShell && <AnnouncementPopup />}
+      {!isAdminShell && (
+        <PopupPriorityProvider>
+          <MonthWelcomePopup />
+          <AnnouncementPopup />
+        </PopupPriorityProvider>
+      )}
       {!isAdminShell && <Navbar />}
       <main className={isAdminShell ? "flex-1 min-h-0 overflow-hidden" : "flex-1 w-full max-w-full"}>
         <Outlet />
@@ -167,6 +175,22 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="approvals">
                     <ApprovalsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="blog/bible-study"
+                element={
+                  <RequirePermission feature="blog.posts" action="edit">
+                    <ChurchResourcesPage kind="bible_study" />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="blog/daily-manna"
+                element={
+                  <RequirePermission feature="blog.posts" action="edit">
+                    <ChurchResourcesPage kind="daily_manna" />
                   </RequirePermission>
                 }
               />

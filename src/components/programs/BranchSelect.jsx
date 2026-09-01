@@ -1,29 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { Label } from "../ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "../ui/select";
-import { listPublicChurchBranches } from "../../lib/api";
+import { listPublicChurchBranches, listPublicChurchDistricts } from "../../lib/api";
+import { CHURCH_BRANCHES, CHURCH_DISTRICTS, groupChurchNetwork, normalizeBranch, normalizeDistrict } from "../../data/churchBranches";
 
-/** Reusable church branch picker — local & international groups. */
+/** Reusable church branch picker — grouped by district, type, and international. */
 export function BranchSelect({ value, onChange, required = true, label = "Church branch", id = "branch" }) {
   const [branches, setBranches] = useState([]);
+  const [districts, setDistricts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    listPublicChurchBranches()
-      .then(setBranches)
-      .catch(() => setBranches([]))
+    Promise.all([
+      listPublicChurchBranches().catch(() => CHURCH_BRANCHES),
+      listPublicChurchDistricts().catch(() => CHURCH_DISTRICTS),
+    ])
+      .then(([branchRows, districtRows]) => {
+        const b = (Array.isArray(branchRows) ? branchRows : CHURCH_BRANCHES).map(normalizeBranch);
+        const d = (Array.isArray(districtRows) ? districtRows : CHURCH_DISTRICTS).map(normalizeDistrict);
+        setBranches(b);
+        setDistricts(d);
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const { local, international } = useMemo(() => {
-    const loc = [];
-    const intl = [];
-    (branches || []).forEach((b) => {
-      if (b.region === "international" || b.isInternational) intl.push(b);
-      else loc.push(b);
-    });
-    return { local: loc, international: intl };
-  }, [branches]);
+  const groups = useMemo(() => groupChurchNetwork(branches, districts), [branches, districts]);
 
   return (
     <div className="space-y-2">
@@ -36,18 +37,49 @@ export function BranchSelect({ value, onChange, required = true, label = "Church
         </SelectTrigger>
         <SelectContent>
           {!required && <SelectItem value="all">All branches</SelectItem>}
-          {local.length > 0 && (
+
+          {groups.headquarters.length > 0 && (
             <SelectGroup>
-              <SelectLabel>Local branches (Nigeria)</SelectLabel>
-              {local.map((b) => (
+              <SelectLabel>Headquarters</SelectLabel>
+              {groups.headquarters.map((b) => (
                 <SelectItem key={b.id} value={b.id}>{b.label || b.name}</SelectItem>
               ))}
             </SelectGroup>
           )}
-          {international.length > 0 && (
+
+          {groups.districtGroups.map(({ district, branches: districtBranches }) =>
+            districtBranches.length > 0 ? (
+              <SelectGroup key={district.id}>
+                <SelectLabel>{district.name}</SelectLabel>
+                {districtBranches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.label || b.name}</SelectItem>
+                ))}
+              </SelectGroup>
+            ) : null
+          )}
+
+          {groups.standaloneAssemblies.length > 0 && (
+            <SelectGroup>
+              <SelectLabel>Other assemblies</SelectLabel>
+              {groups.standaloneAssemblies.map((b) => (
+                <SelectItem key={b.id} value={b.id}>{b.label || b.name}</SelectItem>
+              ))}
+            </SelectGroup>
+          )}
+
+          {groups.campuses.length > 0 && (
+            <SelectGroup>
+              <SelectLabel>Campus fellowships</SelectLabel>
+              {groups.campuses.map((b) => (
+                <SelectItem key={b.id} value={b.id}>{b.label || b.name}</SelectItem>
+              ))}
+            </SelectGroup>
+          )}
+
+          {groups.international.length > 0 && (
             <SelectGroup>
               <SelectLabel>International</SelectLabel>
-              {international.map((b) => (
+              {groups.international.map((b) => (
                 <SelectItem key={b.id} value={b.id}>{b.label || b.name}</SelectItem>
               ))}
             </SelectGroup>
@@ -55,7 +87,7 @@ export function BranchSelect({ value, onChange, required = true, label = "Church
         </SelectContent>
       </Select>
       {required && (
-        <p className="text-xs text-gray-500">Select the Fire-Fire branch you belong to, or International if you fellowship online from abroad.</p>
+        <p className="text-xs text-gray-500">Select your Fire-Fire branch, assembly, or campus fellowship.</p>
       )}
     </div>
   );

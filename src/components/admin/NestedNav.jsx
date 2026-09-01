@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BarChart3,
+  BookOpen,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
@@ -23,6 +24,7 @@ import {
   Plus,
   ScrollText,
   Shield,
+  Sun,
   UserPlus,
   Users,
   Video,
@@ -37,6 +39,7 @@ import { pathMatches } from "../../data/adminNav";
 
 const ICONS = {
   BarChart3,
+  BookOpen,
   CalendarDays,
   CheckCircle2,
   Church,
@@ -63,6 +66,7 @@ const ICONS = {
   Wrench,
   Mic,
   StickyNote,
+  Sun,
   Languages,
   Type,
 };

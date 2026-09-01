@@ -21,7 +21,7 @@ import { Textarea } from "../../../components/ui/textarea";
 import { Label } from "../../../components/ui/label";
 import { Switch } from "../../../components/ui/switch";
 
-const CATEGORIES = ["Faith", "Teaching", "Worship", "Family", "Youth", "Testimony", "Events", "General"];
+const CATEGORIES = ["Education", "Music", "News", "Politics", "Youth", "Teaching", "Faith", "Worship", "Events", "General"];
 
 const emptyPost = (author = "") => ({
   title: "",

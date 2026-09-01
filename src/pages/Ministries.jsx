@@ -1,15 +1,21 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardDescription, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
 import { Users, Clock } from 'lucide-react';
 import { useCollection } from '../hooks/useCollection';
 import { ministries as mockMinistries } from '../mock';
 import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
+import { BranchesNetworkSection } from '../components/Ministries/BranchesNetworkSection';
+import { BibleSchoolSection } from '../components/Ministries/BibleSchoolSection';
 
 export const Ministries = () => {
   const { settings } = useSettings();
   const hero = pageSection(settings, 'ministries', 'hero');
+  const networkCopy = pageSection(settings, 'ministries', 'network');
+  const departmentsCopy = pageSection(settings, 'ministries', 'departments');
   const { items, loading } = useCollection('/ministries');
   const ministries = items.length ? items : mockMinistries;
 
@@ -27,12 +33,22 @@ export const Ministries = () => {
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <BranchesNetworkSection intro={networkCopy.body} />
+
+      <BibleSchoolSection />
+
+      <section className="py-16 bg-gray-50 border-t border-gray-100" id="departments">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 space-y-3">
+            <Badge className="bg-red-100 text-red-700 hover:bg-red-100">{departmentsCopy.badge}</Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">{departmentsCopy.heading}</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">{departmentsCopy.body}</p>
+          </div>
+
           {loading ? (
             <p className="text-center text-gray-500">Loading ministries...</p>
           ) : ministries.length === 0 ? (
-            <p className="text-center text-gray-500" data-testid="ministries-empty">No ministries listed yet.</p>
+            <p className="text-center text-gray-500" data-testid="ministries-empty">No ministry departments listed yet.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {ministries.map((ministry) => {
@@ -60,6 +76,12 @@ export const Ministries = () => {
               })}
             </div>
           )}
+
+          <div className="text-center mt-10">
+            <Button asChild variant="outline" className="border-red-200 text-red-700 hover:bg-red-50">
+              <Link to="/contact">Get involved with a ministry</Link>
+            </Button>
+          </div>
         </div>
       </section>
     </div>

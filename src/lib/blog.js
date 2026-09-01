@@ -30,6 +30,41 @@ export function wordCount(html) {
   return text.split(" ").length;
 }
 
+export function postTimestamp(post) {
+  const raw = post?.published_at || post?.scheduled_at || post?.created_at || post?.date;
+  if (!raw) return 0;
+  const t = new Date(raw).getTime();
+  return Number.isNaN(t) ? 0 : t;
+}
+
+/** Merge seeded + API blog posts; API wins on matching slug/id. */
+export function mergeBlogPosts(apiPosts = [], seeds = []) {
+  const byKey = new Map();
+  const add = (post) => {
+    if (!post) return;
+    const key = post.slug || post.id;
+    if (key == null || key === "") return;
+    byKey.set(String(key), post);
+  };
+  seeds.forEach(add);
+  (apiPosts || []).forEach(add);
+  return Array.from(byKey.values()).sort((a, b) => {
+    const orderA = Number(a.sort_order);
+    const orderB = Number(b.sort_order);
+    const hasOrderA = !Number.isNaN(orderA);
+    const hasOrderB = !Number.isNaN(orderB);
+    if (hasOrderA || hasOrderB) {
+      const sa = hasOrderA ? orderA : 9999;
+      const sb = hasOrderB ? orderB : 9999;
+      if (sa !== sb) return sa - sb;
+    }
+    const featA = a.featured ? 1 : 0;
+    const featB = b.featured ? 1 : 0;
+    if (featB !== featA) return featB - featA;
+    return postTimestamp(b) - postTimestamp(a);
+  });
+}
+
 export function isPublicBlogPost(post) {
   if (!post) return false;
   const due =

@@ -23,7 +23,9 @@ export const Navbar = () => {
       name: 'Ministries',
       path: '/ministries',
       subItems: [
-        { name: 'All Ministries', path: '/ministries' },
+        { name: 'Branches & Districts', path: '/ministries' },
+        { name: 'Bible School (GOSBC)', path: '/ministries#bible-school' },
+        { name: 'Ministry Departments', path: '/ministries#departments' },
         { name: 'Youth Ministry', path: '/ministries#youth' },
         { name: 'Women Ministry', path: '/ministries#women' },
         { name: 'Men Ministry', path: '/ministries#men' },

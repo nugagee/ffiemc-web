@@ -181,6 +181,13 @@ export const ContentManager = ({ title, path, fields, columns, feature }) => {
                   <GripVertical className="h-5 w-5" />
                 </span>
               )}
+              {item.image ? (
+                <img
+                  src={item.image}
+                  alt=""
+                  className="w-14 h-14 rounded-lg object-cover shrink-0 border border-gray-100"
+                />
+              ) : null}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-semibold text-gray-900 truncate">{item[columns[0]]}</p>

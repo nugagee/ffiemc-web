@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -18,6 +18,29 @@ const SERVICE_STYLES = [
 ];
 const EXPECT_ICONS = [Music, BookOpen, Users, Heart];
 
+const PROGRAMME_GROUPS = ['Monthly', 'Mountain Programs', 'Yearly'];
+
+const GROUP_STYLES = {
+  Monthly: { badge: 'bg-blue-100 text-blue-700', border: 'border-blue-200' },
+  'Mountain Programs': { badge: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-200' },
+  Yearly: { badge: 'bg-amber-100 text-amber-800', border: 'border-amber-200' },
+};
+
+function groupProgrammes(items = []) {
+  const buckets = Object.fromEntries(PROGRAMME_GROUPS.map((group) => [group, []]));
+  const other = [];
+  items.forEach((item) => {
+    const group = item.group || '';
+    if (buckets[group]) buckets[group].push(item);
+    else other.push(item);
+  });
+  const grouped = PROGRAMME_GROUPS
+    .filter((group) => buckets[group].length)
+    .map((group) => ({ group, items: buckets[group] }));
+  if (other.length) grouped.push({ group: 'Other', items: other });
+  return grouped;
+}
+
 function parseFeatures(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
   return String(value || '')
@@ -36,6 +59,7 @@ export const Services = () => {
   const cta = pageSection(settings, 'services', 'cta');
   const serviceTimes = (timesCopy.items?.length ? timesCopy.items : settings.serviceTimes) || [];
   const specialServices = (programmesCopy.items?.length ? programmesCopy.items : settings.programmes) || [];
+  const groupedProgrammes = useMemo(() => groupProgrammes(specialServices), [specialServices]);
   const expectItems = expectCopy.items || [];
   const guidelines = guidelinesCopy.items || [];
 
@@ -130,26 +154,39 @@ export const Services = () => {
           {specialServices.length === 0 ? (
             <p className="text-center text-gray-500">No programmes listed yet.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {specialServices.map((service, index) => (
-                <Card key={`${service.title}-${index}`} className="hover:shadow-lg transition-shadow duration-200">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <CardTitle className="text-lg">{service.title}</CardTitle>
-                      {service.frequency && (
-                        <Badge variant="secondary" className="text-xs shrink-0">
-                          {service.frequency}
-                        </Badge>
-                      )}
+            <div className="space-y-12">
+              {groupedProgrammes.map(({ group, items }) => {
+                const style = GROUP_STYLES[group] || { badge: 'bg-gray-100 text-gray-700', border: 'border-gray-200' };
+                return (
+                  <div key={group}>
+                    <div className="flex items-center gap-3 mb-6">
+                      <Badge className={style.badge}>{group}</Badge>
+                      <div className={`flex-1 h-px ${style.border} border-t`} />
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-gray-600">
-                      {service.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              ))}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {items.map((service, index) => (
+                        <Card key={`${group}-${service.title}-${index}`} className="hover:shadow-lg transition-shadow duration-200 border-0 shadow-md">
+                          <CardHeader>
+                            <div className="flex items-start justify-between gap-3">
+                              <CardTitle className="text-lg leading-snug">{service.title}</CardTitle>
+                              {service.frequency && (
+                                <Badge variant="secondary" className="text-xs shrink-0 max-w-[45%] text-right leading-tight text-white">
+                                  {service.frequency}
+                                </Badge>
+                              )}
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <CardDescription className="text-gray-600 leading-relaxed">
+                              {service.description}
+                            </CardDescription>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

@@ -71,7 +71,7 @@ export const Leadership = () => {
                     {leader.bio}
                   </CardDescription>
                   
-                  <div className="space-y-3">
+                  {/* <div className="space-y-3">
                     <div className="flex items-center justify-center space-x-4">
                       <Button size="sm" variant="outline" className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white">
                         <Mail className="h-4 w-4 mr-2" />
@@ -82,7 +82,7 @@ export const Leadership = () => {
                         Schedule
                       </Button>
                     </div>
-                  </div>
+                  </div> */}
                 </CardContent>
               </Card>
             ))}

@@ -5,6 +5,8 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../components/ui/carousel';
+import { HomeBlogSection, mergeBlogPosts } from '../components/home/HomeBlogSection';
+import { CONVENTION_BLOG_POSTS } from '../data/conventionContent';
 import { Calendar, Clock, MapPin, Users, Heart, Flame, ArrowRight, Play, ChevronRight, Quote, Star, Facebook, Twitter, Instagram, Music, MessageCircle, Share, ThumbsUp } from 'lucide-react';
 import { useCollection } from '../hooks/useCollection';
 import { useSettings } from '../context/SettingsContext';
@@ -15,6 +17,7 @@ import {
   sermons as mockSermons,
   ministries as mockMinistries,
   testimonies as mockTestimonies,
+  blogPosts as mockBlogPosts,
 } from '../mock';
 
 export const Home = () => {
@@ -24,6 +27,7 @@ export const Home = () => {
   const welcome = pageSection(settings, 'home', 'welcome');
   const eventsCopy = pageSection(settings, 'home', 'eventsPreview');
   const sermonsCopy = pageSection(settings, 'home', 'sermonsPreview');
+  const blogCopy = pageSection(settings, 'home', 'blogPreview');
   const ministriesCopy = pageSection(settings, 'home', 'ministriesPreview');
   const ctaCopy = pageSection(settings, 'home', 'cta');
   const testimoniesCopy = pageSection(settings, 'home', 'testimoniesPreview');
@@ -33,6 +37,7 @@ export const Home = () => {
   const { items: sermonsApi } = useCollection('/sermons');
   const { items: testimoniesApi } = useCollection('/testimonies');
   const { items: ministriesApi } = useCollection('/ministries');
+  const { items: blogApi } = useCollection('/blog');
   const { items: heroFromApi } = useCollection('/hero-slides');
   // Use CMS data when present; fall back to mock until admin publishes content
   const events = eventsApi.length ? eventsApi : mockEvents;
@@ -41,9 +46,43 @@ export const Home = () => {
   const ministries = ministriesApi.length ? ministriesApi : mockMinistries;
   const heroSlides = (heroFromApi.length ? [...heroFromApi] : [...mockHeroSlides])
     .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
-  const upcomingEvents = [...events].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 3);
+  const upcomingEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return [...events]
+      .sort((a, b) => {
+        if (a.featured && !b.featured) return -1;
+        if (!a.featured && b.featured) return 1;
+        const da = a.date ? new Date(a.date) : today;
+        const db = b.date ? new Date(b.date) : today;
+        return da - db;
+      })
+      .filter((e) => e.featured || !e.date || new Date(e.date) >= today)
+      .slice(0, 3);
+  }, [events]);
+
+  const eventCtaLink = (event) => {
+    if (event.registerSlug) return `/register/${event.registerSlug}`;
+    const title = (event.title || '').toLowerCase();
+    if (title.includes('youth convention')) return '/register/youth-convention-2026';
+    return '/events';
+  };
+
+  const eventCtaLabel = (event) => {
+    if (event.registerSlug || (event.title || '').toLowerCase().includes('youth convention')) {
+      return 'Register Now';
+    }
+    return 'Learn More';
+  };
   const latestSermons = sermons.slice(0, 2);
   const featuredMinistries = ministries.slice(0, 3);
+  const latestBlogPosts = useMemo(
+    () => mergeBlogPosts(
+      blogApi.length ? blogApi : mockBlogPosts,
+      CONVENTION_BLOG_POSTS
+    ),
+    [blogApi]
+  );
   const carouselTestimonies = useMemo(() => {
     const featured = testimonies.filter((t) => t.featured);
     const rest = testimonies.filter((t) => !t.featured);
@@ -142,31 +181,27 @@ export const Home = () => {
               <h3 className="text-sm sm:text-lg font-semibold text-gray-900">Join Us for Worship</h3>
               <p className="text-[11px] sm:text-sm text-gray-600">All are welcome to experience God's love</p>
             </div>
-            <div
-              className={`flex gap-2.5 sm:gap-4 pb-1 scroll-smooth [scrollbar-width:thin] ${
-                serviceTimes.length >= 5
-                  ? 'overflow-x-auto snap-x snap-mandatory'
-                  : 'overflow-x-auto snap-x snap-mandatory sm:overflow-visible sm:snap-none sm:flex-wrap sm:justify-center'
-              }`}
-            >
-              {serviceTimes.map((service, i) => (
-                <div
-                  key={service.id || i}
-                  className={`snap-start text-center p-2.5 sm:p-3 bg-red-50 rounded-lg ${
-                    serviceTimes.length >= 5
-                      ? 'shrink-0 w-[9.5rem] sm:w-[11.5rem]'
-                      : 'shrink-0 w-[9.5rem] sm:w-auto sm:flex-1 sm:min-w-[10rem] sm:max-w-[15rem]'
-                  }`}
-                >
-                  <div className="flex flex-col items-center space-y-0.5 sm:space-y-1 min-w-0">
-                    <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600 shrink-0" />
-                    <p className="font-medium text-gray-900 text-xs sm:text-sm leading-snug break-words">{service.name}</p>
-                    <p className="text-[10px] sm:text-xs text-gray-600">{service.day}</p>
-                    <p className="text-[10px] sm:text-xs font-medium text-red-600">{service.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Carousel className="w-full px-8 sm:px-10" opts={{ align: 'start', loop: false, dragFree: true }}>
+              <CarouselContent className="-ml-3">
+                {serviceTimes.map((service, i) => (
+                  <CarouselItem
+                    key={service.id || i}
+                    className="pl-3 basis-[9.5rem] sm:basis-[11.5rem]"
+                  >
+                    <div className="text-center p-2.5 sm:p-3 bg-red-50 rounded-lg h-full">
+                      <div className="flex flex-col items-center space-y-0.5 sm:space-y-1 min-w-0">
+                        <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600 shrink-0" />
+                        <p className="font-medium text-gray-900 text-xs sm:text-sm leading-snug break-words">{service.name}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-600">{service.day}</p>
+                        <p className="text-[10px] sm:text-xs font-medium text-red-600">{service.time}</p>
+                      </div>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="left-0 h-7 w-7 sm:h-8 sm:w-8 bg-white border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700" />
+              <CarouselNext className="right-0 h-7 w-7 sm:h-8 sm:w-8 bg-white border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700" />
+            </Carousel>
           </div>
         </section>
       )}
@@ -266,12 +301,18 @@ export const Home = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {upcomingEvents.map((event, index) => (
-              <Card key={event.id} className="bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20 transition-all duration-300 hover:scale-105">
-                <CardHeader className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Badge className={`${event.featured ? "bg-yellow-500 text-black" : "bg-white/20 text-white"}`}>
-                      {event.featured ? "Featured" : "Event"}
+            {upcomingEvents.map((event) => (
+              <Card key={event.id} className="overflow-hidden bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20 transition-all duration-300 hover:scale-105">
+                <div className="relative aspect-video overflow-hidden">
+                  <img
+                    src={event.image || 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=800&h=450&fit=crop'}
+                    alt={event.title}
+                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-2">
+                    <Badge className={`${event.featured ? 'bg-yellow-500 text-black' : 'bg-white/20 text-white'}`}>
+                      {event.featured ? 'Featured' : 'Event'}
                     </Badge>
                     <div className="text-right">
                       <p className="text-lg font-bold">
@@ -280,6 +321,8 @@ export const Home = () => {
                       <p className="text-sm text-red-100">{event.time}</p>
                     </div>
                   </div>
+                </div>
+                <CardHeader className="space-y-2">
                   <CardTitle className="text-2xl">{event.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -287,11 +330,11 @@ export const Home = () => {
                     {event.description}
                   </CardDescription>
                   <div className="flex items-center text-sm text-red-200">
-                    <MapPin className="h-4 w-4 mr-2" />
+                    <MapPin className="h-4 w-4 mr-2 shrink-0" />
                     {event.location}
                   </div>
-                  <Button variant="outline" size="sm" className="border-white/30 text-white hover:bg-white hover:text-red-600">
-                    Learn More
+                  <Button asChild variant="outline" size="sm" className="border-white/30 text-white hover:bg-white hover:text-red-600">
+                    <Link to={eventCtaLink(event)}>{eventCtaLabel(event)}</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -364,6 +407,13 @@ export const Home = () => {
           </div>
         </div>
       </section>
+
+      <HomeBlogSection
+        posts={latestBlogPosts}
+        badge={blogCopy.badge}
+        heading={blogCopy.heading}
+        body={blogCopy.body}
+      />
 
       {/* Ministries Preview - Enhanced */}
       <section className="py-20 bg-gradient-to-br from-orange-50 via-red-50 to-pink-50">

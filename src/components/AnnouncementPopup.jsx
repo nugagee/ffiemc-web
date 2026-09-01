@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useActiveAnnouncements } from "../hooks/useActiveAnnouncements";
+import { usePopupPriority } from "../context/PopupPriorityContext";
 import { trackBannerEvent } from "../lib/bannerTrack";
 import { Button } from "./ui/button";
 import {
@@ -44,6 +45,7 @@ function orientationOf(width, height) {
 
 export function AnnouncementPopup() {
   const location = useLocation();
+  const { monthWelcomeBlocking } = usePopupPriority();
   const list = useActiveAnnouncements("popup");
   const eligible = list.filter((row) => row && !isHiddenForever(row));
   const [ready, setReady] = useState(false);
@@ -61,22 +63,23 @@ export function AnnouncementPopup() {
     setReady(false);
     setDialogOpen(false);
     setBetweenPopupsMs(null);
+    if (monthWelcomeBlocking) return undefined;
     const delayMs = popupDelayMs(eligible[0]);
     const t = window.setTimeout(() => setReady(true), delayMs);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname, eligible.map((r) => r.id).join(",")]);
+  }, [location.pathname, eligible.map((r) => r.id).join(","), monthWelcomeBlocking]);
 
   // Open current item once ready; after Close / Don't show again, wait ~3s (or that banner's delay) before the next.
   useEffect(() => {
-    if (!ready || !item) {
+    if (monthWelcomeBlocking || !ready || !item) {
       setDialogOpen(false);
       return undefined;
     }
     const gapMs = betweenPopupsMs == null ? 80 : betweenPopupsMs;
     const t = window.setTimeout(() => setDialogOpen(true), gapMs);
     return () => window.clearTimeout(t);
-  }, [ready, item?.id, betweenPopupsMs]);
+  }, [ready, item?.id, betweenPopupsMs, monthWelcomeBlocking]);
 
   useEffect(() => {
     setOrientation("unknown");

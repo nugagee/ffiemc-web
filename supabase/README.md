@@ -64,6 +64,12 @@ Then run `supabase/migrations/20260909_admin_utilities.sql` for private admin no
 
 Then run `supabase/migrations/20260910_event_pages_person_names.sql` for FFIEYC-style program nav, registration counts, title + first/last name on forms, and structured registration emails.
 
+Then run `supabase/migrations/20260912_church_resources.sql` for Monday Bible Study and Daily Manna resources with admin upload/import.
+
+Then run `supabase/migrations/20260913_seed_convention_blog.sql` to seed the six convention blog posts (Failure, Time to Youth, Way/Truth/Life, All in All, Top 10, Stepping Out Again).
+
+Also run `supabase/migrations/20260911_events_image.sql` if event card images are not set up yet.
+
 Built-in lists still work from the frontend defaults if this migration is not run yet; admin “Save” falls back to updating site settings when the RPC is missing (needs permission to edit settings).
 
 **Admin:** Programs submenu (programs, types, branches, registrations, roles, members, **announcements**)

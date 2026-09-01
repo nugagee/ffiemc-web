@@ -69,30 +69,30 @@ export const serviceTimes = [
   {
     id: 2,
     name: "Main Service",
-    time: "9:00 AM - 12:00 PM", 
+    time: "9:00 AM - 12:00 PM",
     day: "Sunday",
     description: "Our primary worship service with preaching and fellowship"
   },
   {
     id: 3,
-    name: "Bible Study", 
+    name: "Bible Study",
     time: "5:00 PM - 7:00 PM",
     day: "Monday",
     description: "Deep dive into God's Word and biblical teachings"
   },
   {
     id: 4,
-    name: "Women's Program", 
-    time: "12:00 PM - 3:00 PM",
+    name: "Revival Hour",
+    time: "5:00 PM - 7:00 PM",
     day: "Wednesday",
-    description: "Fellowship, teaching, and empowerment for women"
+    description: "A midweek revival gathering for prayer, worship, and spiritual renewal"
   },
   {
     id: 5,
-    name: "Mid-week Service", 
-    time: "6:00 PM - 8:00 PM",
-    day: "Wednesday",
-    description: "Bible study and prayer meeting"
+    name: "Night Vigil",
+    time: "12:00 AM - 5:00 AM",
+    day: "Friday",
+    description: "Overnight prayer and worship as we seek God's face through the night"
   }
 ];
 
@@ -122,38 +122,34 @@ export const leadership = [
 
 export const events = [
   {
-    id: 1,
-    title: "Holy Ghost Fire Conference",
-    date: "2025-03-15",
-    time: "9:00 AM",
-    location: "Main Auditorium",
-    description: "A powerful conference focused on receiving the baptism of the Holy Spirit and fire",
-    featured: true
+    id: "youth-convention-2026",
+    title: "Fire-Fire Youth Convention 2026 — The Refiner",
+    date: "2026-09-09",
+    time: "Day & Night · Wed 9 – Sat 12 Sep",
+    location: "Fire-Fire HQ, Ibadan",
+    description: "Join young people from every branch and campus for FFYC'26 — worship, teaching, and renewal. Register now for the annual youth convention.",
+    image: "/ffyc-2026-flyer.png",
+    featured: true,
+    registerSlug: "youth-convention-2026",
   },
   {
     id: 2,
-    title: "Youth Revival",
-    date: "2025-02-28",
-    time: "6:00 PM",
-    location: "Youth Hall",
-    description: "Special revival service for young people to encounter God's transforming power"
+    title: "Holy Ghost Fire Conference",
+    date: "2026-03-15",
+    time: "9:00 AM",
+    location: "Main Auditorium",
+    description: "A powerful conference focused on receiving the baptism of the Holy Spirit and fire",
+    image: "https://images.unsplash.com/photo-1438032005730-c779502df39b?w=800&h=450&fit=crop",
   },
   {
     id: 3,
     title: "Marriage Enrichment Seminar",
-    date: "2025-03-08",
-    time: "4:00 PM", 
+    date: "2026-04-08",
+    time: "4:00 PM",
     location: "Conference Room",
-    description: "Building stronger marriages through biblical principles"
+    description: "Building stronger marriages through biblical principles",
+    image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&h=450&fit=crop",
   },
-  {
-    id: 4,
-    title: "Evangelism Outreach",
-    date: "2025-02-22",
-    time: "10:00 AM",
-    location: "Community Center",
-    description: "Reaching out to the community with the gospel message"
-  }
 ];
 
 export const sermons = [

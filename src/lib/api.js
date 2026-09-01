@@ -125,12 +125,21 @@ async function publicGet(collection, id) {
   assertConfigured();
   const table = TABLE_MAP[collection];
   if (!table) throw new Error("Not found");
-  const { data, error } = await getSupabase()
+  let { data, error } = await getSupabase()
     .from(table)
     .select("*")
     .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) {
+    const bySlug = await getSupabase()
+      .from(table)
+      .select("*")
+      .eq("slug", id)
+      .maybeSingle();
+    if (bySlug.error) throw new Error(bySlug.error.message);
+    data = bySlug.data;
+  }
   if (!data) throw new Error("Not found");
   if (collection === "blog" && !isPublicBlogPost(data)) throw new Error("Not found");
   return withId(data);
@@ -483,6 +492,22 @@ export const authApi = {
       p_token: getAdminToken(),
       p_id: id,
     }),
+  listChurchResources: (kind = null) =>
+    rpc("admin_list_church_resources", {
+      p_token: getAdminToken(),
+      p_kind: kind || null,
+    }),
+  upsertChurchResource: (id, data) =>
+    rpc("admin_upsert_church_resource", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data || {},
+    }),
+  deleteChurchResource: (id) =>
+    rpc("admin_delete_church_resource", {
+      p_token: getAdminToken(),
+      p_id: id,
+    }),
   announcementStats: () =>
     rpc("admin_announcement_stats", { p_token: getAdminToken() }),
   listAnnouncementEvents: (announcementId = null, limit = 500) =>
@@ -576,6 +601,9 @@ export const authApi = {
   listChurchBranches: () => rpc("admin_list_church_branches", { p_token: getAdminToken() }),
   upsertChurchBranch: (id, data) => rpc("admin_upsert_church_branch", { p_token: getAdminToken(), p_id: id || null, p_data: data }),
   deleteChurchBranch: (id) => rpc("admin_delete_church_branch", { p_token: getAdminToken(), p_id: id }),
+  listChurchDistricts: () => rpc("admin_list_church_districts", { p_token: getAdminToken() }),
+  upsertChurchDistrict: (id, data) => rpc("admin_upsert_church_district", { p_token: getAdminToken(), p_id: id || null, p_data: data }),
+  deleteChurchDistrict: (id) => rpc("admin_delete_church_district", { p_token: getAdminToken(), p_id: id }),
   listVolunteerTeams: () => rpc("admin_list_volunteer_teams", { p_token: getAdminToken() }),
   listVolunteerApplications: (teamId = null) =>
     rpc("admin_list_volunteer_applications", { p_token: getAdminToken(), p_team_id: teamId || null }),
@@ -829,6 +857,11 @@ export async function listPublicChurchRoles() {
 export async function listPublicChurchBranches() {
   assertConfigured();
   return rpc("public_list_church_branches");
+}
+
+export async function listPublicChurchDistricts() {
+  assertConfigured();
+  return rpc("public_list_church_districts");
 }
 
 export async function submitProgramRegistration(slug, payload) {

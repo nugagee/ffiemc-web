@@ -16,6 +16,7 @@ const BLOG_FIELDS = [
 ];
 const EVENT_FIELDS = [
   { name: 'title', label: 'Title', type: 'text' },
+  { name: 'image', label: 'Event image', type: 'image', hint: 'Shown at the top of the event card on the homepage and events page' },
   { name: 'date', label: 'Date', type: 'date' },
   { name: 'time', label: 'Time', type: 'text' },
   { name: 'location', label: 'Location', type: 'text' },
@@ -58,7 +59,15 @@ export const HeroCms = () => (
   />
 );
 export const BlogCms = () => <ContentManager title="Blog" path="/blog?all=1" fields={BLOG_FIELDS} columns={['title', 'category', 'author']} feature="blog.posts" />;
-export const EventsCms = () => <ContentManager title="Events" path="/events?all=1" fields={EVENT_FIELDS} columns={['title', 'date', 'location']} feature="events.list" />;
+export const EventsCms = () => (
+  <ContentManager
+    title="Events"
+    path="/events?all=1"
+    fields={EVENT_FIELDS}
+    columns={['title', 'date', 'location']}
+    feature="events.list"
+  />
+);
 export const SermonsCms = () => <ContentManager title="Sermons" path="/sermons?all=1" fields={SERMON_FIELDS} columns={['title', 'pastor', 'series']} feature="sermons.list" />;
 export const MinistriesCms = () => <ContentManager title="Ministries" path="/ministries?all=1" fields={MINISTRY_FIELDS} columns={['name', 'leader', 'meetingTime']} feature="ministries.list" />;
 export const TestimoniesCms = () => <TestimoniesPanel />;
