@@ -1,5 +1,6 @@
 import { CONVENTION_BLOG_IDS } from "./aboutDefaults";
 import { CHURCH_DOCTRINES, DOCTRINE_PURPOSE } from "./churchDoctrines";
+import { CATECHISM_ITEMS } from "./catechism";
 
 const IMG = "https://images.unsplash.com/photo-1438032005730-c779502df39b?w=1200&h=630&fit=crop";
 const SEPTEMBER_IMG = "/happy-new-month-september-2025.png";
@@ -46,7 +47,57 @@ ${doctrineSnapshotList}
 <p>May this month bring you open doors, divine peace, strength, favour, and a harvest of joy. Happy New Month, family — in Jesus' name! Amen. 🕊️❤️</p>
 <p><em>— Fire-Fire International Evangelical Church</em></p>`;
 
+const catechismSnapshotList = CATECHISM_ITEMS.map(
+  (item) => `<li><strong>${item.question}</strong> — ${item.answer}</li>`
+).join("\n");
+
+const CATECHISM_BLOG_CONTENT = `<p>Beloved family, thank you for the hunger we saw after our last article on the church doctrines. Many of you asked: <em>How do we explain these truths simply? How do we teach our children, our youth, and new believers?</em></p>
+<p>The answer is the <strong>Church Catechism</strong> — a living Q&amp;A that helps every Fire-Fire member know what we believe, why we believe it, and how to pass it on. This is how we <em>teach one by one another</em>.</p>
+
+<h3>What is a catechism?</h3>
+<p>A catechism is not a replacement for the Bible. It is a <strong>faithful snapshot of the Bible's teaching</strong> — short questions, clear answers — so that doctrine can be remembered, discussed, and lived. It is the classroom of the church: pastors, parents, youth executives, and every disciple learning together.</p>
+<p>If doctrine is the backbone of the believer, the catechism is the <strong>daily exercise</strong> that keeps that backbone strong.</p>
+
+<h3>A snapshot from our About page</h3>
+<p>Here are the questions we teach at Fire-Fire International Evangelical Church. Read them slowly. Share one with your fellowship this week. Then go deeper on the full Catechism section of our website.</p>
+<ol>
+${catechismSnapshotList}
+</ol>
+
+<h3>How to use this in your group</h3>
+<ul>
+<li><strong>Youth fellowships:</strong> Take two questions each meeting. Read the answer, then ask: <em>How does this change how we live this week?</em></li>
+<li><strong>Family altar:</strong> Parents, let a child ask the question and recite the answer together.</li>
+<li><strong>New believers:</strong> Walk through salvation, faith, and the Lord's Prayer before moving to deeper doctrine.</li>
+<li><strong>Leaders:</strong> Use the catechism to prepare Bible study, counselling, and campus fellowships.</li>
+</ul>
+
+<h3>Go deeper</h3>
+<p>The About page has the full catechism with our Old and New Testament book lists — a complete snapshot of what this church stands for.</p>
+<p>👉 <strong><a href="/about#catechism">Open the Church Catechism on the About page</a></strong><br/>
+👉 <strong><a href="/about#doctrines">Review the 30 church doctrines</a></strong></p>
+<p><em>"But sanctify the Lord God in your hearts: and be ready always to give an answer to every man that asketh you a reason of the hope that is in you."</em> — 1 Peter 3:15</p>
+<p>Keep the conversation going. Know the faith. Teach the faith. Live the faith.</p>
+<p><em>— Fire-Fire International Evangelical Church</em></p>`;
+
 export const CONVENTION_BLOG_POSTS = [
+  {
+    id: CONVENTION_BLOG_IDS.septemberCatechism,
+    title: "Ready to Give an Answer — Our Church Catechism",
+    slug: "church-catechism-know-what-we-teach",
+    excerpt:
+      "Following the response to our doctrines article: a snapshot of the Fire-Fire Catechism — questions and answers every member can learn, teach, and live. Continue on the About page.",
+    category: "Teaching",
+    author: "Fire-Fire International Evangelical Church",
+    image: "/leadership/youth-escos/catechism-teaching.png",
+    featured: true,
+    published: true,
+    status: "published",
+    tags: "catechism,teaching,about,youth,doctrine",
+    published_at: "2026-09-03T08:00:00.000Z",
+    sort_order: -2,
+    content: CATECHISM_BLOG_CONTENT,
+  },
   {
     id: CONVENTION_BLOG_IDS.septemberDoctrines,
     title: "Happy New Month! Know What We Believe — A September Welcome",

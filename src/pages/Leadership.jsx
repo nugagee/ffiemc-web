@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Mail, Calendar, Users, Heart, BookOpen } from 'lucide-react';
+import { Mail, Users, Heart, BookOpen, Phone, MapPin } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
 
@@ -12,6 +12,7 @@ export const Leadership = () => {
   const { settings } = useSettings();
   const hero = pageSection(settings, 'leadership', 'hero');
   const teamBlock = pageSection(settings, 'leadership', 'team');
+  const youthEscos = pageSection(settings, 'leadership', 'youthEscos');
   const deptBlock = pageSection(settings, 'leadership', 'departments');
   const values = pageSection(settings, 'leadership', 'values');
   const cta = pageSection(settings, 'leadership', 'cta');
@@ -89,6 +90,69 @@ export const Leadership = () => {
           </div>
         </div>
       </section>
+
+      {youthEscos.items?.length > 0 && (
+        <section id="youth-escos" className="py-16 sm:py-20 bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 text-white scroll-mt-24">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12 space-y-3">
+              <Badge className="bg-red-600 text-white hover:bg-red-600">{youthEscos.badge}</Badge>
+              <h2 className="text-3xl md:text-4xl font-bold">{youthEscos.heading}</h2>
+              <p className="text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
+                {youthEscos.intro}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {youthEscos.items.map((esco, index) => (
+                <Card
+                  key={`${esco.email || esco.name}-${index}`}
+                  className="overflow-hidden border-0 bg-white/5 text-white hover:bg-white/10 transition-all duration-300 shadow-xl"
+                >
+                  <div className="aspect-[3/4] overflow-hidden bg-gray-800">
+                    {esco.image ? (
+                      <img
+                        src={esco.image}
+                        alt={esco.name}
+                        className="w-full h-full object-cover object-top"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-red-300">
+                        {(esco.name || "?").charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg leading-snug">{esco.name}</CardTitle>
+                    <Badge className="w-fit mt-2 bg-red-600 text-white hover:bg-red-600 text-[11px] font-medium">
+                      {esco.post}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm text-gray-300 pb-6">
+                    {esco.branch && (
+                      <p className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-red-400" />
+                        <span>{esco.branch}</span>
+                      </p>
+                    )}
+                    {esco.email && (
+                      <a href={`mailto:${esco.email}`} className="flex items-start gap-2 hover:text-white">
+                        <Mail className="h-4 w-4 mt-0.5 shrink-0 text-red-400" />
+                        <span className="break-all">{esco.email}</span>
+                      </a>
+                    )}
+                    {esco.phone && (
+                      <a href={`tel:${String(esco.phone).replace(/\s/g, "")}`} className="flex items-start gap-2 hover:text-white">
+                        <Phone className="h-4 w-4 mt-0.5 shrink-0 text-red-400" />
+                        <span>{esco.phone}</span>
+                      </a>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Departments */}
       <section className="py-16 bg-gray-50">

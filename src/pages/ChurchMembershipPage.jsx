@@ -9,6 +9,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
+import { Checkbox } from "../components/ui/checkbox";
 import { BranchSelect } from "../components/programs/BranchSelect";
 import { PhoneField } from "../components/forms/PhoneField";
 import { ManagedSelect } from "../components/forms/ManagedSelect";
@@ -19,6 +20,7 @@ import { PersonNameFields } from "../components/forms/PersonNameFields";
 import { withPersonPayload } from "../lib/personName";
 import { pageSection } from "../data/sitePages";
 import { Church, Send } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function ChurchMembershipPage() {
   const { settings } = useSettings();
@@ -34,6 +36,7 @@ export function ChurchMembershipPage() {
     address: "", city: "", state: "", country: DEFAULT_COUNTRY,
     role_ids: [], branch_id: "", ministry: "", baptism_status: "", marital_status: "",
     occupation: "", emergency_contact_name: "", emergency_contact_phone: "", notes: "",
+    consent: false,
   });
 
   useEffect(() => {
@@ -48,9 +51,19 @@ export function ChurchMembershipPage() {
       toast.error("Select at least one church role");
       return;
     }
+    if (!form.consent) {
+      toast.error("Please tick the consent box to continue");
+      return;
+    }
     setSubmitting(true);
     try {
       const person = withPersonPayload(form);
+      const roleName = roles.filter((r) => form.role_ids.includes(r.id)).map((r) => r.name).join(", ");
+      const formData = {
+        ...extras,
+        consent: true,
+        consent_at: new Date().toISOString(),
+      };
       const result = await submitChurchMembership({
         ...person,
         email: form.email,
@@ -70,15 +83,16 @@ export function ChurchMembershipPage() {
         emergency_contact_name: form.emergency_contact_name,
         emergency_contact_phone: form.emergency_contact_phone,
         notes: form.notes,
-        form_data: extras,
+        form_data: formData,
       });
       try {
         await sendChurchMembershipEmails({
-          fullName: person.full_name,
-          email: form.email,
-          phone: form.phone,
-          roleName: result.roleName,
+          ...person,
+          ...form,
+          formData,
+          roleName: roleName || result.roleName,
           branchName: result.branchName,
+          status: "pending",
           adminEmail: settings.notificationEmail,
         });
         await markChurchMemberEmailed(result.id);
@@ -86,7 +100,7 @@ export function ChurchMembershipPage() {
         console.warn(emailErr);
       }
       setDone(true);
-      toast.success("Registration received! Check your email for confirmation.");
+      toast.success("Application received. Check your email for acknowledgement — confirmation follows after approval.");
     } catch (err) {
       toast.error(formatApiError(err.message));
     } finally {
@@ -99,8 +113,11 @@ export function ChurchMembershipPage() {
       <div className="min-h-[60vh] flex items-center justify-center px-4">
         <Card className="max-w-md w-full text-center p-8">
           <Church className="h-12 w-12 text-red-600 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold">Welcome to the family!</h1>
-          <p className="text-gray-600 mt-3">Your membership registration has been received. Our leadership team will review your application.</p>
+          <h1 className="text-2xl font-bold">Application received</h1>
+          <p className="text-gray-600 mt-3">
+            Thank you. Your membership application is pending review. We have emailed you an acknowledgement.
+            You will receive a confirmation email once church leadership approves your request.
+          </p>
         </Card>
       </div>
     );
@@ -186,6 +203,25 @@ export function ChurchMembershipPage() {
                 <div className="space-y-2 md:col-span-2">
                   <Label>Additional notes</Label>
                   <Textarea name="notes" value={form.notes} onChange={change} rows={3} className="focus:border-red-500" />
+                </div>
+              </div>
+              <div className="rounded-xl border border-red-100 bg-red-50/60 p-4 space-y-3">
+                <p className="text-sm font-semibold text-gray-900">{hero.consentTitle || "Consent"}</p>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="membership-consent"
+                    checked={form.consent}
+                    onCheckedChange={(v) => setForm({ ...form, consent: Boolean(v) })}
+                    className="mt-0.5 border-red-400 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
+                  />
+                  <Label htmlFor="membership-consent" className="font-normal text-sm text-gray-700 leading-relaxed">
+                    {hero.consentText ||
+                      "I confirm that the information I have provided is true, and I consent to Fire-Fire International Evangelical Church collecting and using my details to process this membership application, contact me about church life, and keep a membership record. I understand my application will remain pending until it is approved by church leadership."}
+                    {" "}*
+                    <span className="block mt-2 text-xs text-gray-500">
+                      See our <Link to="/privacy" className="text-red-700 underline underline-offset-2">privacy policy</Link>.
+                    </span>
+                  </Label>
                 </div>
               </div>
               <Button type="submit" disabled={submitting} className="w-full bg-red-600 hover:bg-red-700">

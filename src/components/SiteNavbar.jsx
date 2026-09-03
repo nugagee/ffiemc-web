@@ -18,7 +18,10 @@ export const Navbar = () => {
     { name: 'Home', path: '/' },
     { name: 'About', path: '/about' },
     { name: 'Services', path: '/services' },
-    { name: 'Leadership', path: '/leadership' },
+    { name: 'Leadership', path: '/leadership', subItems: [
+      { name: 'Pastoral Team', path: '/leadership' },
+      { name: 'Youth Executives', path: '/leadership#youth-escos' },
+    ] },
     {
       name: 'Ministries',
       path: '/ministries',

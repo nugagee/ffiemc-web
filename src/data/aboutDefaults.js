@@ -7,6 +7,7 @@ import {
 } from "./catechism";
 
 export const CONVENTION_BLOG_IDS = {
+  septemberCatechism: "f1f1e008-0008-4008-8008-000000000008",
   septemberDoctrines: "f1f1e007-0007-4007-8007-000000000007",
   failure: "f1f1e001-0001-4001-8001-000000000001",
   timeYouth: "f1f1e002-0002-4002-8002-000000000002",

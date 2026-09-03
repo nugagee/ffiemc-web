@@ -1,0 +1,314 @@
+-- Blog post reactions + read-time analytics
+-- Run after blog_posts exists
+
+create table if not exists public.blog_post_events (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid,
+  post_slug text not null default '',
+  post_title text not null default '',
+  visitor_id text not null default '',
+  session_id text not null default '',
+  action text not null,
+  reaction text not null default '',
+  duration_seconds integer not null default 0,
+  scroll_percent integer not null default 0,
+  path text not null default '/',
+  user_agent text not null default '',
+  device_type text not null default '',
+  browser text not null default '',
+  os text not null default '',
+  language text not null default '',
+  timezone text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.blog_post_events
+  drop constraint if exists blog_post_events_action_check;
+alter table public.blog_post_events
+  add constraint blog_post_events_action_check
+  check (action in ('view', 'read', 'leave', 'react'));
+
+alter table public.blog_post_events
+  drop constraint if exists blog_post_events_scroll_check;
+alter table public.blog_post_events
+  add constraint blog_post_events_scroll_check
+  check (scroll_percent >= 0 and scroll_percent <= 100);
+
+alter table public.blog_post_events
+  drop constraint if exists blog_post_events_reaction_check;
+alter table public.blog_post_events
+  add constraint blog_post_events_reaction_check
+  check (reaction in ('', 'amen', 'fire', 'heart', 'clap', 'inspired'));
+
+create index if not exists blog_post_events_slug_idx
+  on public.blog_post_events (post_slug, created_at desc);
+create index if not exists blog_post_events_visitor_idx
+  on public.blog_post_events (visitor_id, post_slug, action);
+create index if not exists blog_post_events_action_idx
+  on public.blog_post_events (action, created_at desc);
+
+create unique index if not exists blog_post_events_read_session_uidx
+  on public.blog_post_events (visitor_id, session_id, post_slug)
+  where action = 'read' and visitor_id <> '';
+
+create unique index if not exists blog_post_events_react_uidx
+  on public.blog_post_events (visitor_id, post_slug)
+  where action = 'react' and visitor_id <> '';
+
+-- ---------------------------------------------------------------------------
+-- Public: track view / read progress / reaction
+-- ---------------------------------------------------------------------------
+create or replace function public.public_track_blog_event(
+  p_slug text,
+  p_action text,
+  p_post_id uuid default null,
+  p_title text default '',
+  p_visitor_id text default '',
+  p_session_id text default '',
+  p_reaction text default '',
+  p_duration integer default 0,
+  p_scroll integer default 0,
+  p_path text default '/',
+  p_user_agent text default '',
+  p_device_type text default '',
+  p_browser text default '',
+  p_os text default '',
+  p_language text default '',
+  p_timezone text default ''
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_action text := lower(trim(coalesce(p_action, '')));
+  v_reaction text := lower(trim(coalesce(p_reaction, '')));
+  v_slug text := left(trim(coalesce(p_slug, '')), 120);
+  v_visitor text := left(trim(coalesce(p_visitor_id, '')), 80);
+  v_session text := left(trim(coalesce(p_session_id, '')), 80);
+  v_duration int := greatest(0, least(coalesce(p_duration, 0), 86400));
+  v_scroll int := greatest(0, least(coalesce(p_scroll, 0), 100));
+  v_existing uuid;
+  v_row public.blog_post_events%rowtype;
+begin
+  if v_slug = '' then
+    raise exception 'Post slug is required';
+  end if;
+  if v_action not in ('view', 'read', 'leave', 'react') then
+    raise exception 'Invalid action';
+  end if;
+  if v_reaction not in ('', 'amen', 'fire', 'heart', 'clap', 'inspired') then
+    v_reaction := '';
+  end if;
+
+  if v_action = 'react' then
+    if v_visitor = '' then
+      raise exception 'Visitor is required to react';
+    end if;
+    select id into v_existing
+    from public.blog_post_events
+    where action = 'react' and visitor_id = v_visitor and post_slug = v_slug
+    limit 1;
+    if v_existing is not null then
+      if v_reaction = '' then
+        delete from public.blog_post_events where id = v_existing;
+        return jsonb_build_object('ok', true, 'cleared', true);
+      end if;
+      update public.blog_post_events set
+        reaction = v_reaction,
+        post_title = coalesce(nullif(trim(p_title), ''), post_title),
+        post_id = coalesce(p_post_id, post_id),
+        updated_at = now()
+      where id = v_existing
+      returning * into v_row;
+      return to_jsonb(v_row);
+    end if;
+    if v_reaction = '' then
+      return jsonb_build_object('ok', true, 'cleared', true);
+    end if;
+    insert into public.blog_post_events (
+      post_id, post_slug, post_title, visitor_id, session_id, action, reaction,
+      path, user_agent, device_type, browser, os, language, timezone
+    ) values (
+      p_post_id, v_slug, left(coalesce(p_title, ''), 240), v_visitor, v_session, 'react', v_reaction,
+      left(coalesce(p_path, '/'), 240), left(coalesce(p_user_agent, ''), 400),
+      left(coalesce(p_device_type, ''), 40), left(coalesce(p_browser, ''), 40),
+      left(coalesce(p_os, ''), 40), left(coalesce(p_language, ''), 40),
+      left(coalesce(p_timezone, ''), 80)
+    ) returning * into v_row;
+    return to_jsonb(v_row);
+  end if;
+
+  if v_action in ('read', 'leave') then
+    select id into v_existing
+    from public.blog_post_events
+    where action = 'read'
+      and visitor_id = v_visitor
+      and session_id = v_session
+      and post_slug = v_slug
+    limit 1;
+    if v_existing is not null then
+      update public.blog_post_events set
+        duration_seconds = greatest(duration_seconds, v_duration),
+        scroll_percent = greatest(scroll_percent, v_scroll),
+        post_title = coalesce(nullif(trim(p_title), ''), post_title),
+        updated_at = now()
+      where id = v_existing
+      returning * into v_row;
+      return to_jsonb(v_row);
+    end if;
+    insert into public.blog_post_events (
+      post_id, post_slug, post_title, visitor_id, session_id, action,
+      duration_seconds, scroll_percent, path, user_agent, device_type, browser, os, language, timezone
+    ) values (
+      p_post_id, v_slug, left(coalesce(p_title, ''), 240), v_visitor, v_session, 'read',
+      v_duration, v_scroll, left(coalesce(p_path, '/'), 240),
+      left(coalesce(p_user_agent, ''), 400), left(coalesce(p_device_type, ''), 40),
+      left(coalesce(p_browser, ''), 40), left(coalesce(p_os, ''), 40),
+      left(coalesce(p_language, ''), 40), left(coalesce(p_timezone, ''), 80)
+    ) returning * into v_row;
+    return to_jsonb(v_row);
+  end if;
+
+  -- view
+  insert into public.blog_post_events (
+    post_id, post_slug, post_title, visitor_id, session_id, action,
+    path, user_agent, device_type, browser, os, language, timezone
+  ) values (
+    p_post_id, v_slug, left(coalesce(p_title, ''), 240), v_visitor, v_session, 'view',
+    left(coalesce(p_path, '/'), 240), left(coalesce(p_user_agent, ''), 400),
+    left(coalesce(p_device_type, ''), 40), left(coalesce(p_browser, ''), 40),
+    left(coalesce(p_os, ''), 40), left(coalesce(p_language, ''), 40),
+    left(coalesce(p_timezone, ''), 80)
+  ) returning * into v_row;
+  return to_jsonb(v_row);
+end;
+$$;
+
+create or replace function public.public_blog_engagement(p_slug text, p_visitor_id text default '')
+returns jsonb
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select jsonb_build_object(
+    'counts', coalesce((
+      select jsonb_object_agg(reaction, cnt)
+      from (
+        select reaction, count(*)::int as cnt
+        from public.blog_post_events
+        where action = 'react' and post_slug = trim(p_slug) and reaction <> ''
+        group by reaction
+      ) s
+    ), '{}'::jsonb),
+    'mine', coalesce((
+      select reaction
+      from public.blog_post_events
+      where action = 'react'
+        and post_slug = trim(p_slug)
+        and visitor_id = left(trim(coalesce(p_visitor_id, '')), 80)
+        and visitor_id <> ''
+      limit 1
+    ), ''),
+    'total', (
+      select count(*)::int
+      from public.blog_post_events
+      where action = 'react' and post_slug = trim(p_slug) and reaction <> ''
+    )
+  );
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Admin analytics
+-- ---------------------------------------------------------------------------
+create or replace function public.admin_blog_analytics(
+  p_token text,
+  p_slug text default null,
+  p_limit integer default 300
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_limit int := greatest(20, least(coalesce(p_limit, 300), 800));
+begin
+  perform public._require_permission(p_token, 'blog.posts', 'edit');
+  return jsonb_build_object(
+    'posts', coalesce((
+      select jsonb_agg(row_to_json(t) order by t.views desc, t.title)
+      from (
+        select
+          coalesce(nullif(e.post_slug, ''), 'unknown') as slug,
+          coalesce(nullif(max(e.post_title), ''), e.post_slug) as title,
+          count(*) filter (where e.action = 'view') as views,
+          count(distinct e.visitor_id) filter (where e.visitor_id <> '') as unique_visitors,
+          coalesce(round(avg(r.max_duration))::int, 0) as avg_seconds,
+          coalesce(round(avg(r.max_scroll))::int, 0) as avg_scroll,
+          count(*) filter (where e.action = 'react') as reactions,
+          count(*) filter (where e.action = 'react' and e.reaction = 'amen') as amen,
+          count(*) filter (where e.action = 'react' and e.reaction = 'fire') as fire,
+          count(*) filter (where e.action = 'react' and e.reaction = 'heart') as heart,
+          count(*) filter (where e.action = 'react' and e.reaction = 'clap') as clap,
+          count(*) filter (where e.action = 'react' and e.reaction = 'inspired') as inspired,
+          count(*) filter (where e.action in ('read', 'leave') and e.scroll_percent >= 80) as completed
+        from public.blog_post_events e
+        left join lateral (
+          select
+            max(duration_seconds) as max_duration,
+            max(scroll_percent) as max_scroll
+          from public.blog_post_events r
+          where r.post_slug = e.post_slug
+            and r.action in ('read', 'leave')
+            and r.visitor_id <> ''
+        ) r on true
+        group by e.post_slug
+      ) t
+    ), '[]'::jsonb),
+    'events', coalesce((
+      select jsonb_agg(row_to_json(e) order by e.created_at desc)
+      from (
+        select
+          id, post_slug, post_title, visitor_id, session_id, action, reaction,
+          duration_seconds, scroll_percent, device_type, browser, os, language,
+          timezone, path, created_at, updated_at
+        from public.blog_post_events
+        where (p_slug is null or p_slug = '' or post_slug = p_slug)
+          and action in ('view', 'leave', 'react', 'read')
+        order by created_at desc
+        limit v_limit
+      ) e
+    ), '[]'::jsonb),
+    'visitors', coalesce((
+      select jsonb_agg(row_to_json(v) order by v.last_seen desc)
+      from (
+        select
+          visitor_id,
+          max(post_title) filter (where post_title <> '') as last_title,
+          count(*) filter (where action = 'view') as views,
+          max(duration_seconds) as max_seconds,
+          max(scroll_percent) as max_scroll,
+          string_agg(distinct reaction, ', ') filter (where action = 'react' and reaction <> '') as reactions,
+          max(device_type) as device_type,
+          max(browser) as browser,
+          max(os) as os,
+          max(created_at) as last_seen
+        from public.blog_post_events
+        where visitor_id <> ''
+          and (p_slug is null or p_slug = '' or post_slug = p_slug)
+        group by visitor_id
+        order by max(created_at) desc
+        limit 80
+      ) v
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+grant execute on function public.public_track_blog_event(text, text, uuid, text, text, text, text, integer, integer, text, text, text, text, text, text, text) to anon, authenticated;
+grant execute on function public.public_blog_engagement(text, text) to anon, authenticated;
+grant execute on function public.admin_blog_analytics(text, text, integer) to anon, authenticated;

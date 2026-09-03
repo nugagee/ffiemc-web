@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
-import { Calendar, Pencil, Plus, Search, Trash2, User } from "lucide-react";
+import { Calendar, Pencil, Plus, Search, Trash2, User, BarChart3 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useCollection } from "../../../hooks/useCollection";
 import api, { formatApiError } from "../../../lib/api";
@@ -114,11 +114,18 @@ export default function BlogPostList() {
           </button>
         ))}
         right={canEdit ? (
-          <Button asChild className="bg-red-600 hover:bg-red-700 rounded-xl h-11 px-5">
-            <Link to="/admin/blog/new">
-              <Plus size={16} className="mr-2" /> New post
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline" className="rounded-xl h-11 px-5">
+              <Link to="/admin/blog/analytics">
+                <BarChart3 size={16} className="mr-2" /> Analytics
+              </Link>
+            </Button>
+            <Button asChild className="bg-red-600 hover:bg-red-700 rounded-xl h-11 px-5">
+              <Link to="/admin/blog/new">
+                <Plus size={16} className="mr-2" /> New post
+              </Link>
+            </Button>
+          </div>
         ) : null}
       />
 
@@ -185,6 +192,13 @@ export default function BlogPostList() {
                           <span className="inline-flex items-center gap-1"><Calendar size={13} />{fmt(displayDate(post))}</span>
                         </div>
                         <div className="flex items-center gap-2">
+                          {canEdit && post.slug && (
+                            <Button asChild variant="outline" size="sm" className="rounded-lg">
+                              <Link to={`/admin/blog/analytics?slug=${encodeURIComponent(post.slug)}`}>
+                                <BarChart3 size={14} /> Stats
+                              </Link>
+                            </Button>
+                          )}
                           {canEdit && (
                             <Button asChild variant="outline" size="sm" className="rounded-lg">
                               <Link to={`/admin/blog/${post.id}/edit`}>

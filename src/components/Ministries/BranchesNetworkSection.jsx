@@ -314,15 +314,16 @@ export function BranchesNetworkSection({ intro }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 pt-12 sm:pt-4 bg-black/50 backdrop-blur-sm"
               onClick={() => setActiveBranch(null)}
+              role="presentation"
             >
               <motion.div
                 initial={{ y: 40, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 20, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-lg rounded-3xl bg-white shadow-2xl overflow-hidden"
+                className="w-full max-w-lg max-h-[min(80dvh,100%)] overflow-y-auto rounded-3xl bg-white shadow-2xl"
               >
                 <div className="bg-gradient-to-r from-red-600 to-orange-500 px-6 py-8 text-white">
                   <Badge className="bg-white/20 text-white hover:bg-white/20 mb-3">

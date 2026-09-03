@@ -207,6 +207,28 @@ export const SITE_PAGES = [
         { name: "heading", label: "Heading" },
         { name: "intro", label: "Intro", type: "textarea" },
       ] }) },
+      {
+        key: "youthEscos",
+        label: "Youth ministry executives (Escos)",
+        hint: "Add, edit, delete, and drag to reorder youth executives. Photos appear on the Leadership page.",
+        ...list(
+          [
+            { name: "name", label: "Name" },
+            { name: "post", label: "Post held" },
+            { name: "branch", label: "Church branch" },
+            { name: "email", label: "Email" },
+            { name: "phone", label: "Phone" },
+            { name: "image", label: "Photo", type: "image" },
+          ],
+          {
+            headingFields: [
+              { name: "badge", label: "Badge" },
+              { name: "heading", label: "Heading" },
+              { name: "intro", label: "Intro", type: "textarea" },
+            ],
+          }
+        ),
+      },
       { key: "departments", label: "Ministry departments", ...list([
         { name: "name", label: "Name" },
         { name: "head", label: "Led by" },
@@ -433,6 +455,8 @@ export const SITE_PAGES = [
         { name: "badge", label: "Badge" },
         { name: "headline", label: "Headline" },
         { name: "intro", label: "Intro text", type: "textarea" },
+        { name: "consentTitle", label: "Consent heading" },
+        { name: "consentText", label: "Consent checkbox text", type: "textarea" },
       ]) },
     ],
   },
@@ -654,6 +678,21 @@ export const DEFAULT_PAGE_CONTENT = {
         { name: "Deacon John Adebayo", position: "Church Secretary", image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&crop=face", bio: "Deacon Adebayo oversees administrative duties and coordinates church activities with dedication and excellence." },
       ],
     },
+    youthEscos: {
+      badge: "Youth Ministry",
+      heading: "Youth Executives (Escos)",
+      intro: "Meet the Fire Youth executives serving across our branches and campuses — discipling the next generation and coordinating worship, prayer, academics, and welfare.",
+      items: [
+        { name: "Samuel Oreoluwa Shontan", post: "Academic Coordinator", branch: "FFCF OOU / Academy Branch", email: "shontansamuel@gmail.com", phone: "", image: "/leadership/youth-escos/samuel-shontan.png" },
+        { name: "Moronranti John Oladipupo", post: "Youth Choir Coordinator", branch: "FIRE-FIRE Headquarters", email: "johnmoronranti@gmail.com", phone: "", image: "/leadership/youth-escos/john-moronranti.png" },
+        { name: "Gbenro Funmilayo Temitope", post: "Secretary / Sister Coordinator", branch: "Headquarters", email: "gbenrofunmilayo96@gmail.com", phone: "09037926490", image: "/leadership/youth-escos/funmilayo-gbenro.png" },
+        { name: "Joshua O. Shontan", post: "Public Relations Officer", branch: "Headquarters", email: "shontanjoshua26@gmail.com", phone: "08051819265", image: "/leadership/youth-escos/joshua-shontan.png" },
+        { name: "Adesokan Bukola Grace", post: "Ass. Sister Welfare", branch: "Headquarters", email: "bukolagrace355@gmail.com", phone: "08105113677", image: "/leadership/youth-escos/bukola-adesokan.png" },
+        { name: "Ajala Mercy Olatomiwa", post: "Ass. Sister Welfare", branch: "Ayegun", email: "Ajalamercy@gmail.com", phone: "09012591544", image: "/leadership/youth-escos/mercy-ajala.png" },
+        { name: "Olayemi Oluwapelumi Tonade", post: "Financial Secretary / Coordinator", branch: "Academy Branch", email: "Oluwapelumi2019@gmail.com", phone: "08149237847", image: "/leadership/youth-escos/oluwapelumi-tonade.png" },
+        { name: "Emmanuel Sobalaje", post: "Prayer Coordinator 1", branch: "FFCF / Headquarters", email: "emmanuelericsobalaje@gmail.com", phone: "07035206144", image: "/leadership/youth-escos/emmanuel-sobalaje.png" },
+      ],
+    },
     departments: {
       badge: "Ministry Departments",
       heading: "Ministry Leadership",
@@ -795,6 +834,8 @@ export const DEFAULT_PAGE_CONTENT = {
       badge: "Membership",
       headline: "Join Fire-Fire International",
       intro: "Register as a bonafide member of the church. Pastors, workers, and members can complete this form with full details.",
+      consentTitle: "Consent",
+      consentText: "I confirm that the information I have provided is true, and I consent to Fire-Fire International Evangelical Church collecting and using my details to process this membership application, contact me about church life, and keep a membership record. I understand my application will remain pending until it is approved by church leadership.",
     },
   },
   donate: {

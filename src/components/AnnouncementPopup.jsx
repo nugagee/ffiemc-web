@@ -143,7 +143,7 @@ export function AnnouncementPopup() {
       }}
     >
       <DialogContent
-        className={`p-0 overflow-hidden gap-0 sm:rounded-2xl [&>button]:right-3 [&>button]:top-3 [&>button]:z-10 max-h-[92vh] flex flex-col ${dialogWidth}`}
+        className={`p-0 overflow-hidden gap-0 rounded-2xl [&>button]:right-3 [&>button]:top-3 [&>button]:z-20 max-h-[min(78dvh,100%)] sm:max-h-[min(88dvh,100%)] flex flex-col ${dialogWidth}`}
       >
         {item.image ? (
           <div className="w-full bg-neutral-950 shrink-0 flex items-center justify-center">
@@ -156,10 +156,10 @@ export function AnnouncementPopup() {
               }}
               className={`block mx-auto w-auto h-auto max-w-full object-contain ${
                 orientation === "landscape"
-                  ? "max-h-[min(52vh,28rem)]"
+                  ? "max-h-[min(38dvh,22rem)] sm:max-h-[min(52vh,28rem)]"
                   : orientation === "portrait"
-                    ? "max-h-[min(68vh,42rem)]"
-                    : "max-h-[min(60vh,34rem)]"
+                    ? "max-h-[min(42dvh,26rem)] sm:max-h-[min(68vh,42rem)]"
+                    : "max-h-[min(40dvh,24rem)] sm:max-h-[min(60vh,34rem)]"
               }`}
             />
           </div>

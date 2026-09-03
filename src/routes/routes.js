@@ -44,6 +44,7 @@ import AdminActivityPage from "../pages/admin/AdminActivityPage";
 import PageEditor from "../pages/admin/PageEditor";
 import BlogPostList from "../pages/admin/blog/BlogPostList";
 import BlogPostEditor from "../pages/admin/blog/BlogPostEditor";
+import BlogAnalyticsPage from "../pages/admin/blog/BlogAnalyticsPage";
 import ChurchResourcesPage from "../pages/admin/blog/ChurchResourcesPage";
 import PrayerInboxPage from "../pages/admin/PrayerInboxPage";
 import PastorsPage from "../pages/admin/PastorsPage";
@@ -191,6 +192,14 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="blog.posts" action="edit">
                     <ChurchResourcesPage kind="daily_manna" />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="blog/analytics"
+                element={
+                  <RequirePermission feature="blog.posts" action="edit">
+                    <BlogAnalyticsPage />
                   </RequirePermission>
                 }
               />

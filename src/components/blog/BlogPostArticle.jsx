@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { looksLikeHtml, sanitizeHtml } from "../../lib/blog";
 import { Badge } from "../ui/badge";
 import { ArrowLeft, Calendar, User } from "lucide-react";
+import { BlogReactions } from "./BlogReactions";
+import { BlogReadTracker } from "./BlogReadTracker";
 
 const fmtDate = (d) => {
   try {
@@ -59,7 +61,9 @@ export function BlogPostArticle({ post, preview = false }) {
             {post.content || <span className="text-gray-400 italic">No content yet.</span>}
           </div>
         )}
+        {!preview && <BlogReactions post={post} />}
       </div>
+      {!preview && <BlogReadTracker post={post} />}
     </article>
   );
 }

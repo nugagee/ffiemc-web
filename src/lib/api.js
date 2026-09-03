@@ -516,6 +516,12 @@ export const authApi = {
       p_announcement_id: announcementId || null,
       p_limit: limit,
     }),
+  blogAnalytics: (slug = null, limit = 300) =>
+    rpc("admin_blog_analytics", {
+      p_token: getAdminToken(),
+      p_slug: slug || null,
+      p_limit: limit,
+    }),
   logAdminActivity: (path, action = "navigate", meta = {}) =>
     rpc("admin_log_activity", {
       p_token: getAdminToken(),

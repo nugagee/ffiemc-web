@@ -99,10 +99,14 @@ export default function ApprovalsPage({ mine = false }) {
       ) {
         try {
           await sendMembershipApprovedEmail({
+            ...(row.previous || {}),
+            ...(row.payload || {}),
             fullName: row.payload?.full_name || row.previous?.full_name,
             email: row.payload?.email || row.previous?.email,
             roleName: row.payload?.role_names || memberRoleLabel(row.payload) || row.previous?.role_name || "",
-            branchName: row.previous?.branch_name || "",
+            branchName: row.payload?.branch_name || row.previous?.branch_name || "",
+            formData: row.payload?.form_data || row.previous?.form_data || {},
+            status: "approved",
             siteUrl: siteOrigin(),
           });
         } catch {

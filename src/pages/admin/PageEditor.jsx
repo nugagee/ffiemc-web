@@ -228,7 +228,7 @@ function ListEditor({ pageKey, section, canEdit }) {
           </div>
         ))}
         <Button type="button" variant="outline" onClick={() => updateForm({ ...form, items: [...items, emptyItem()] })}>
-          <Plus className="h-4 w-4 mr-2" />Add item
+          <Plus className="h-4 w-4 mr-2" />Add {section.key === "youthEscos" ? "executive" : "item"}
         </Button>
       </fieldset>
     </Card>

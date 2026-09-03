@@ -40,6 +40,42 @@ function formatDate(v) {
   return v ? new Date(v).toLocaleString("en-GB") : "—";
 }
 
+function memberEmailData(row, roles, extra = {}) {
+  const person = personFromRow(row);
+  return {
+    ...person,
+    fullName: extra.fullName || row.full_name || person.full_name,
+    email: extra.email || row.email,
+    phone: extra.phone || row.phone,
+    gender: extra.gender || row.gender,
+    dateOfBirth: extra.dateOfBirth || row.date_of_birth,
+    address: extra.address || row.address,
+    city: extra.city || row.city,
+    state: extra.state || row.state,
+    country: extra.country || row.country,
+    ministry: extra.ministry || row.ministry,
+    occupation: extra.occupation || row.occupation,
+    baptismStatus: extra.baptismStatus || row.baptism_status,
+    maritalStatus: extra.maritalStatus || row.marital_status,
+    emergencyContactName: extra.emergencyContactName || row.emergency_contact_name,
+    emergencyContactPhone: extra.emergencyContactPhone || row.emergency_contact_phone,
+    notes: extra.notes || row.notes,
+    formData: extra.formData || row.form_data || {},
+    roleName: extra.roleName || memberRoleLabel(row, roles),
+    branchName: extra.branchName || row.branch_name || "",
+    status: extra.status || row.status,
+    siteUrl: siteOrigin(),
+  };
+}
+
+function consentLabel(row) {
+  const data = row?.form_data || {};
+  if (data.consent === true || data.consent === "true") {
+    return data.consent_at ? `Yes (${formatDate(data.consent_at)})` : "Yes";
+  }
+  return "—";
+}
+
 export default function ChurchMembersPage() {
   const { can, isSuperadmin } = useAuth();
   const { settings } = useSettings();
@@ -138,13 +174,16 @@ export default function ChurchMembersPage() {
           && (form.status === "approved" || form.status === "active");
         if (becameApproved && form.email) {
           try {
-            await sendMembershipApprovedEmail({
-              fullName: person.full_name,
-              email: form.email,
-              roleName: memberRoleLabel({ role_ids: form.role_ids }, roles) || editRow.role_name || "",
-              branchName: editRow.branch_name || "",
-              siteUrl: siteOrigin(),
-            });
+            await sendMembershipApprovedEmail(memberEmailData(
+              { ...editRow, ...form, form_data: form.form_data },
+              roles,
+              {
+                fullName: person.full_name,
+                roleName: memberRoleLabel({ role_ids: form.role_ids }, roles) || editRow.role_name || "",
+                branchName: editRow.branch_name || "",
+                status: "approved",
+              }
+            ));
           } catch (err) {
             toast.warning("Approved, but congratulations email failed: " + err.message);
           }
@@ -178,11 +217,12 @@ export default function ChurchMembersPage() {
       });
       try {
         await sendChurchMembershipEmails({
-          fullName: person.full_name,
-          email: form.email,
-          phone: form.phone,
-          roleName: result.roleName,
+          ...person,
+          ...form,
+          formData: form.form_data || {},
+          roleName: result.roleName || memberRoleLabel({ role_ids: form.role_ids }, roles),
           branchName: result.branchName,
+          status: "pending",
           adminEmail: settings.notificationEmail,
         });
         await authApi.markChurchMemberEmailed(result.id);
@@ -214,6 +254,37 @@ export default function ChurchMembersPage() {
     setFormOpen(true);
   };
 
+  const approveMember = async (row) => {
+    if (!row?.id) return;
+    if (!window.confirm(`Approve membership for ${row.full_name} and send a confirmation email?`)) return;
+    const payload = { status: "approved", role_ids: memberRoleIds(row) };
+    try {
+      const result = await requestOrApply({
+        isSuperadmin,
+        feature: "church_members",
+        action: "update",
+        resourceType: "church_members",
+        resourceId: row.id,
+        title: `Approve member ${row.full_name}`,
+        payload: { ...row, ...payload, role_names: memberRoleLabel(row, roles) },
+        previous: row,
+        apply: () => authApi.updateChurchMember(row.id, payload),
+      });
+      if (!result.queued) {
+        try {
+          await sendMembershipApprovedEmail(memberEmailData(row, roles, { status: "approved" }));
+          toast.success("Member approved. Confirmation email sent.");
+        } catch (err) {
+          toast.warning("Member approved, but confirmation email failed: " + err.message);
+        }
+      }
+      setViewRow(null);
+      await load();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
   return (
     <div>
       <p className="text-xs uppercase tracking-[0.25em] text-red-600 font-semibold">Members</p>
@@ -222,7 +293,7 @@ export default function ChurchMembersPage() {
       </h1>
       <p className="text-gray-500 mt-2 text-sm">
         {statusGroup === "pending"
-          ? "New /join-church registrations wait here until they are approved."
+          ? "New /join-church applications wait here. Use Approve to confirm a member and send their confirmation email."
           : "Bonafide member registry — searchable, exportable, ready for notifications."}
       </p>
 
@@ -369,6 +440,7 @@ export default function ChurchMembersPage() {
                   <TableActions
                     onView={() => setViewRow(row)}
                     onEdit={() => startEdit(row)}
+                    onApprove={row.status === "pending" ? () => approveMember(row) : undefined}
                     canEdit={canEdit}
                     canDelete={canDelete}
                     onDelete={async () => {
@@ -418,6 +490,7 @@ export default function ChurchMembersPage() {
           { label: "Marital status", value: viewRow.marital_status },
           { label: "Emergency contact", value: `${viewRow.emergency_contact_name || ""} ${viewRow.emergency_contact_phone || ""}`.trim() },
           { label: "Status", value: viewRow.status },
+          { label: "Consent", value: consentLabel(viewRow) },
           { label: "Notes", value: viewRow.notes },
           { label: "Extra form data", value: viewRow.form_data },
           { label: "Registered", value: formatDate(viewRow.created_at) },
@@ -425,6 +498,11 @@ export default function ChurchMembersPage() {
         footer={viewRow && canEdit ? (
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>
+            {viewRow.status === "pending" ? (
+              <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => approveMember(viewRow)}>
+                Approve & email
+              </Button>
+            ) : null}
             <Button className="bg-red-600 hover:bg-red-700" onClick={() => { startEdit(viewRow); setViewRow(null); }}>Edit</Button>
           </div>
         ) : undefined}

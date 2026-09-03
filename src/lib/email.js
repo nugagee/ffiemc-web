@@ -318,44 +318,140 @@ export async function sendProgramRegistrationEmails({
   return last;
 }
 
-/** Church membership: notify admin + confirmation to applicant. */
-export async function sendChurchMembershipEmails({
-  fullName,
-  email,
-  phone,
-  roleName,
-  branchName = "",
-  adminEmail,
-  fallbackAdminEmail,
-}) {
-  const to = adminEmail || fallbackAdminEmail || "adenugaolajideadewale@gmail.com";
-  const first = (fullName || "").split(" ")[0] || fullName || "Friend";
+const MEMBERSHIP_CONSENT_KEYS = new Set(["consent", "consent_at", "consent_text"]);
 
-  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      name: fullName,
-      email,
-      phone: phone || "",
-      role: roleName || "",
-      church_branch: branchName || "",
-      _subject: `New church membership registration — ${fullName}`,
-      _template: "table",
-      _captcha: "false",
-      _autoresponse:
-        `Hi ${first},\n\n` +
-        `Thank you for registering as a bonafide member of Fire-Fire International Evangelical Church.\n\n` +
-        `Your application has been received and will be reviewed by our leadership team.\n\n` +
-        `— Fire-Fire International Evangelical Church`,
-    }),
+const MEMBERSHIP_FIELD_LABELS = [
+  ["title", "Title"],
+  ["first_name", "First name"],
+  ["last_name", "Last name"],
+  ["full_name", "Full name"],
+  ["email", "Email"],
+  ["phone", "Phone"],
+  ["gender", "Gender"],
+  ["date_of_birth", "Date of birth"],
+  ["address", "Address"],
+  ["city", "City"],
+  ["state", "State"],
+  ["country", "Country"],
+  ["church_roles", "Church role(s)"],
+  ["church_branch", "Church branch"],
+  ["ministry", "Ministry / department"],
+  ["occupation", "Occupation"],
+  ["baptism_status", "Baptism status"],
+  ["marital_status", "Marital status"],
+  ["emergency_contact_name", "Emergency contact name"],
+  ["emergency_contact_phone", "Emergency contact phone"],
+  ["notes", "Additional notes"],
+  ["additional_form_answers", "Other form answers"],
+  ["data_consent", "Data consent"],
+  ["consent_timestamp", "Consent given at"],
+  ["application_status", "Application status"],
+];
+
+function extraFormAnswers(formData) {
+  if (!formData || typeof formData !== "object" || Array.isArray(formData)) return "";
+  return Object.entries(formData)
+    .filter(([key, value]) => !MEMBERSHIP_CONSENT_KEYS.has(key) && value != null && String(value).trim() !== "" && typeof value !== "object")
+    .map(([key, value]) => `${String(key).replace(/_/g, " ")}: ${value}`)
+    .join("\n");
+}
+
+function dash(value) {
+  const text = String(value || "").trim();
+  return text || "";
+}
+
+/** Flatten a membership application for admin emails and confirmation copy. */
+export function membershipEmailFields(data = {}) {
+  const formData = data.formData || data.form_data || {};
+  const consent = data.consent === true || formData.consent === true || formData.consent === "true";
+  return {
+    title: dash(data.nameTitle || data.name_title),
+    first_name: dash(data.firstName || data.first_name),
+    last_name: dash(data.lastName || data.last_name),
+    full_name: dash(data.fullName || data.full_name),
+    email: dash(data.email),
+    phone: dash(data.phone),
+    gender: dash(data.gender),
+    date_of_birth: dash(data.dateOfBirth || data.date_of_birth),
+    address: dash(data.address),
+    city: dash(data.city),
+    state: dash(data.state),
+    country: dash(data.country),
+    church_roles: dash(data.roleName || data.role_name || data.role_names),
+    church_branch: dash(data.branchName || data.branch_name),
+    ministry: dash(data.ministry),
+    occupation: dash(data.occupation),
+    baptism_status: dash(data.baptismStatus || data.baptism_status),
+    marital_status: dash(data.maritalStatus || data.marital_status),
+    emergency_contact_name: dash(data.emergencyContactName || data.emergency_contact_name),
+    emergency_contact_phone: dash(data.emergencyContactPhone || data.emergency_contact_phone),
+    notes: dash(data.notes),
+    additional_form_answers: extraFormAnswers(formData),
+    data_consent: consent ? "Yes — applicant consented to data processing" : "",
+    consent_timestamp: dash(data.consentAt || formData.consent_at),
+    application_status: dash(data.status) || "pending",
+  };
+}
+
+function membershipPlainText(data, { heading, intro, closing }) {
+  const fields = membershipEmailFields(data);
+  const lines = MEMBERSHIP_FIELD_LABELS
+    .map(([key, label]) => {
+      const value = fields[key];
+      if (!value) return null;
+      return `${label}: ${value}`;
+    })
+    .filter(Boolean)
+    .join("\n");
+  return (
+    `${intro}\n\n` +
+    `${heading}\n` +
+    `------------------------------\n` +
+    `${lines}\n` +
+    `------------------------------\n\n` +
+    `${closing}`
+  );
+}
+
+function firstNameFromMembership(data) {
+  const first = String(data.firstName || data.first_name || "").trim();
+  if (first) return first;
+  const full = String(data.fullName || data.full_name || "").trim();
+  return full.split(" ")[0] || "Beloved";
+}
+
+/** Church membership: notify admin with full form + acknowledgement to applicant. */
+export async function sendChurchMembershipEmails(data = {}) {
+  const to = data.adminEmail || data.fallbackAdminEmail || "adenugaolajideadewale@gmail.com";
+  const fields = membershipEmailFields(data);
+  const first = firstNameFromMembership(data);
+  const fullName = fields.full_name || "Applicant";
+
+  const applicantCopy = membershipPlainText(data, {
+    heading: "APPLICATION RECEIVED",
+    intro:
+      `Dear ${first},\n\n` +
+      `Thank you for submitting your membership application to Fire-Fire International Evangelical Church.\n\n` +
+      `We have received your details. Your application is now pending review by our leadership team. ` +
+      `This is not yet confirmation of membership. You will receive a separate confirmation email once your application is approved.`,
+    closing:
+      `Please keep this email for your records.\n\n` +
+      `With love,\n` +
+      `The Leadership Team\n` +
+      `Fire-Fire International Evangelical Church`,
   });
 
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.message || "Could not send membership emails");
-  }
-  return response.json();
+  return postFormSubmit(to, {
+    ...fields,
+    name: fullName,
+    email: fields.email,
+    _subject: `New church membership registration — ${fullName}`,
+    _template: "table",
+    _captcha: "false",
+    _replyto: fields.email || "info@firefireintl.org",
+    _autoresponse: applicantCopy,
+  });
 }
 
 /** Volunteer application: notify assigned admin + confirmation to applicant. */
@@ -529,17 +625,29 @@ export async function deliverMemberNotifications({
 }
 
 /** Structured congratulations after membership is approved. */
-export async function sendMembershipApprovedEmail({
-  fullName,
-  email,
-  roleName = "",
-  branchName = "",
-  siteUrl = "https://firefireintl.org",
-}) {
+export async function sendMembershipApprovedEmail(data = {}) {
+  const email = data.email;
   if (!email) return null;
-  const first = (fullName || "").split(" ")[0] || fullName || "Beloved";
-  const roleLine = roleName ? `Your registered role(s): ${roleName}\n` : "";
-  const branchLine = branchName ? `Your church branch: ${branchName}\n` : "";
+  const first = firstNameFromMembership(data);
+  const siteUrl = data.siteUrl || "https://firefireintl.org";
+  const payload = { ...data, status: "approved" };
+
+  const message = membershipPlainText(payload, {
+    heading: "MEMBERSHIP CONFIRMED",
+    intro:
+      `Dear ${first},\n\n` +
+      `Congratulations!\n\n` +
+      `Your membership application with Fire-Fire International Evangelical Church has been reviewed and approved. ` +
+      `You are now a bonafide member of the FFIEMC family.`,
+    closing:
+      `We are glad to walk with you in faith, fellowship, and service. Stay connected for Sunday services, programmes, and church meetings.\n\n` +
+      `Visit our website: ${siteUrl}\n` +
+      `If you have any questions, reply to this email or write to info@firefireintl.org.\n\n` +
+      `May the Lord bless you and keep you.\n\n` +
+      `With love,\n` +
+      `The Leadership Team\n` +
+      `Fire-Fire International Evangelical Church`,
+  });
 
   return formSubmit(email, {
     name: "Fire-Fire International Evangelical Church",
@@ -547,19 +655,7 @@ export async function sendMembershipApprovedEmail({
     _subject: `Welcome to the FFIEMC family — your membership is approved`,
     _template: "box",
     _replyto: "info@firefireintl.org",
-    message:
-      `Dear ${first},\n\n` +
-      `Congratulations!\n\n` +
-      `Your membership registration with Fire-Fire International Evangelical Church has been reviewed and approved. ` +
-      `You are now a bonafide member of the FFIEMC family.\n\n` +
-      `${roleLine}${branchLine}\n` +
-      `We are glad to walk with you in faith, fellowship, and service. Stay connected for services, programmes, and church meetings.\n\n` +
-      `Visit: ${siteUrl}\n` +
-      `Website membership: ${siteUrl}/join-church\n\n` +
-      `May the Lord bless you and keep you.\n\n` +
-      `With love,\n` +
-      `The Leadership Team\n` +
-      `Fire-Fire International Evangelical Church`,
+    message,
   });
 }
 
