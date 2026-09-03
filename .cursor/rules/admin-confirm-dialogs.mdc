@@ -1,0 +1,48 @@
+---
+description: Use ConfirmDialog for admin approve/decline/delete and other destructive or irreversible actions — never window.confirm
+globs: src/pages/admin/**/*.{js,jsx},src/components/admin/**/*.{js,jsx}
+alwaysApply: false
+---
+
+# Admin confirmation dialogs
+
+When adding or changing admin features that approve, decline, delete, withdraw, send, or otherwise take an irreversible action:
+
+1. **Do not use** `window.confirm`, `window.alert`, or browser prompts.
+2. **Use** `useConfirmDialog` / `ConfirmDialog` from `src/components/admin/ConfirmDialog.jsx`.
+
+```jsx
+import { useConfirmDialog } from "../../components/admin/ConfirmDialog";
+
+const { confirm, dialog } = useConfirmDialog();
+
+const ok = await confirm({
+  title: "Approve this membership?",
+  description: "A confirmation email will be sent to the applicant.",
+  confirmLabel: "Approve",
+  variant: "success", // success | danger | warning | default
+});
+if (!ok) return;
+
+// …perform action
+
+return (
+  <>
+    {/* page UI */}
+    {dialog}
+  </>
+);
+```
+
+## Variant guide
+
+- `success` — approve, activate, publish
+- `danger` — reject, delete, decline
+- `warning` — withdraw, resend, overwrite
+- `default` — neutral confirmations
+
+## Copy
+
+- Title: short action question (“Approve this request?”).
+- Description: what happens next (email sent, cannot undo, etc.).
+- Confirm label: verb matching the action (“Approve”, “Reject”, “Delete”).

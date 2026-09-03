@@ -25,6 +25,7 @@ import { TablePagination, usePagedRows } from "../../../components/admin/TablePa
 import { RoleMultiSelect, memberRoleIds, memberRoleLabel } from "../../../components/forms/RoleMultiSelect";
 import { PageToolbar } from "../../../components/admin/PageToolbar";
 import { RecordViewDialog } from "../../../components/admin/RecordViewDialog";
+import { useConfirmDialog } from "../../../components/admin/ConfirmDialog";
 import { PersonNameFields } from "../../../components/forms/PersonNameFields";
 import { personFromRow, withPersonPayload } from "../../../lib/personName";
 import { Plus } from "lucide-react";
@@ -101,6 +102,7 @@ export default function ChurchMembersPage() {
   const [editRow, setEditRow] = useState(null);
   const [viewRow, setViewRow] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = async () => {
     const [r, m] = await Promise.all([
@@ -256,8 +258,23 @@ export default function ChurchMembersPage() {
 
   const approveMember = async (row) => {
     if (!row?.id) return;
-    if (!window.confirm(`Approve membership for ${row.full_name} and send a confirmation email?`)) return;
-    const payload = { status: "approved", role_ids: memberRoleIds(row) };
+    const ok = await confirm({
+      title: `Approve ${row.full_name}?`,
+      description: "This marks the membership as approved and sends a confirmation email to the applicant.",
+      confirmLabel: "Approve & email",
+      variant: "success",
+    });
+    if (!ok) return;
+    const person = personFromRow(row);
+    const payload = {
+      status: "approved",
+      role_ids: memberRoleIds(row),
+      name_title: person.name_title || row.name_title || "",
+      first_name: person.first_name || "",
+      last_name: person.last_name || "",
+      full_name: row.full_name || "",
+      email: row.email || "",
+    };
     try {
       const result = await requestOrApply({
         isSuperadmin,
@@ -444,7 +461,13 @@ export default function ChurchMembersPage() {
                     canEdit={canEdit}
                     canDelete={canDelete}
                     onDelete={async () => {
-                      if (!window.confirm(`Delete ${row.full_name}?`)) return;
+                      const ok = await confirm({
+                        title: `Delete ${row.full_name}?`,
+                        description: "This permanently removes the member record. This cannot be undone.",
+                        confirmLabel: "Delete",
+                        variant: "danger",
+                      });
+                      if (!ok) return;
                       const result = await requestOrApply({
                         isSuperadmin,
                         feature: "church_members",
@@ -507,6 +530,7 @@ export default function ChurchMembersPage() {
           </div>
         ) : undefined}
       />
+      {confirmDialog}
     </div>
   );
 }

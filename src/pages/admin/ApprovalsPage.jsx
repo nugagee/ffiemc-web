@@ -13,6 +13,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { TablePagination, usePagedRows } from "../../components/admin/TablePagination";
 import { RecordViewDialog } from "../../components/admin/RecordViewDialog";
 import { PageToolbar } from "../../components/admin/PageToolbar";
+import { useConfirmDialog } from "../../components/admin/ConfirmDialog";
 import { memberRoleLabel } from "../../components/forms/RoleMultiSelect";
 
 export const APPROVAL_FEATURES = [
@@ -62,6 +63,7 @@ export default function ApprovalsPage({ mine = false }) {
   const [note, setNote] = useState("");
   const [comment, setComment] = useState("");
   const [viewRow, setViewRow] = useState(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = async () => {
     const list = await authApi.listChangeRequests(
@@ -86,12 +88,23 @@ export default function ApprovalsPage({ mine = false }) {
   };
 
   const review = async (id, decision) => {
+    const row = rows.find((r) => r.id === id);
+    const isApprove = decision === "approved";
+    const ok = await confirm({
+      title: isApprove ? "Approve this request?" : "Reject this request?",
+      description: isApprove
+        ? `This will apply “${row?.title || "the change"}” immediately.${note.trim() ? " Your review note will be saved." : ""}`
+        : `This will reject “${row?.title || "the request"}”. The requester can see your decision${note.trim() ? " and note" : ""}.`,
+      confirmLabel: isApprove ? "Approve" : "Reject",
+      variant: isApprove ? "success" : "danger",
+    });
+    if (!ok) return;
+
     try {
-      const row = rows.find((r) => r.id === id);
       await authApi.reviewChangeRequest(id, decision, note);
-      toast.success(decision === "approved" ? "Change applied" : "Request rejected");
+      toast.success(isApprove ? "Change applied" : "Request rejected");
       if (
-        decision === "approved"
+        isApprove
         && row?.feature === "church_members"
         && row?.action === "update"
         && (row.previous?.status === "pending")
@@ -114,6 +127,7 @@ export default function ApprovalsPage({ mine = false }) {
         }
       }
       setNote("");
+      setViewRow(null);
       await load();
       refreshCounts();
     } catch (e) {
@@ -135,7 +149,14 @@ export default function ApprovalsPage({ mine = false }) {
   };
 
   const withdraw = async (id) => {
-    if (!window.confirm("Withdraw this request?")) return;
+    const row = rows.find((r) => r.id === id);
+    const ok = await confirm({
+      title: "Withdraw this request?",
+      description: `“${row?.title || "This request"}” will be cancelled and removed from the approval inbox.`,
+      confirmLabel: "Withdraw",
+      variant: "warning",
+    });
+    if (!ok) return;
     try {
       await authApi.cancelChangeRequest(id);
       toast.success("Request withdrawn");
@@ -325,21 +346,67 @@ export default function ApprovalsPage({ mine = false }) {
                   onChange={(e) => setComment(e.target.value)}
                   placeholder={mine ? "Ask a question or add context…" : "Send feedback to the requester…"}
                 />
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setViewRow(null)}>Close</Button>
                   <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => sendComment(viewRow.id)}>
                     Send feedback
                   </Button>
+                  {!mine && canReview ? (
+                    <>
+                      <Button
+                        type="button"
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => review(viewRow.id, "approved")}
+                      >
+                        <Check size={14} className="mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-red-200 text-red-700 hover:bg-red-50"
+                        onClick={() => review(viewRow.id, "rejected")}
+                      >
+                        <X size={14} className="mr-1" />
+                        Reject
+                      </Button>
+                    </>
+                  ) : null}
+                  {mine ? (
+                    <Button type="button" variant="outline" onClick={() => withdraw(viewRow.id)}>
+                      Withdraw
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             ) : (
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setViewRow(null)}>Close</Button>
+                {!mine && canReview && viewRow?.status === "pending" ? (
+                  <>
+                    <Button
+                      type="button"
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                      onClick={() => review(viewRow.id, "approved")}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-red-200 text-red-700 hover:bg-red-50"
+                      onClick={() => review(viewRow.id, "rejected")}
+                    >
+                      Reject
+                    </Button>
+                  </>
+                ) : null}
               </div>
             )}
           </div>
         )}
       />
+      {confirmDialog}
     </div>
   );
 }
