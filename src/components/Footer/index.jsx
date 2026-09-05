@@ -142,8 +142,8 @@ export default function Footer() {
         </span>
 
         <div className="legal-links">
-          <span>Privacy Policy</span>
-          <span>Terms of Service</span>
+          <Link to="/privacy">Privacy Policy</Link>
+          <Link to="/terms">Terms of Service</Link>
         </div>
       </div>
     </footer>

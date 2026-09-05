@@ -27,6 +27,7 @@ import { BlogPost } from "../pages/BlogPost";
 import { PrayerRequest } from "../pages/PrayerRequest";
 import { Donate } from "../pages/Donate";
 import { PaymentCallback } from "../pages/PaymentCallback";
+import { PrivacyPolicy, TermsOfService } from "../pages/LegalPages";
 import { Testimonies } from "../pages/Testimonies";
 import { ShareTestimony } from "../pages/ShareTestimony";
 import { VisitorTracker } from "../components/VisitorTracker";
@@ -45,6 +46,7 @@ import PageEditor from "../pages/admin/PageEditor";
 import BlogPostList from "../pages/admin/blog/BlogPostList";
 import BlogPostEditor from "../pages/admin/blog/BlogPostEditor";
 import BlogAnalyticsPage from "../pages/admin/blog/BlogAnalyticsPage";
+import BlogCommentsPage from "../pages/admin/blog/BlogCommentsPage";
 import ChurchResourcesPage from "../pages/admin/blog/ChurchResourcesPage";
 import PrayerInboxPage from "../pages/admin/PrayerInboxPage";
 import PastorsPage from "../pages/admin/PastorsPage";
@@ -121,6 +123,11 @@ const AllPages = () => (
             <Route path="/prayer-request" element={<PrayerRequest />} />
             <Route path="/donate" element={<Donate />} />
             <Route path="/donate/callback" element={<PaymentCallback />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
+            <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
+            <Route path="/terms-and-conditions" element={<Navigate to="/terms" replace />} />
             <Route path="/testimonies" element={<Testimonies />} />
             <Route path="/share-testimony" element={<ShareTestimony />} />
             <Route path="/register/:slug" element={<ProgramRegisterPage />} />
@@ -200,6 +207,14 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="blog.posts" action="edit">
                     <BlogAnalyticsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="blog/comments"
+                element={
+                  <RequirePermission feature="blog.posts" action="edit">
+                    <BlogCommentsPage />
                   </RequirePermission>
                 }
               />

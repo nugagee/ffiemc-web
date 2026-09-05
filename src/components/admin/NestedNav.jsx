@@ -20,6 +20,7 @@ import {
   List,
   Mail,
   Megaphone,
+  MessageSquare,
   Newspaper,
   Plus,
   ScrollText,
@@ -55,6 +56,7 @@ const ICONS = {
   List,
   Mail,
   Megaphone,
+  MessageSquare,
   Newspaper,
   Plus,
   ScrollText,
@@ -139,7 +141,7 @@ function BadgePill({ count }) {
   );
 }
 
-function LeafLink({ node, depth, badges = {} }) {
+function LeafLink({ node, depth, badges = {}, onNavigate }) {
   const location = useLocation();
   const pad = depth === 0 ? "px-4 py-2.5 text-sm gap-3" : "px-3 py-2 text-[13px] gap-2";
   const iconSize = depth === 0 ? 16 : 14;
@@ -151,6 +153,7 @@ function LeafLink({ node, depth, badges = {} }) {
     <NavLink
       to={node.to}
       end={node.end}
+      onClick={() => onNavigate?.()}
       className={({ isActive }) => {
         const active = node.to === "/admin/blog" ? blogAllActive : isActive;
         return `flex items-center ${pad} rounded-xl transition-all duration-200 ${
@@ -165,7 +168,7 @@ function LeafLink({ node, depth, badges = {} }) {
   );
 }
 
-function Group({ node, depth, ctx, badges }) {
+function Group({ node, depth, ctx, badges, onNavigate }) {
   const location = useLocation();
   const active = isGroupActive(node, location.pathname);
   const [open, setOpen] = useState(active);
@@ -205,9 +208,9 @@ function Group({ node, depth, ctx, badges }) {
             <div className={`mt-1 space-y-1 border-l border-white/10 ${depth === 0 ? "ml-4 pl-2" : "ml-3 pl-2"}`}>
               {(node.children || []).map((child) =>
                 child.children?.length ? (
-                  <Group key={child.id} node={child} depth={depth + 1} ctx={ctx} badges={badges} />
+                  <Group key={child.id} node={child} depth={depth + 1} ctx={ctx} badges={badges} onNavigate={onNavigate} />
                 ) : (
-                  <LeafLink key={child.id} node={child} depth={depth + 1} badges={badges} />
+                  <LeafLink key={child.id} node={child} depth={depth + 1} badges={badges} onNavigate={onNavigate} />
                 )
               )}
             </div>
@@ -218,16 +221,16 @@ function Group({ node, depth, ctx, badges }) {
   );
 }
 
-export function NestedNav({ items, can, isSuperadmin, isPastor, badges = {} }) {
+export function NestedNav({ items, can, isSuperadmin, isPastor, badges = {}, onNavigate }) {
   const ctx = { can, isSuperadmin, isPastor };
   const visible = filterTree(items, ctx);
   return (
     <div className="space-y-1">
       {visible.map((node) =>
         node.children?.length ? (
-          <Group key={node.id} node={node} depth={0} ctx={ctx} badges={badges} />
+          <Group key={node.id} node={node} depth={0} ctx={ctx} badges={badges} onNavigate={onNavigate} />
         ) : (
-          <LeafLink key={node.id} node={node} depth={0} badges={badges} />
+          <LeafLink key={node.id} node={node} depth={0} badges={badges} onNavigate={onNavigate} />
         )
       )}
     </div>

@@ -26,9 +26,9 @@ export default function ImageUrlField({
   const [mediaOpen, setMediaOpen] = useState(false);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 min-w-0">
       {label ? <Label htmlFor={id}>{label}</Label> : null}
-      <div className="flex flex-col sm:flex-row gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row min-w-0">
         <Input
           id={id}
           type="url"
@@ -37,7 +37,7 @@ export default function ImageUrlField({
           disabled={disabled}
           onChange={(e) => onChange?.(e.target.value)}
           data-testid={id ? `field-${id}` : undefined}
-          className="flex-1"
+          className="flex-1 min-w-0"
         />
         <div className="flex gap-2 shrink-0">
           <Button
@@ -45,7 +45,7 @@ export default function ImageUrlField({
             variant="outline"
             disabled={disabled}
             onClick={() => setMediaOpen(true)}
-            className="whitespace-nowrap"
+            className="flex-1 sm:flex-none whitespace-nowrap"
           >
             <ImagePlus className="h-4 w-4 mr-2" />
             Upload
@@ -56,7 +56,7 @@ export default function ImageUrlField({
               size="icon"
               variant="outline"
               disabled={disabled}
-              className="text-red-600 hover:bg-red-50"
+              className="text-red-600 hover:bg-red-50 shrink-0"
               onClick={() => onChange?.("")}
               title="Clear image"
             >
@@ -67,7 +67,7 @@ export default function ImageUrlField({
       </div>
       {hint ? <p className="text-xs text-gray-500">{hint}</p> : null}
       {value ? (
-        <div className="mt-1 overflow-hidden rounded-xl border border-gray-100 bg-gray-50 aspect-video max-w-sm">
+        <div className="mt-1 overflow-hidden rounded-xl border border-gray-100 bg-gray-50 aspect-[4/3] sm:aspect-video w-full max-w-full sm:max-w-sm">
           <img src={value} alt="" className="h-full w-full object-cover" />
         </div>
       ) : null}

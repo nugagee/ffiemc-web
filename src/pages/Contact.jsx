@@ -13,6 +13,7 @@ import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
 import { BranchSelect } from '../components/programs/BranchSelect';
+import GoogleMap from '../components/GoogleMap/GoogleMap';
 
 export const Contact = () => {
   const { settings } = useSettings();
@@ -348,7 +349,7 @@ export const Contact = () => {
         </div>
       </section>
 
-      {/* Map Section (Placeholder) */}
+      {/* Map Section */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -356,18 +357,12 @@ export const Contact = () => {
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Our Location
             </h2>
-            <p className="text-lg text-gray-600">
-              {settings.location}
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              {settings.location || "Fire-Fire Area, Papa Agric, Off Olojuoro Olunde Road, Olomi, Ibadan, Nigeria"}
             </p>
           </div>
 
-          <div className="bg-gray-200 rounded-lg h-96 flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <MapPin className="h-12 w-12 mx-auto mb-4" />
-              <p className="text-lg font-medium">Interactive Map</p>
-              <p className="text-sm">Map integration will be available soon</p>
-            </div>
-          </div>
+          <GoogleMap address={settings.location} />
         </div>
       </section>
 

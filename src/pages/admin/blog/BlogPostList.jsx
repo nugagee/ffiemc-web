@@ -120,6 +120,11 @@ export default function BlogPostList() {
                 <BarChart3 size={16} className="mr-2" /> Analytics
               </Link>
             </Button>
+            <Button asChild variant="outline" className="rounded-xl h-11 px-5">
+              <Link to="/admin/blog/comments">
+                Comments
+              </Link>
+            </Button>
             <Button asChild className="bg-red-600 hover:bg-red-700 rounded-xl h-11 px-5">
               <Link to="/admin/blog/new">
                 <Plus size={16} className="mr-2" /> New post

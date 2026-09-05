@@ -318,14 +318,14 @@ export default function AdminsPage() {
       </Dialog>
 
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 sm:rounded-lg top-[5vh] translate-y-0 data-[state=open]:slide-in-from-top-2 data-[state=closed]:slide-out-to-top-2">
-          <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b border-gray-100 pr-12">
+        <DialogContent className="max-w-4xl max-h-[92dvh] overflow-hidden flex flex-col gap-0 p-0 sm:rounded-lg top-[4vh] translate-y-0 data-[state=open]:slide-in-from-top-2 data-[state=closed]:slide-out-to-top-2 w-[calc(100%-1rem)]">
+          <DialogHeader className="shrink-0 px-4 sm:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4 border-b border-gray-100 pr-12">
             <DialogTitle>Permissions for {editing?.username}</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-4">
+          <div className="flex-1 overflow-y-auto overscroll-contain px-3 sm:px-6 py-3 sm:py-4">
             <PermissionMatrix value={editPerms} onChange={setEditPerms} />
           </div>
-          <DialogFooter className="shrink-0 px-6 py-4 border-t border-gray-100">
+          <DialogFooter className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100">
             <Button
               type="button"
               variant="outline"

@@ -190,7 +190,11 @@ export const ShareTestimony = () => {
                   <Label htmlFor="consent_public" className="font-normal text-sm text-gray-700 leading-relaxed">
                     I consent to Fire-Fire International Evangelical Church reviewing and, if
                     approved, publishing my testimony (name and story) on the website and related
-                    church communications. *
+                    church communications. See our{" "}
+                    <Link to="/privacy" className="text-red-700 underline underline-offset-2">
+                      privacy policy
+                    </Link>
+                    . *
                   </Label>
                 </div>
 

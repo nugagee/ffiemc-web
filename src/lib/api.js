@@ -522,6 +522,25 @@ export const authApi = {
       p_slug: slug || null,
       p_limit: limit,
     }),
+  listBlogComments: (status = null, slug = null, limit = 200) =>
+    rpc("admin_list_blog_comments", {
+      p_token: getAdminToken(),
+      p_status: status || null,
+      p_slug: slug || null,
+      p_limit: limit,
+    }),
+  moderateBlogComment: (id, status, note = "") =>
+    rpc("admin_moderate_blog_comment", {
+      p_token: getAdminToken(),
+      p_id: id,
+      p_status: status,
+      p_note: note || "",
+    }),
+  deleteBlogComment: (id) =>
+    rpc("admin_delete_blog_comment", {
+      p_token: getAdminToken(),
+      p_id: id,
+    }),
   logAdminActivity: (path, action = "navigate", meta = {}) =>
     rpc("admin_log_activity", {
       p_token: getAdminToken(),

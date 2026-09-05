@@ -40,19 +40,19 @@ function FeatureRow({ feature, value, onChange, disabled }) {
 export function PermissionMatrix({ value, onChange, disabled }) {
   return (
     <div className="rounded-xl border border-gray-100 overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-3 sm:px-4 py-3 bg-gray-50 border-b border-gray-100">
+        <div className="min-w-0">
           <p className="text-sm font-semibold">Roles and permissions</p>
           <p className="text-xs text-gray-500 mt-0.5">
             Tick only the admin areas this account may use. Website pages are listed separately below.
           </p>
         </div>
         {!disabled && (
-          <div className="flex gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => onChange(allPermissions())}>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button type="button" size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={() => onChange(allPermissions())}>
               Allow all
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => onChange(emptyPermissions())}>
+            <Button type="button" size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={() => onChange(emptyPermissions())}>
               Clear
             </Button>
           </div>
@@ -60,7 +60,7 @@ export function PermissionMatrix({ value, onChange, disabled }) {
       </div>
 
       {GROUPS.map((group) => (
-        <div key={group} className="px-4 py-3 border-b border-gray-100">
+        <div key={group} className="px-3 sm:px-4 py-3 border-b border-gray-100">
           <p className="text-[11px] uppercase tracking-widest text-gray-400 mb-3">{group}</p>
           <div className="space-y-2">
             {DASHBOARD_FEATURES.filter((feature) => (feature.group || "Dashboard") === group).map((feature) => (
@@ -76,7 +76,7 @@ export function PermissionMatrix({ value, onChange, disabled }) {
         </div>
       ))}
 
-      <div className="px-4 py-3">
+      <div className="px-3 sm:px-4 py-3">
         <p className="text-[11px] uppercase tracking-widest text-gray-400 mb-3">Website pages & contents</p>
         <div className="space-y-3">
           {SITE_PAGES.map((page) => {
@@ -108,7 +108,7 @@ export function PermissionMatrix({ value, onChange, disabled }) {
                     const sectionPerms = pagePerms.sections?.[section.key] || {};
                     const actionLabels = section.actionLabels || {};
                     return (
-                      <div key={section.key} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
+                      <div key={section.key} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between px-3 py-2.5">
                         <div className="min-w-0 pr-2">
                           <p className="text-sm text-gray-800">{section.label}</p>
                           {section.hint ? (

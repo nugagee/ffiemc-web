@@ -336,7 +336,7 @@ const ContactPage = () => {
           <h2 className="text-2xl md:text-4xl font-bold font-heading text-gray-900 mb-8">
             Our Location
           </h2>
-          <GoogleMap address="Fire-Fire Area, Olomi, Ibadan, Nigeria" />
+          <GoogleMap address="Fire-Fire Area, Papa Agric, Off Olojuoro Olunde Road, Olomi, Ibadan, Nigeria" />
         </div>
       </section>
 

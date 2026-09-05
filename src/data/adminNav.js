@@ -34,6 +34,7 @@ export const ADMIN_NAV = [
     children: [
       { id: "blog-new", to: "/admin/blog/new", label: "Create article", icon: "Plus", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-analytics", to: "/admin/blog/analytics", label: "Analytics", icon: "BarChart3", end: true, feature: "blog.posts", action: "edit" },
+      { id: "blog-comments", to: "/admin/blog/comments", label: "Comments", icon: "MessageSquare", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-bible", to: "/admin/blog/bible-study", label: "Monday Bible Study", icon: "BookOpen", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-manna", to: "/admin/blog/daily-manna", label: "Daily Manna", icon: "Sun", end: true, feature: "blog.posts", action: "edit" },
       {

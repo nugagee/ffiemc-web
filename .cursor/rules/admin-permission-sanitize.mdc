@@ -1,0 +1,15 @@
+---
+description: Keep SQL permission sanitizer catalog in sync when adding CMS page sections
+globs: src/data/sitePages.js,supabase/migrations/**/*.sql
+alwaysApply: false
+---
+
+# Admin page-section permissions
+
+When adding a new CMS page or section in `src/data/sitePages.js` (for example `leadership.youthEscos`):
+
+1. Add a Supabase migration that updates `public._sanitize_permissions` so the new section key is in `v_catalog`.
+2. If it is a new page key, also add it to `admin_update_page_section` `v_allowed`.
+3. Without this, ticking the permission checkbox appears to save but the key is stripped and the admin never gets access.
+
+Known pattern: permissions are filtered server-side on save via `_sanitize_permissions`.

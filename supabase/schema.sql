@@ -370,18 +370,21 @@ declare
   v_edit boolean;
   v_delete boolean;
   v_catalog jsonb := '{
-    "home": ["hero","welcome","stats","eventsPreview","sermonsPreview","ministriesPreview","cta","testimoniesPreview","social"],
-    "about": ["hero","mission","values","history","pastor","visit"],
-    "services": ["hero","times","programmes"],
-    "leadership": ["hero","team","departments","values","cta"],
-    "ministries": ["hero","list"],
+    "home": ["hero","announcements","welcome","stats","eventsPreview","sermonsPreview","blogPreview","ministriesPreview","cta","testimoniesPreview","social"],
+    "about": ["hero","mission","values","doctrines","catechism","history","pastor","visit"],
+    "services": ["hero","times","programmes","expect","guidelines","cta"],
+    "leadership": ["hero","team","youthEscos","departments","values","cta"],
+    "ministries": ["hero","network","departments","bibleSchool","list"],
     "events": ["hero","list"],
     "sermons": ["hero","list"],
     "testimonies": ["hero","list"],
     "blog": ["hero","posts"],
     "contact": ["hero","church","hours"],
-    "prayer": ["hero","inbox"],
-    "donate": ["hero","purposes"]
+    "prayer": ["hero","categories","inbox","pastors"],
+    "join": ["hero"],
+    "donate": ["hero","purposes","accounts"],
+    "privacy": ["hero","sections"],
+    "terms": ["hero","sections"]
   }'::jsonb;
 begin
   if p_permissions is null or jsonb_typeof(p_permissions) <> 'object' then
@@ -1706,7 +1709,7 @@ declare
   v_value jsonb;
   v_allowed text[] := array[
     'home','about','services','leadership','ministries','events',
-    'sermons','blog','testimonies','contact','prayer','donate'
+    'sermons','blog','testimonies','contact','prayer','join','donate','privacy','terms'
   ];
 begin
   if p_page is null or p_section is null or not (p_page = any (v_allowed)) then

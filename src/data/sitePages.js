@@ -1,4 +1,5 @@
 import { catechismCmsDefaults, doctrinesCmsDefaults, historyCmsDefaults } from "./aboutDefaults";
+import { DEFAULT_PRIVACY_CONTENT, DEFAULT_TERMS_CONTENT } from "./legalContent";
 
 export const DASHBOARD_FEATURES = [
   { key: "overview", group: "Dashboard", label: "Overview / analytics", hint: "Dashboard charts and totals", actions: ["view"] },
@@ -469,12 +470,75 @@ export const SITE_PAGES = [
         { name: "badge", label: "Badge" },
         { name: "headline", label: "Heading" },
         { name: "intro", label: "Intro / verse", type: "textarea" },
+        { name: "consentTitle", label: "Consent heading" },
+        { name: "consentText", label: "Consent checkbox text", type: "textarea" },
       ]) },
-      { key: "purposes", label: "Giving purposes", ...list([
+      { key: "accounts", label: "Bank accounts", ...list([
+        { name: "id", label: "ID (tithe_gtb, tithe_opay, offering, building)" },
+        { name: "label", label: "Label" },
+        { name: "accountNumber", label: "Account number" },
+        { name: "accountName", label: "Account name" },
+        { name: "bank", label: "Bank" },
+      ]) },
+      { key: "purposes", label: "Giving purposes (legacy)", ...list([
         { name: "id", label: "ID (tithe, offering, …)" },
         { name: "name", label: "Name" },
         { name: "description", label: "Description" },
       ]) },
+    ],
+  },
+  {
+    key: "privacy",
+    label: "Privacy policy",
+    path: "/admin/pages/privacy",
+    sections: [
+      {
+        key: "hero",
+        label: "Page header",
+        hint: "Public /privacy. Use placeholders {{church}} {{email}} {{phone}} {{location}} in intro text if needed.",
+        ...copy([
+          { name: "badge", label: "Badge" },
+          { name: "headline", label: "Title" },
+          { name: "intro", label: "Intro", type: "textarea", rows: 4 },
+          { name: "lastUpdated", label: "Last updated" },
+        ]),
+      },
+      {
+        key: "sections",
+        label: "Policy sections",
+        hint: "Each item is a numbered heading plus body. Use blank lines between paragraphs. Start bullet lines with “- ”. Placeholders: {{church}} {{email}} {{phone_clause}} {{location_clause}}.",
+        ...list([
+          { name: "title", label: "Section title" },
+          { name: "body", label: "Section body", type: "textarea", rows: 8 },
+        ]),
+      },
+    ],
+  },
+  {
+    key: "terms",
+    label: "Terms of service",
+    path: "/admin/pages/terms",
+    sections: [
+      {
+        key: "hero",
+        label: "Page header",
+        hint: "Public /terms. Use placeholders {{church}} {{email}} {{phone}} {{location}} in intro text if needed.",
+        ...copy([
+          { name: "badge", label: "Badge" },
+          { name: "headline", label: "Title" },
+          { name: "intro", label: "Intro", type: "textarea", rows: 4 },
+          { name: "lastUpdated", label: "Last updated" },
+        ]),
+      },
+      {
+        key: "sections",
+        label: "Terms sections",
+        hint: "Each item is a heading plus body. Use blank lines between paragraphs. Start bullet lines with “- ”. Placeholders: {{church}} {{email}} {{location_paren}} {{location_clause}}.",
+        ...list([
+          { name: "title", label: "Section title" },
+          { name: "body", label: "Section body", type: "textarea", rows: 8 },
+        ]),
+      },
     ],
   },
 ];
@@ -840,9 +904,43 @@ export const DEFAULT_PAGE_CONTENT = {
   },
   donate: {
     hero: {
-      badge: "Give Cheerfully",
-      headline: "Support the Ministry",
+      badge: "Partner with us",
+      headline: "Giving Options",
       intro: "Each of you should give what you have decided in your heart to give, for God loves a cheerful giver. — 2 Corinthians 9:7",
+      consentTitle: "Willing giver agreement",
+      consentText: "I confirm that I am giving willingly and cheerfully to Fire-Fire International Evangelical Church. I understand bank transfers are made at my own initiative, account details are for ministry giving only. I give this gift freely for the work of the gospel.",
+    },
+    accounts: {
+      items: [
+        {
+          id: "tithe_gtb",
+          label: "Tithe Account",
+          accountNumber: "0449806275",
+          accountName: "FIREFIRE INTL EVANG CHTITHE",
+          bank: "GTB",
+        },
+        {
+          id: "tithe_opay",
+          label: "Tithe",
+          accountNumber: "6104585635",
+          accountName: "SAMUEL OLUKUNLE MORONRANTI",
+          bank: "OPay",
+        },
+        {
+          id: "offering",
+          label: "Offering Account",
+          accountNumber: "0158946758",
+          accountName: "FIREFIRE INTL EVANGELICAL CH",
+          bank: "GTB",
+        },
+        {
+          id: "building",
+          label: "Building Account",
+          accountNumber: "0095881239",
+          accountName: "FIRE FIRE INTERNATIONAL EVANGELICAL",
+          bank: "Sterling Bank",
+        },
+      ],
     },
     purposes: {
       items: [
@@ -855,6 +953,8 @@ export const DEFAULT_PAGE_CONTENT = {
       ],
     },
   },
+  privacy: DEFAULT_PRIVACY_CONTENT,
+  terms: DEFAULT_TERMS_CONTENT,
 };
 
 export function getSitePage(key) {

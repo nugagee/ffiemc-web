@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { looksLikeHtml, sanitizeHtml } from "../../lib/blog";
+import { applyBlogShareMeta } from "../../lib/blogAnalytics";
 import { Badge } from "../ui/badge";
 import { ArrowLeft, Calendar, User } from "lucide-react";
 import { BlogReactions } from "./BlogReactions";
+import { BlogShareBar } from "./BlogShareBar";
+import { BlogComments } from "./BlogComments";
 import { BlogReadTracker } from "./BlogReadTracker";
 
 const fmtDate = (d) => {
@@ -15,6 +18,11 @@ const fmtDate = (d) => {
 };
 
 export function BlogPostArticle({ post, preview = false }) {
+  useEffect(() => {
+    if (!post || preview) return undefined;
+    return applyBlogShareMeta(post);
+  }, [post, preview]);
+
   if (!post) return null;
 
   return (
@@ -61,7 +69,13 @@ export function BlogPostArticle({ post, preview = false }) {
             {post.content || <span className="text-gray-400 italic">No content yet.</span>}
           </div>
         )}
-        {!preview && <BlogReactions post={post} />}
+        {!preview && (
+          <>
+            <BlogReactions post={post} />
+            <BlogShareBar post={post} />
+            <BlogComments post={post} />
+          </>
+        )}
       </div>
       {!preview && <BlogReadTracker post={post} />}
     </article>

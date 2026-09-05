@@ -27,6 +27,7 @@ export function trackBlogEvent(post, action, extra = {}) {
       p_visitor_id: getVisitorId(),
       p_session_id: getSessionId(),
       p_reaction: extra.reaction || "",
+      p_share_channel: extra.shareChannel || "",
       p_duration: extra.duration || 0,
       p_scroll: extra.scroll || 0,
       p_path: typeof window !== "undefined" ? window.location.pathname : "/",
@@ -57,5 +58,46 @@ export function fetchBlogEngagement(slug) {
         mine: data?.mine || "",
         total: data?.total || 0,
       };
+    });
+}
+
+export function fetchBlogComments(slug) {
+  if (!slug || !isSupabaseConfigured || !getSupabase()) {
+    return Promise.resolve([]);
+  }
+  return getSupabase()
+    .rpc("public_list_blog_comments", { p_slug: slug, p_limit: 100 })
+    .then(({ data, error }) => {
+      if (error) {
+        console.warn("Blog comments failed:", error.message);
+        return [];
+      }
+      return Array.isArray(data) ? data : [];
+    });
+}
+
+export function submitBlogComment(post, payload = {}) {
+  if (!post || !isSupabaseConfigured || !getSupabase()) {
+    return Promise.reject(new Error("Comments are unavailable right now"));
+  }
+  const slug = postAnalyticsKey(post);
+  if (!slug) return Promise.reject(new Error("Missing article"));
+  return getSupabase()
+    .rpc("public_submit_blog_comment", {
+      p_slug: slug,
+      p_body: payload.body || "",
+      p_post_id: postAnalyticsId(post),
+      p_title: post.title || "",
+      p_author_name: payload.authorName || "",
+      p_author_email: payload.authorEmail || "",
+      p_is_anonymous: Boolean(payload.isAnonymous),
+      p_visitor_id: getVisitorId(),
+      p_session_id: getSessionId(),
+      p_path: typeof window !== "undefined" ? window.location.pathname : "/",
+      ...demoPayload(),
+    })
+    .then(({ data, error }) => {
+      if (error) throw new Error(error.message || "Could not submit comment");
+      return data;
     });
 }
