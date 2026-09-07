@@ -226,6 +226,7 @@ export const ministries = [
 export const blogPosts = [
   {
     id: 1,
+    slug: "the-power-of-persistent-prayer",
     title: "The Power of Persistent Prayer",
     excerpt: "Discover how consistent prayer can transform your spiritual life and bring breakthrough in impossible situations.",
     content: "Prayer is the engine that drives the Christian life. When we pray persistently, we align ourselves with God's will and open doors for His power to work in our lives...",
@@ -237,6 +238,7 @@ export const blogPosts = [
   },
   {
     id: 2,
+    slug: "living-with-holy-fire",
     title: "Living with Holy Fire",
     excerpt: "How to maintain the passion and zeal for God in your daily Christian walk.",
     content: "The fire of God is not just for special occasions or conferences. It's meant to burn continuously in our hearts as we live for Christ...",
@@ -248,6 +250,7 @@ export const blogPosts = [
   },
   {
     id: 3,
+    slug: "teaching-the-next-generation",
     title: "Teaching the Next Generation",
     excerpt: "The importance of discipleship and how we can effectively teach one by one another.",
     content: "Our church motto 'Teach one by one another' reflects the heart of discipleship. Every believer has the responsibility to pour into others...",

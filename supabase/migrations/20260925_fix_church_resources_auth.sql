@@ -1,4 +1,5 @@
--- Sunday service sermons + choir ministrations (video links) on church_resources
+-- Fix church_resources admin RPCs: use _require_permission (same as other admin APIs).
+-- Previous migrations incorrectly called public._admin_from_token(text), which does not exist.
 
 alter table public.church_resources
   drop constraint if exists church_resources_kind_check;
@@ -13,9 +14,6 @@ alter table public.church_resources
   add column if not exists facebook_url text not null default '',
   add column if not exists audiomack_url text not null default '',
   add column if not exists thumbnail_url text not null default '';
-
-create index if not exists church_resources_media_date_idx
-  on public.church_resources (kind, service_date desc nulls last, study_date desc nulls last, created_at desc);
 
 create or replace function public.public_list_church_resources(p_kind text default null)
 returns jsonb

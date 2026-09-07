@@ -8,6 +8,7 @@ import { BlogReactions } from "./BlogReactions";
 import { BlogShareBar } from "./BlogShareBar";
 import { BlogComments } from "./BlogComments";
 import { BlogReadTracker } from "./BlogReadTracker";
+import { RelatedBlogPosts } from "./RelatedBlogPosts";
 
 const fmtDate = (d) => {
   try {
@@ -74,6 +75,7 @@ export function BlogPostArticle({ post, preview = false }) {
             <BlogReactions post={post} />
             <BlogShareBar post={post} />
             <BlogComments post={post} />
+            <RelatedBlogPosts post={post} />
           </>
         )}
       </div>

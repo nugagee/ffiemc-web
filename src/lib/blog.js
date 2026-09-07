@@ -10,6 +10,21 @@ export function slugify(value) {
     .slice(0, 80);
 }
 
+export function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || "")
+  );
+}
+
+/** Public blog URL path — prefer title slug over id. */
+export function blogPostPath(post) {
+  if (!post) return "/blog";
+  const slug = String(post.slug || "").trim();
+  if (slug) return `/blog/${encodeURIComponent(slug)}`;
+  if (post.id != null && post.id !== "") return `/blog/${encodeURIComponent(String(post.id))}`;
+  return "/blog";
+}
+
 export function looksLikeHtml(value) {
   return /<\/?[a-z][\s\S]*>/i.test(String(value || ""));
 }
@@ -37,7 +52,32 @@ export function postTimestamp(post) {
   return Number.isNaN(t) ? 0 : t;
 }
 
-/** Merge seeded + API blog posts; API wins on matching slug/id. */
+/** Related posts for reader navigation: same category first, then newest. */
+export function relatedBlogPosts(current, allPosts = [], limit = 3) {
+  if (!current) return [];
+  const currentId = String(current.id ?? "");
+  const currentSlug = String(current.slug || "");
+  const category = String(current.category || "").toLowerCase();
+  const others = (allPosts || []).filter((p) => {
+    if (!p) return false;
+    const id = String(p.id ?? "");
+    const slug = String(p.slug || "");
+    if (currentId && id === currentId) return false;
+    if (currentSlug && slug === currentSlug) return false;
+    return true;
+  });
+
+  const sameCategory = [];
+  const rest = [];
+  others.forEach((p) => {
+    if (category && String(p.category || "").toLowerCase() === category) sameCategory.push(p);
+    else rest.push(p);
+  });
+
+  return [...sameCategory, ...rest].slice(0, limit);
+}
+
+/** Merge seeded + API blog posts; API wins on matching slug/id. Newest first. */
 export function mergeBlogPosts(apiPosts = [], seeds = []) {
   const byKey = new Map();
   const add = (post) => {
@@ -49,19 +89,16 @@ export function mergeBlogPosts(apiPosts = [], seeds = []) {
   seeds.forEach(add);
   (apiPosts || []).forEach(add);
   return Array.from(byKey.values()).sort((a, b) => {
-    const orderA = Number(a.sort_order);
-    const orderB = Number(b.sort_order);
-    const hasOrderA = !Number.isNaN(orderA);
-    const hasOrderB = !Number.isNaN(orderB);
-    if (hasOrderA || hasOrderB) {
-      const sa = hasOrderA ? orderA : 9999;
-      const sb = hasOrderB ? orderB : 9999;
-      if (sa !== sb) return sa - sb;
-    }
+    const byDate = postTimestamp(b) - postTimestamp(a);
+    if (byDate !== 0) return byDate;
     const featA = a.featured ? 1 : 0;
     const featB = b.featured ? 1 : 0;
     if (featB !== featA) return featB - featA;
-    return postTimestamp(b) - postTimestamp(a);
+    const orderA = Number(a.sort_order);
+    const orderB = Number(b.sort_order);
+    const sa = Number.isNaN(orderA) ? 0 : orderA;
+    const sb = Number.isNaN(orderB) ? 0 : orderB;
+    return sa - sb;
   });
 }
 

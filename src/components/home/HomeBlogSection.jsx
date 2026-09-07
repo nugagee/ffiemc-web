@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import Autoplay from "embla-carousel-autoplay";
 import { ArrowRight, Calendar, FileText, User } from "lucide-react";
-import { mergeBlogPosts } from "../../lib/blog";
+import { mergeBlogPosts, blogPostPath } from "../../lib/blog";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
@@ -53,7 +53,7 @@ function FeaturedBlogCard({ post }) {
       transition={{ duration: 0.45, ease: "easeOut" }}
       className="h-full"
     >
-      <Link to={`/blog/${post.id}`} className="group block h-full">
+      <Link to={blogPostPath(post)} className="group block h-full">
         <Card className="h-full overflow-hidden border-0 shadow-2xl bg-gray-900 text-white">
           <div className="relative min-h-[22rem] lg:min-h-[28rem]">
             <img

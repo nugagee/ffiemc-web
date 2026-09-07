@@ -6,6 +6,7 @@ import { ArrowLeft, CalendarClock, Eye, ImageIcon, Loader2, Save } from "lucide-
 import { useAuth } from "../../../context/AuthContext";
 import api, { formatApiError } from "../../../lib/api";
 import {
+  blogPostPath,
   fromDatetimeLocal,
   postStatus,
   slugify,
@@ -184,9 +185,9 @@ export default function BlogPostEditor() {
           <Button variant="outline" className="rounded-xl" onClick={openPreview}>
             <Eye size={15} /> Preview
           </Button>
-          {form.status === "published" && id && (
+          {form.status === "published" && (form.slug || id) && (
             <Button asChild variant="outline" className="rounded-xl">
-              <a href={`/blog/${id}`} target="_blank" rel="noreferrer">
+              <a href={blogPostPath({ slug: form.slug, id })} target="_blank" rel="noreferrer">
                 View live
               </a>
             </Button>
@@ -377,6 +378,9 @@ export default function BlogPostEditor() {
                   setField("slug", slugify(e.target.value));
                 }}
               />
+              <p className="mt-1.5 text-xs text-gray-500 break-all">
+                Public URL: {blogPostPath({ slug: form.slug || slugify(form.title), id })}
+              </p>
             </div>
             <div>
               <Label>Author</Label>

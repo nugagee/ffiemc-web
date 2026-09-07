@@ -58,13 +58,9 @@ security definer
 set search_path = public
 as $$
 declare
-  v_admin uuid;
   v_kind text := lower(nullif(trim(p_kind), ''));
 begin
-  v_admin := public._admin_from_token(p_token);
-  if not public._has_perm(v_admin, 'blog.posts', 'view') then
-    raise exception 'You do not have permission to view church resources';
-  end if;
+  perform public._require_permission(p_token, 'blog.posts', 'edit');
   return coalesce((
     select jsonb_agg(to_jsonb(r) order by
       case when r.kind = 'bible_study' then r.week_of end desc nulls last,
@@ -84,15 +80,11 @@ security definer
 set search_path = public
 as $$
 declare
-  v_admin uuid;
   v_id uuid;
   v_kind text;
   v_row jsonb;
 begin
-  v_admin := public._admin_from_token(p_token);
-  if not public._has_perm(v_admin, 'blog.posts', 'edit') then
-    raise exception 'You do not have permission to edit church resources';
-  end if;
+  perform public._require_permission(p_token, 'blog.posts', 'edit');
   v_id := coalesce(p_id, gen_random_uuid());
   v_kind := lower(coalesce(nullif(p_data->>'kind', ''), 'bible_study'));
   if v_kind not in ('bible_study', 'daily_manna') then
@@ -141,13 +133,8 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  v_admin uuid;
 begin
-  v_admin := public._admin_from_token(p_token);
-  if not public._has_perm(v_admin, 'blog.posts', 'delete') then
-    raise exception 'You do not have permission to delete church resources';
-  end if;
+  perform public._require_permission(p_token, 'blog.posts', 'delete');
   delete from public.church_resources where id = p_id;
   return jsonb_build_object('ok', true);
 end;

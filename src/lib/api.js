@@ -1,5 +1,5 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
-import { isPublicBlogPost } from "./blog";
+import { isPublicBlogPost, isUuid } from "./blog";
 
 const TOKEN_KEY = "ffiemc_admin_token";
 
@@ -72,7 +72,13 @@ function collectionFromPath(path) {
 
 function parseId(path) {
   const parts = normalizePath(path).split("/").filter(Boolean);
-  if (parts.length >= 2) return parts[1];
+  if (parts.length >= 2) {
+    try {
+      return decodeURIComponent(parts[1]);
+    } catch {
+      return parts[1];
+    }
+  }
   return null;
 }
 
@@ -125,21 +131,41 @@ async function publicGet(collection, id) {
   assertConfigured();
   const table = TABLE_MAP[collection];
   if (!table) throw new Error("Not found");
-  let { data, error } = await getSupabase()
-    .from(table)
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) {
+  const key = String(id || "").trim();
+  if (!key) throw new Error("Not found");
+
+  let data = null;
+  let error = null;
+
+  // Prefer slug lookup for non-UUID keys (avoids Postgres uuid parse errors).
+  if (!isUuid(key)) {
     const bySlug = await getSupabase()
       .from(table)
       .select("*")
-      .eq("slug", id)
+      .eq("slug", key)
       .maybeSingle();
-    if (bySlug.error) throw new Error(bySlug.error.message);
     data = bySlug.data;
+    error = bySlug.error;
+  } else {
+    const byId = await getSupabase()
+      .from(table)
+      .select("*")
+      .eq("id", key)
+      .maybeSingle();
+    data = byId.data;
+    error = byId.error;
+    if (!error && !data) {
+      const bySlug = await getSupabase()
+        .from(table)
+        .select("*")
+        .eq("slug", key)
+        .maybeSingle();
+      data = bySlug.data;
+      error = bySlug.error;
+    }
   }
+
+  if (error) throw new Error(error.message);
   if (!data) throw new Error("Not found");
   if (collection === "blog" && !isPublicBlogPost(data)) throw new Error("Not found");
   return withId(data);

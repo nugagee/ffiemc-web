@@ -1,3 +1,5 @@
+import { isUuid, blogPostPath } from "./blog";
+
 export const BLOG_REACTIONS = [
   { id: "amen", emoji: "🙏", label: "Amen" },
   { id: "fire", emoji: "🔥", label: "On fire" },
@@ -41,12 +43,6 @@ export function postAnalyticsKey(post) {
   return post?.slug || String(post?.id || "");
 }
 
-function isUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    String(value || "")
-  );
-}
-
 export function postAnalyticsId(post) {
   return isUuid(post?.id) ? post.id : null;
 }
@@ -67,7 +63,7 @@ export function blogPostShareUrl(post) {
     return window.location.href.split("#")[0].split("?")[0];
   }
   if (!slug) return window.location.href.split("#")[0].split("?")[0];
-  return `${window.location.origin}/blog/${encodeURIComponent(slug)}`;
+  return `${window.location.origin}${blogPostPath(post)}`;
 }
 
 export function blogPostShareSummary(post, maxLen = 160) {
