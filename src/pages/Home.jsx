@@ -351,7 +351,7 @@ export const Home = () => {
       </section>
 
       {/* Latest Sermons - Enhanced */}
-      <section className="py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
+      {/* <section className="py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-12">
             <Badge className="bg-red-600 text-white hover:bg-red-600">{sermonsCopy.badge}</Badge>
@@ -407,7 +407,7 @@ export const Home = () => {
             </Button>
           </div>
         </div>
-      </section>
+      </section> */}
 
       <HomeLatestResources />
 
