@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, BookOpen, Calendar, Download, FileText, Sun, User } from "lucide-react";
+import { ArrowRight, BookOpen, Calendar, Church, Download, FileText, Mic2, Sun, User } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -22,6 +22,8 @@ export function ResourceDownloadMenu({ resource, label = "Download" }) {
 export function BlogHubTabs({ active, onChange }) {
   const tabs = [
     { id: "articles", label: "Articles", icon: FileText },
+    { id: "sunday-sermon", label: "Sunday Sermons", icon: Church },
+    { id: "choir", label: "Choir", icon: Mic2 },
     { id: "bible-study", label: "Monday Bible Study", icon: BookOpen },
     { id: "daily-manna", label: "Daily Manna", icon: Sun },
   ];

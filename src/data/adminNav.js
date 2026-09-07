@@ -37,6 +37,8 @@ export const ADMIN_NAV = [
       { id: "blog-comments", to: "/admin/blog/comments", label: "Comments", icon: "MessageSquare", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-bible", to: "/admin/blog/bible-study", label: "Monday Bible Study", icon: "BookOpen", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-manna", to: "/admin/blog/daily-manna", label: "Daily Manna", icon: "Sun", end: true, feature: "blog.posts", action: "edit" },
+      { id: "blog-sunday", to: "/admin/blog/sunday-sermons", label: "Sunday sermons", icon: "Church", end: true, feature: "blog.posts", action: "edit" },
+      { id: "blog-choir", to: "/admin/blog/choir", label: "Choir ministrations", icon: "Mic", end: true, feature: "blog.posts", action: "edit" },
       {
         id: "blog-all",
         to: "/admin/blog",

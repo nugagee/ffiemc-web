@@ -58,14 +58,19 @@ export function MonthWelcomeBannerPanel({ canEdit = true }) {
     try {
       const payload = {
         ...form,
+        // Always persist an explicit boolean so “off” is never dropped on merge
+        enabled: form.enabled === true,
         starts_at: fromLocalDateTimeInput(form.starts_at) || form.starts_at || "",
         ends_at: fromLocalDateTimeInput(form.ends_at) || form.ends_at || "",
       };
       await authApi.updatePageSection("home", "monthWelcome", payload);
       dirty.current = false;
       await refresh({ notify: true });
-      toast.success("Month welcome popup saved");
-      setForm(toForm(payload));
+      toast.success(payload.enabled ? "Month welcome popup saved (on)" : "Month welcome popup turned off");
+      setForm(toForm(getMonthWelcomeConfig(
+        // Prefer the payload we just saved until settings re-merge lands
+        { pages: { home: { monthWelcome: payload } } }
+      )));
     } catch (err) {
       toast.error(formatApiError(err.message) || "Save failed");
     } finally {

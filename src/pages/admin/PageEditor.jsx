@@ -369,12 +369,14 @@ export default function PageEditor() {
             </div>
           );
         }
-        if (section.cms === "announcements") {
+        if (section.cms === "announcements" || section.cms === "monthWelcome") {
           return (
             <div key={`${page.key}-${section.key}`} className="rounded-2xl bg-white border border-gray-100 p-4 sm:p-5">
-              <h2 className="text-lg font-semibold">Event banners</h2>
+              <h2 className="text-lg font-semibold">{section.label}</h2>
               <p className="text-sm text-gray-500 mt-1">
-                Create popup and sticky banners, then review analytics and visitor activity from the Banners workspace.
+                {section.cms === "monthWelcome"
+                  ? "Turn the Happy New Month homepage popup on or off, update the flyer, and set the schedule from the Banners workspace."
+                  : "Create popup and sticky banners, then review analytics and visitor activity from the Banners workspace."}
               </p>
               <Link
                 to="/admin/banners"

@@ -315,7 +315,7 @@ function payloadFromForm(form) {
 
 export function AnnouncementsPanel() {
   const { can } = useAuth();
-  const canEdit = can("banners", "edit") || can("home.announcements", "edit") || can("home.hero", "edit");
+  const canEdit = can("banners", "edit") || can("home.announcements", "edit") || can("home.monthWelcome", "edit") || can("home.hero", "edit");
   const canDelete = can("banners", "delete") || can("home.announcements", "delete") || can("home.hero", "edit");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);

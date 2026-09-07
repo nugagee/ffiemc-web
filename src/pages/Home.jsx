@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Badge } from '../components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../components/ui/carousel';
 import { HomeBlogSection, mergeBlogPosts } from '../components/home/HomeBlogSection';
+import { HomeLatestResources } from '../components/home/HomeLatestResources';
 import { CONVENTION_BLOG_POSTS } from '../data/conventionContent';
 import { Calendar, Clock, MapPin, Users, Heart, Flame, ArrowRight, Play, ChevronRight, Quote, Star, Facebook, Twitter, Instagram, Music, MessageCircle, Share, ThumbsUp } from 'lucide-react';
 import { useCollection } from '../hooks/useCollection';
@@ -407,6 +408,8 @@ export const Home = () => {
           </div>
         </div>
       </section>
+
+      <HomeLatestResources />
 
       <HomeBlogSection
         posts={latestBlogPosts}

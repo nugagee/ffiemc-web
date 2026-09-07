@@ -370,7 +370,7 @@ declare
   v_edit boolean;
   v_delete boolean;
   v_catalog jsonb := '{
-    "home": ["hero","announcements","welcome","stats","eventsPreview","sermonsPreview","blogPreview","ministriesPreview","cta","testimoniesPreview","social"],
+    "home": ["hero","announcements","monthWelcome","welcome","stats","eventsPreview","sermonsPreview","blogPreview","ministriesPreview","cta","testimoniesPreview","social"],
     "about": ["hero","mission","values","doctrines","catechism","history","pastor","visit"],
     "services": ["hero","times","programmes","expect","guidelines","cta"],
     "leadership": ["hero","team","youthEscos","departments","values","cta"],

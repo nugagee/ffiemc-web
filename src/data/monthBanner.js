@@ -3,7 +3,7 @@ import fallbackImage from "../assets/img/banners/happy-new-month-september-2025.
 export const MONTH_WELCOME_FALLBACK_IMAGE = fallbackImage;
 
 export const DEFAULT_MONTH_WELCOME = {
-  enabled: true,
+  enabled: false,
   image: "",
   title: "Happy New Month",
   alt: "Happy New Month — September from Fire-Fire International Evangelical Church Youth Ministry. A fresh start, greater grace.",
@@ -29,7 +29,12 @@ Amen! 🕊️`,
 
 export function getMonthWelcomeConfig(settings) {
   const current = settings?.pages?.home?.monthWelcome;
-  return { ...DEFAULT_MONTH_WELCOME, ...(current || {}) };
+  const merged = { ...DEFAULT_MONTH_WELCOME, ...(current || {}) };
+  // Coerce so a stored false is never overridden by truthy string/"undefined" quirks
+  merged.enabled = current && Object.prototype.hasOwnProperty.call(current, "enabled")
+    ? current.enabled === true
+    : merged.enabled === true;
+  return merged;
 }
 
 export function isMonthWelcomeActive(config, date = new Date()) {

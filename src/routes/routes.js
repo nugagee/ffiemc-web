@@ -203,6 +203,22 @@ const AllPages = () => (
                 }
               />
               <Route
+                path="blog/sunday-sermons"
+                element={
+                  <RequirePermission feature="blog.posts" action="edit">
+                    <ChurchResourcesPage kind="sunday_sermon" />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="blog/choir"
+                element={
+                  <RequirePermission feature="blog.posts" action="edit">
+                    <ChurchResourcesPage kind="choir_ministration" />
+                  </RequirePermission>
+                }
+              />
+              <Route
                 path="blog/analytics"
                 element={
                   <RequirePermission feature="blog.posts" action="edit">

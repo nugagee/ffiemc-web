@@ -1,5 +1,6 @@
 import { catechismCmsDefaults, doctrinesCmsDefaults, historyCmsDefaults } from "./aboutDefaults";
 import { DEFAULT_PRIVACY_CONTENT, DEFAULT_TERMS_CONTENT } from "./legalContent";
+import { DEFAULT_MONTH_WELCOME } from "./monthBanner";
 
 export const DASHBOARD_FEATURES = [
   { key: "overview", group: "Dashboard", label: "Overview / analytics", hint: "Dashboard charts and totals", actions: ["view"] },
@@ -40,6 +41,15 @@ export const SITE_PAGES = [
         cms: "announcements",
         actions: ["edit", "delete"],
         actionLabels: { edit: "Manage", delete: "Delete" },
+      },
+      {
+        key: "monthWelcome",
+        label: "Month welcome popup",
+        hint: "Managed under Banners — Happy New Month homepage popup",
+        kind: "inbox",
+        cms: "monthWelcome",
+        actions: ["edit"],
+        actionLabels: { edit: "Manage" },
       },
       { key: "welcome", label: "Welcome section", ...copy([
         { name: "headline", label: "Headline" },
@@ -545,6 +555,11 @@ export const SITE_PAGES = [
 
 export const DEFAULT_PAGE_CONTENT = {
   home: {
+    monthWelcome: {
+      ...DEFAULT_MONTH_WELCOME,
+      // Prefer off unless an admin explicitly enables a campaign window.
+      enabled: false,
+    },
     welcome: {
       headline: "Teaching One by One Another",
       body: "At Fire-Fire International Evangelical Church, we believe in the transformative power of personal discipleship. Every member is both a student and a teacher in God's kingdom.",
@@ -983,8 +998,19 @@ export function mergePageContent(storedPages = {}) {
     const stored = storedPages[page.key] || {};
     next[page.key] = {};
     page.sections.forEach((section) => {
-      if (section.kind === "collection" || section.kind === "inbox") return;
+      // Collection/inbox sections are usually managed elsewhere — except content-bearing
+      // managed blobs like home.monthWelcome that must survive settings merge.
+      if (section.kind === "collection") return;
+      if (section.kind === "inbox" && section.cms !== "monthWelcome") return;
       next[page.key][section.key] = mergeSection(defaults[section.key], stored[section.key]);
+    });
+    // Keep any other stored page sections that are not collection/inbox shells
+    Object.keys(stored).forEach((key) => {
+      if (next[page.key][key] !== undefined) return;
+      const meta = page.sections.find((s) => s.key === key);
+      if (meta?.kind === "collection") return;
+      if (meta?.kind === "inbox" && meta.cms !== "monthWelcome") return;
+      next[page.key][key] = mergeSection(defaults[key], stored[key]);
     });
   });
   return next;
