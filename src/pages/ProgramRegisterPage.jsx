@@ -40,7 +40,14 @@ export function ProgramRegisterPage() {
     setDone(false);
     setError("");
     getPublicProgram(slug)
-      .then(setProgram)
+      .then((data) => {
+        const external = String(data?.externalRegistrationUrl || data?.external_registration_url || "").trim();
+        if (external && /^https?:\/\//i.test(external)) {
+          window.location.replace(external);
+          return;
+        }
+        setProgram(data);
+      })
       .catch((e) => setError(e.message || "Program not found"));
   }, [slug]);
 

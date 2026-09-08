@@ -13,11 +13,38 @@ import { DEFAULT_PROGRAM_FIELDS } from "../../../components/programs/DynamicForm
 import { DEFAULT_PROGRAM_PAGE } from "../../../components/programs/pageContent";
 import { AGE_BRACKETS, isAgeField } from "../../../data/ageBrackets";
 import ImageUrlField from "../../../components/admin/ImageUrlField";
-import { Plus, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Copy, Check } from "lucide-react";
 import { PageToolbar } from "../../../components/admin/PageToolbar";
 
 function slugify(text) {
   return String(text || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+/** Accept a bare slug or a pasted full register URL and return the slug segment. */
+function normalizeProgramSlug(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    if (/^https?:\/\//i.test(raw) || raw.includes("/")) {
+      const withProto = /^https?:\/\//i.test(raw) ? raw : `https://placeholder.local${raw.startsWith("/") ? "" : "/"}${raw}`;
+      const u = new URL(withProto);
+      const parts = u.pathname.split("/").filter(Boolean);
+      const regIdx = parts.findIndex((p) => p.toLowerCase() === "register");
+      if (regIdx >= 0 && parts[regIdx + 1]) return slugify(parts[regIdx + 1]);
+      if (parts.length) return slugify(parts[parts.length - 1]);
+    }
+  } catch {
+    /* fall through */
+  }
+  return slugify(raw.replace(/^\/+/, "").replace(/^register\//i, ""));
+}
+
+function publicRegisterUrl(slug) {
+  const path = `/register/${slug || "your-slug"}`;
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}${path}`;
+  }
+  return path;
 }
 
 function toLocalInput(value) {
@@ -67,6 +94,7 @@ const emptyForm = () => ({
   registration_closes_at: "",
   is_active: true,
   allow_public_registration: true,
+  external_registration_url: "",
   form_fields: [...DEFAULT_PROGRAM_FIELDS],
   page_content: { ...DEFAULT_PROGRAM_PAGE },
 });
@@ -88,6 +116,7 @@ export default function ProgramsPage() {
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState(null);
   const [fieldDraft, setFieldDraft] = useState({ name: "", label: "", type: "text", required: false, options: "" });
+  const [slugCopied, setSlugCopied] = useState(false);
 
   const load = async () => {
     const [t, p] = await Promise.all([authApi.listProgramTypes(), authApi.listPrograms()]);
@@ -119,13 +148,14 @@ export default function ProgramsPage() {
     await authApi.upsertProgram(editing?.id || null, {
       ...form,
       admin_email: (form.coordinator_emails || []).map((e) => String(e).trim()).filter(Boolean).join(", "),
-      slug: form.slug || slugify(form.title),
+      slug: normalizeProgramSlug(form.slug || form.title),
       starts_at: fromLocalInput(form.starts_at) || null,
       ends_at: fromLocalInput(form.ends_at) || null,
       registration_opens_at: fromLocalInput(form.registration_opens_at) || null,
       registration_closes_at: fromLocalInput(form.registration_closes_at) || null,
       form_fields: form.form_fields,
       page_content: form.page_content,
+      external_registration_url: String(form.external_registration_url || "").trim(),
     });
     toast.success(editing ? "Program updated" : "Program created");
     reset();
@@ -172,6 +202,7 @@ export default function ProgramsPage() {
       registration_closes_at: toLocalInput(p.registration_closes_at),
       is_active: p.is_active,
       allow_public_registration: p.allow_public_registration,
+      external_registration_url: p.external_registration_url || "",
       form_fields: p.form_fields?.length ? p.form_fields : [...DEFAULT_PROGRAM_FIELDS],
       page_content: { ...DEFAULT_PROGRAM_PAGE, ...(p.page_content || {}) },
     });
@@ -196,7 +227,10 @@ export default function ProgramsPage() {
             <p className="text-xs uppercase tracking-[0.25em] text-red-600 font-semibold">Programs</p>
             <h1 className="text-3xl font-bold mt-2">Church programs</h1>
             <p className="text-gray-500 mt-2 text-sm">
-              Each program gets its own public URL <code className="text-xs bg-gray-100 px-1 rounded">/register/your-slug</code>. Customize headings, layout, images, and form fields for every future event.
+              Each program gets its own public page. Only the <strong>slug</strong> is editable — the path always starts with{" "}
+              <code className="text-xs bg-gray-100 px-1 rounded">/register/</code>
+              (e.g. <code className="text-xs bg-gray-100 px-1 rounded">/register/youth-convention-2026</code>).
+              Customize headings, layout, images, and form fields for every event.
             </p>
           </div>
         )}
@@ -254,11 +288,75 @@ export default function ProgramsPage() {
                 />
                 <p className="text-xs text-gray-500">Shown under Registrations instead of “Sign-ups”.</p>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label>Public URL slug</Label>
-                <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: slugify(e.target.value) })} required />
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex-1 flex rounded-md border border-input overflow-hidden focus-within:ring-2 focus-within:ring-red-500/30">
+                    <span className="inline-flex items-center px-3 text-xs sm:text-sm text-gray-500 bg-gray-50 border-r whitespace-nowrap">
+                      /register/
+                    </span>
+                    <Input
+                      className="border-0 rounded-none focus-visible:ring-0"
+                      value={form.slug}
+                      onChange={(e) => setForm({ ...form, slug: normalizeProgramSlug(e.target.value) })}
+                      onPaste={(e) => {
+                        const pasted = e.clipboardData?.getData("text");
+                        if (pasted && (pasted.includes("/") || /^https?:/i.test(pasted))) {
+                          e.preventDefault();
+                          setForm({ ...form, slug: normalizeProgramSlug(pasted) });
+                        }
+                      }}
+                      placeholder="youth-convention-2026"
+                      required
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="shrink-0"
+                    disabled={!form.slug}
+                    onClick={async () => {
+                      const url = publicRegisterUrl(form.slug);
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        setSlugCopied(true);
+                        toast.success("Public URL copied");
+                        window.setTimeout(() => setSlugCopied(false), 2000);
+                      } catch {
+                        toast.error("Could not copy URL");
+                      }
+                    }}
+                  >
+                    {slugCopied ? <Check size={16} className="mr-1.5" /> : <Copy size={16} className="mr-1.5" />}
+                    Copy link
+                  </Button>
+                  {form.slug ? (
+                    <Button asChild type="button" variant="outline" className="shrink-0">
+                      <a href={publicRegisterUrl(form.slug)} target="_blank" rel="noreferrer">
+                        <ExternalLink size={16} className="mr-1.5" /> Open
+                      </a>
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="text-xs text-gray-500 break-all">
+                  Full public URL:{" "}
+                  <span className="font-mono text-gray-700">{publicRegisterUrl(form.slug)}</span>
+                </p>
+                <p className="text-xs text-gray-400">
+                  Tip: paste a full link like <span className="font-mono">https://ffiem.org/register/my-event</span> and only the slug is kept.
+                </p>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>External registration URL (optional)</Label>
+                <Input
+                  type="url"
+                  value={form.external_registration_url}
+                  onChange={(e) => setForm({ ...form, external_registration_url: e.target.value })}
+                  placeholder="https://forms.google.com/… or https://eventbrite.com/…"
+                />
                 <p className="text-xs text-gray-500">
-                  Visitors open <span className="font-mono">/register/{form.slug || "your-slug"}</span>
+                  If set, visitors who open{" "}
+                  <span className="font-mono">{publicRegisterUrl(form.slug)}</span> are redirected to this link instead of the on-site form.
                 </p>
               </div>
               <div className="space-y-2">
@@ -488,6 +586,9 @@ export default function ProgramsPage() {
                 <Link to={`/register/${p.slug}`} target="_blank" className="inline-flex items-center gap-1 text-sm text-red-600 mt-2 hover:underline">
                   /register/{p.slug} <ExternalLink size={12} />
                 </Link>
+                {p.external_registration_url ? (
+                  <p className="text-xs text-amber-700 mt-1">Redirects to external registration</p>
+                ) : null}
               </div>
               <div className="flex gap-2">
                 <Button asChild variant="outline" size="sm"><Link to={`/admin/registrations/programs/${p.id}`}>Registrations</Link></Button>
