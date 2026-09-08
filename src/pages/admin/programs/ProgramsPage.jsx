@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Checkbox } from "../../../components/ui/checkbox";
 import { DEFAULT_PROGRAM_FIELDS } from "../../../components/programs/DynamicFormFields";
 import { DEFAULT_PROGRAM_PAGE } from "../../../components/programs/pageContent";
+import { AGE_BRACKETS, isAgeField } from "../../../data/ageBrackets";
 import ImageUrlField from "../../../components/admin/ImageUrlField";
 import { Plus, Trash2, ExternalLink } from "lucide-react";
 import { PageToolbar } from "../../../components/admin/PageToolbar";
@@ -141,7 +142,10 @@ export default function ProgramsPage() {
       type: fieldDraft.type,
       required: Boolean(fieldDraft.required),
     };
-    if (fieldDraft.type === "select" && fieldDraft.options.trim()) {
+    if (isAgeField(next)) {
+      next.type = "select";
+      next.options = AGE_BRACKETS;
+    } else if (fieldDraft.type === "select" && fieldDraft.options.trim()) {
       next.options = fieldDraft.options.split(",").map((s) => s.trim()).filter(Boolean);
     }
     setForm({ ...form, form_fields: [...form.form_fields, next] });

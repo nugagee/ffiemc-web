@@ -1,7 +1,10 @@
 import { CORE_COUNTRIES } from "./countries";
+import { AGE_BRACKETS } from "./ageBrackets";
 
 export const MEMBER_FIELD_KEYS = [
   "gender",
+  "age",
+  "age_bracket",
   "state",
   "baptism_status",
   "occupation",
@@ -20,6 +23,7 @@ export const NIGERIA_STATES = [
 
 export const DEFAULT_FORM_DROPDOWNS = [
   { id: "gender", label: "Gender", fieldKey: "gender", locked: true, options: ["Male", "Female"] },
+  { id: "age", label: "Age bracket", fieldKey: "age", locked: true, options: AGE_BRACKETS },
   { id: "state", label: "State", fieldKey: "state", locked: true, options: NIGERIA_STATES },
   {
     id: "baptism_status",

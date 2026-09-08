@@ -32,7 +32,7 @@ export function ChurchMembershipPage() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [form, setForm] = useState({
-    name_title: "", first_name: "", last_name: "", email: "", phone: "", gender: "", date_of_birth: "",
+    name_title: "", first_name: "", last_name: "", email: "", phone: "", gender: "", age_bracket: "", date_of_birth: "",
     address: "", city: "", state: "", country: DEFAULT_COUNTRY,
     role_ids: [], branch_id: "", ministry: "", baptism_status: "", marital_status: "",
     occupation: "", emergency_contact_name: "", emergency_contact_phone: "", notes: "",
@@ -61,6 +61,7 @@ export function ChurchMembershipPage() {
       const roleName = roles.filter((r) => form.role_ids.includes(r.id)).map((r) => r.name).join(", ");
       const formData = {
         ...extras,
+        age_bracket: form.age_bracket || "",
         consent: true,
         consent_at: new Date().toISOString(),
       };
@@ -151,6 +152,7 @@ export function ChurchMembershipPage() {
                   required
                 />
                 <ManagedSelect catalogs={catalogs} fieldKey="gender" label="Gender" value={form.gender} onChange={(v) => setForm({ ...form, gender: v })} />
+                <ManagedSelect catalogs={catalogs} fieldKey="age" label="Age bracket" value={form.age_bracket} onChange={(v) => setForm({ ...form, age_bracket: v })} />
                 <div className="space-y-2">
                   <Label>Date of birth</Label>
                   <Input name="date_of_birth" type="date" value={form.date_of_birth} onChange={change} className="focus:border-red-500" />

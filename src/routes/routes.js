@@ -68,10 +68,13 @@ import SpeechToTextPage from "../pages/admin/utilities/SpeechToTextPage";
 import NotesDiaryPage from "../pages/admin/utilities/NotesDiaryPage";
 import TranslatePage from "../pages/admin/utilities/TranslatePage";
 import TextToolsPage from "../pages/admin/utilities/TextToolsPage";
+import CompanionBotPage from "../pages/admin/utilities/CompanionBotPage";
+import CompanionUsagePage from "../pages/admin/utilities/CompanionUsagePage";
 import { MeetingJoinPage } from "../pages/MeetingJoinPage";
 import AnnouncementsPanel from "../components/admin/AnnouncementsPanel";
 import BannerAnalyticsPage from "../components/admin/BannerAnalyticsPage";
 import { BlogPreview } from "../pages/BlogPreview";
+import { NetworkStatus } from "../components/NetworkStatus";
 
 const PublicShell = () => {
   const location = useLocation();
@@ -94,6 +97,7 @@ const PublicShell = () => {
       </main>
       {!isAdminShell && <Footer />}
       <Toaster richColors position="top-right" />
+      <NetworkStatus />
     </div>
   );
 };
@@ -363,6 +367,22 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="utilities">
                     <TextToolsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="utilities/companion"
+                element={
+                  <RequirePermission feature="fire_buddy">
+                    <CompanionBotPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="utilities/companion-usage"
+                element={
+                  <RequirePermission feature="fire_buddy" action="edit">
+                    <CompanionUsagePage />
                   </RequirePermission>
                 }
               />

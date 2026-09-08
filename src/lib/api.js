@@ -756,6 +756,55 @@ export const authApi = {
     }),
   deleteUtilityNote: (id) =>
     rpc("admin_delete_utility_note", { p_token: getAdminToken(), p_id: id }),
+  aiQuota: () => rpc("admin_ai_quota", { p_token: getAdminToken() }),
+  aiReserveTurn: () => rpc("admin_ai_reserve_turn", { p_token: getAdminToken() }),
+  aiLogTurn: ({
+    conversationId = null,
+    model = "",
+    promptTokens = 0,
+    completionTokens = 0,
+    userPreview = "",
+    assistantContent = "",
+    userContent = "",
+    requestOk = true,
+    errorMessage = "",
+  } = {}) =>
+    rpc("admin_ai_log_turn", {
+      p_token: getAdminToken(),
+      p_conversation_id: conversationId || null,
+      p_model: model || "",
+      p_prompt_tokens: promptTokens || 0,
+      p_completion_tokens: completionTokens || 0,
+      p_user_preview: userPreview || "",
+      p_assistant_content: assistantContent || "",
+      p_user_content: userContent || "",
+      p_request_ok: requestOk !== false,
+      p_error_message: errorMessage || "",
+    }),
+  aiListConversations: () =>
+    rpc("admin_ai_list_conversations", { p_token: getAdminToken() }),
+  aiListMessages: (conversationId) =>
+    rpc("admin_ai_list_messages", {
+      p_token: getAdminToken(),
+      p_conversation_id: conversationId,
+    }),
+  aiSetLimit: ({
+    adminId,
+    monthlyTokenLimit = 200000,
+    monthlyRequestLimit = 200,
+    enabled = true,
+    notes = "",
+  }) =>
+    rpc("admin_ai_set_limit", {
+      p_token: getAdminToken(),
+      p_admin_id: adminId,
+      p_monthly_token_limit: monthlyTokenLimit,
+      p_monthly_request_limit: monthlyRequestLimit,
+      p_enabled: enabled !== false,
+      p_notes: notes || "",
+    }),
+  aiUsageAnalytics: () =>
+    rpc("admin_ai_usage_analytics", { p_token: getAdminToken() }),
   listMedia: async () => {
     try {
       const rows = await rpc("admin_list_media", { p_token: getAdminToken() });

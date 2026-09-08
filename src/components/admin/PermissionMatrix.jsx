@@ -44,7 +44,7 @@ export function PermissionMatrix({ value, onChange, disabled }) {
         <div className="min-w-0">
           <p className="text-sm font-semibold">Roles and permissions</p>
           <p className="text-xs text-gray-500 mt-0.5">
-            Tick only the admin areas this account may use. Website pages are listed separately below.
+            Tick only the admin areas this account may use — including Fire Buddy, programs, registrations, and every website page section below.
           </p>
         </div>
         {!disabled && (

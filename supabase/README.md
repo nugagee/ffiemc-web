@@ -70,6 +70,12 @@ Then run `supabase/migrations/20260924_sunday_choir_media.sql` to add Sunday ser
 
 If Sunday sermons / choir admin shows `function public._admin_from_token(text) does not exist`, run `supabase/migrations/20260925_fix_church_resources_auth.sql` (or re-run the updated 20260924 file).
 
+Then run `supabase/migrations/20260926_age_brackets_companion_bot.sql` to convert program Age fields to brackets and enable the admin companion bot (usage limits + analytics).
+
+Then run `supabase/migrations/20260927_fire_buddy_permission.sql` so Fire Buddy appears in admin create/edit permissions and RPCs use the `fire_buddy` feature key.
+
+Set `REACT_APP_OPENAI_API_KEY` (and optionally `REACT_APP_OPENAI_MODEL`, default `gpt-4o-mini`) for Fire Buddy.
+
 Then run `supabase/migrations/20260913_seed_convention_blog.sql` to seed the six convention blog posts (Failure, Time to Youth, Way/Truth/Life, All in All, Top 10, Stepping Out Again).
 
 Also run `supabase/migrations/20260911_events_image.sql` if event card images are not set up yet.

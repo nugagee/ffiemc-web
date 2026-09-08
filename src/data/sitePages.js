@@ -18,7 +18,8 @@ export const DASHBOARD_FEATURES = [
   { key: "form_dropdowns", group: "Registrations", label: "Form dropdowns", hint: "State, baptism, occupation and custom form options", actions: ["view", "edit"] },
   { key: "approvals", group: "Approvals", label: "Approval requests", hint: "Review changes submitted by other admins", actions: ["view", "edit"] },
   { key: "church_meetings", group: "Utilities", label: "Church meetings", hint: "Schedule meetings, invite members, video join and calendar", actions: ["view", "edit", "delete"] },
-  { key: "utilities", group: "Utilities", label: "Admin utilities", hint: "Speech to text, notes & diary, Google Translate, and text tools", actions: ["view", "edit", "delete"] },
+  { key: "utilities", group: "Utilities", label: "Admin utilities", hint: "Speech to text, notes & diary, translate, and text tools", actions: ["view", "edit", "delete"] },
+  { key: "fire_buddy", group: "Utilities", label: "Fire Buddy", hint: "AI assistant for content writing, announcements, and admin help — with usage limits", actions: ["view", "edit"] },
 ];
 
 const copy = (fields) => ({ kind: "copy", fields });
@@ -356,7 +357,7 @@ export const SITE_PAGES = [
         { name: "accent", label: "Accent line" },
         { name: "intro", label: "Intro text", type: "textarea" },
       ]) },
-      { key: "posts", label: "Blog posts", ...collection("blog") },
+      { key: "posts", label: "Blog & church resources", hint: "Articles, Sunday sermons, choir, Monday Bible study, Daily Manna, comments, and analytics", ...collection("blog") },
     ],
   },
   {

@@ -147,13 +147,15 @@ export const ADMIN_NAV = [
     label: "Utilities",
     icon: "Wrench",
     matchPrefix: "/admin/utilities",
-    anyOf: [{ feature: "utilities" }, { feature: "church_meetings" }],
+    anyOf: [{ feature: "utilities" }, { feature: "church_meetings" }, { feature: "fire_buddy" }],
     children: [
       { id: "util-meetings", to: "/admin/utilities/meetings", label: "Meetings", icon: "Video", end: true, feature: "church_meetings" },
       { id: "util-speech", to: "/admin/utilities/speech", label: "Speech to text", icon: "Mic", end: true, feature: "utilities" },
       { id: "util-notes", to: "/admin/utilities/notes", label: "Notes & diary", icon: "StickyNote", end: true, feature: "utilities" },
       { id: "util-translate", to: "/admin/utilities/translate", label: "Translate", icon: "Languages", end: true, feature: "utilities" },
       { id: "util-text", to: "/admin/utilities/text", label: "Text tools", icon: "Type", end: true, feature: "utilities" },
+      { id: "util-companion", to: "/admin/utilities/companion", label: "Fire Buddy", icon: "Bot", end: true, feature: "fire_buddy" },
+      { id: "util-companion-usage", to: "/admin/utilities/companion-usage", label: "Fire Buddy usage", icon: "BarChart3", end: true, superadmin: true },
     ],
   },
   {

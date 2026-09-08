@@ -178,6 +178,7 @@ export function firstAllowedPath(user) {
   if (hasPermission(user, "volunteer_applications", "view")) return "/admin/registrations/volunteers";
   if (hasPermission(user, "church_members", "view")) return "/admin/registrations/members";
   if (hasPermission(user, "church_meetings", "view")) return "/admin/utilities/meetings";
+  if (hasPermission(user, "fire_buddy", "view")) return "/admin/utilities/companion";
   if (hasPermission(user, "utilities", "view")) return "/admin/utilities/notes";
   if (hasPermission(user, "member_notifications", "view")) return "/admin/programs/notifications";
   if (hasPermission(user, "form_dropdowns", "view")) return "/admin/registrations/form-options";

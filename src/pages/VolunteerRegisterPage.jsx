@@ -17,6 +17,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { AGE_BRACKETS } from "../data/ageBrackets";
 import { Send } from "lucide-react";
 import { PhoneField } from "../components/forms/PhoneField";
 import { PersonNameFields } from "../components/forms/PersonNameFields";
@@ -35,6 +36,7 @@ export function VolunteerRegisterPage() {
     last_name: "",
     email: "",
     phone: "",
+    age_bracket: "",
     branch_id: "",
     role_interest: "",
     skills: "",
@@ -149,6 +151,23 @@ export function VolunteerRegisterPage() {
                   onChange={(v) => setForm({ ...form, phone: v })}
                   required
                 />
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Age bracket *</Label>
+                  <Select
+                    value={form.age_bracket || undefined}
+                    onValueChange={(v) => setForm({ ...form, age_bracket: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select age bracket" /></SelectTrigger>
+                    <SelectContent>
+                      {AGE_BRACKETS.map((b) => (
+                        <SelectItem key={b} value={b}>{b}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!form.age_bracket ? (
+                    <input tabIndex={-1} aria-hidden className="sr-only" value="" onChange={() => {}} required />
+                  ) : null}
+                </div>
               </div>
               <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} />
               <div className="space-y-2">

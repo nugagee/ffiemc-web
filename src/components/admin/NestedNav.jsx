@@ -35,6 +35,7 @@ import {
   StickyNote,
   Languages,
   Type,
+  Bot,
 } from "lucide-react";
 import { pathMatches } from "../../data/adminNav";
 
@@ -71,6 +72,7 @@ const ICONS = {
   Sun,
   Languages,
   Type,
+  Bot,
 };
 
 function Icon({ name, size = 16 }) {

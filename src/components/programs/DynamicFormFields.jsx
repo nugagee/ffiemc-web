@@ -4,6 +4,7 @@ import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Checkbox } from "../ui/checkbox";
 import { CORE_COUNTRIES, DEFAULT_COUNTRY } from "../../data/countries";
+import { AGE_BRACKETS, ageOptionsFor, isAgeField } from "../../data/ageBrackets";
 
 const BASE_FIELDS = new Set(["full_name", "first_name", "last_name", "name_title", "title", "email", "phone", "church", "home_church"]);
 
@@ -42,12 +43,15 @@ export function DynamicFormFields({ fields = [], values = {}, onChange, idPrefix
         const required = Boolean(field.required);
         const asGender = isGenderField(field);
         const asCountry = isCountryField(field);
-        const asSelect = asGender || asCountry || (field.type === "select" && field.options?.length);
+        const asAge = isAgeField(field);
+        const asSelect = asGender || asCountry || asAge || (field.type === "select" && field.options?.length);
         const selectOptions = asGender
           ? genderOptionsFor(field)
           : asCountry
             ? countryOptionsFor(field, value)
-            : field.options;
+            : asAge
+              ? ageOptionsFor(field)
+              : field.options;
         const selectValue = asCountry ? (value || DEFAULT_COUNTRY) : value;
 
         if (field.type === "textarea") {
@@ -75,7 +79,7 @@ export function DynamicFormFields({ fields = [], values = {}, onChange, idPrefix
                 onValueChange={(v) => onChange(field.name, v)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={`Select ${field.label}`} />
+                  <SelectValue placeholder={asAge ? "Select age bracket" : `Select ${field.label}`} />
                 </SelectTrigger>
                 <SelectContent>
                   {(selectOptions || []).map((opt) => (
@@ -140,4 +144,5 @@ export function buildFormData(fields, values) {
 
 export const DEFAULT_PROGRAM_FIELDS = [
   { name: "gender", label: "Gender", type: "select", required: true, options: GENDER_OPTIONS },
+  { name: "age", label: "Age", type: "select", required: true, options: AGE_BRACKETS },
 ];
