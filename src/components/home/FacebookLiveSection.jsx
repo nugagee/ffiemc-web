@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, Facebook, Flame, Radio, WifiOff } from "lucide-react";
 import { useSettings } from "../../context/SettingsContext";
 import {
@@ -6,6 +6,7 @@ import {
   getFacebookLiveConfig,
   resolveLiveEmbedSrc,
 } from "../../data/facebookLive";
+import { useFacebookLiveAnalytics } from "../../hooks/useFacebookLiveAnalytics";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 
@@ -21,6 +22,7 @@ function LivePulse() {
 export function FacebookLiveSection() {
   const { settings, refresh } = useSettings();
   const [ready, setReady] = useState(false);
+  const sectionRef = useRef(null);
   const config = useMemo(() => getFacebookLiveConfig(settings), [settings]);
   const pageUrl =
     settings?.socials?.facebook || "https://www.facebook.com/firefireministry";
@@ -29,14 +31,19 @@ export function FacebookLiveSection() {
     [config, pageUrl]
   );
   const pagePluginSrc = useMemo(() => facebookPagePluginSrc(pageUrl), [pageUrl]);
+  const isLive = Boolean(config.isLive);
 
-  // Settings load with the app; mark ready after first paint so the section never blocks the hero.
+  const { trackAction } = useFacebookLiveAnalytics({
+    enabled: config.enabled,
+    wasLive: isLive,
+    sectionRef,
+  });
+
   useEffect(() => {
     const t = window.setTimeout(() => setReady(true), 0);
     return () => window.clearTimeout(t);
   }, []);
 
-  // Keep live status fresh while the homepage stays open.
   useEffect(() => {
     if (!config.enabled) return undefined;
     const tick = () => {
@@ -48,10 +55,9 @@ export function FacebookLiveSection() {
 
   if (!config.enabled) return null;
 
-  const isLive = Boolean(config.isLive);
-
   return (
     <section
+      ref={sectionRef}
       id="watch-live"
       className="relative scroll-mt-24 py-12 sm:py-16 overflow-hidden bg-gradient-to-b from-zinc-950 via-red-950/90 to-zinc-950 text-white"
     >
@@ -92,7 +98,12 @@ export function FacebookLiveSection() {
             variant="outline"
             className="shrink-0 border-white/30 bg-white/5 text-white hover:bg-white hover:text-red-700"
           >
-            <a href={pageUrl} target="_blank" rel="noreferrer">
+            <a
+              href={pageUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => trackAction("open_facebook", { source: "header_cta" })}
+            >
               {config.ctaLabel}
               <ExternalLink className="ml-2 h-4 w-4" />
             </a>
@@ -128,7 +139,12 @@ export function FacebookLiveSection() {
                   The live stream is on our Facebook page. Open it to watch instantly — or paste the live video link in Admin so it plays here.
                 </p>
                 <Button asChild className="bg-red-600 hover:bg-red-700 text-white">
-                  <a href={pageUrl} target="_blank" rel="noreferrer">
+                  <a
+                    href={pageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => trackAction("watch_cta", { source: "live_fallback" })}
+                  >
                     Watch live on Facebook
                     <ExternalLink className="ml-2 h-4 w-4" />
                   </a>

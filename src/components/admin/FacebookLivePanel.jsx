@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ExternalLink, Radio, Save } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useSettings } from "../../context/SettingsContext";
 import { DEFAULT_FACEBOOK_LIVE, getFacebookLiveConfig } from "../../data/facebookLive";
 import { authApi, formatApiError } from "../../lib/api";
@@ -85,11 +86,16 @@ export function FacebookLivePanel({ canEdit = true }) {
             visitors still see the Facebook page feed beside it.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <a href={pageUrl} target="_blank" rel="noreferrer">
-            Open page <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-          </a>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <a href={pageUrl} target="_blank" rel="noreferrer">
+              Open page <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+            </a>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/admin/banners/live-analytics">View analytics</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">

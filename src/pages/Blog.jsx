@@ -34,6 +34,13 @@ function initialTab(location) {
   const fromState = location?.state?.blogTab;
   if (VALID_TABS.has(fromState)) return fromState;
   try {
+    const params = new URLSearchParams(location?.search || "");
+    const fromQuery = params.get("tab");
+    if (VALID_TABS.has(fromQuery)) return fromQuery;
+  } catch {
+    /* ignore */
+  }
+  try {
     const stored = sessionStorage.getItem('ffiemc_blog_tab');
     if (VALID_TABS.has(stored)) {
       sessionStorage.removeItem('ffiemc_blog_tab');
@@ -59,8 +66,18 @@ export const Blog = () => {
 
   useEffect(() => {
     const next = location?.state?.blogTab;
-    if (VALID_TABS.has(next)) setTab(next);
-  }, [location?.state?.blogTab]);
+    if (VALID_TABS.has(next)) {
+      setTab(next);
+      return;
+    }
+    try {
+      const params = new URLSearchParams(location?.search || "");
+      const fromQuery = params.get("tab");
+      if (VALID_TABS.has(fromQuery)) setTab(fromQuery);
+    } catch {
+      /* ignore */
+    }
+  }, [location?.state?.blogTab, location?.search]);
 
   const posts = useMemo(() => mergePosts(items.length ? items : mockBlog), [items]);
   const filteredPosts = useMemo(() => {

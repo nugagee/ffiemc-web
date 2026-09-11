@@ -542,6 +542,18 @@ export const authApi = {
       p_announcement_id: announcementId || null,
       p_limit: limit,
     }),
+  facebookLiveAnalytics: (range = "week", limit = 100) =>
+    rpc("admin_facebook_live_analytics", {
+      p_token: getAdminToken(),
+      p_range: range,
+      p_limit: limit,
+    }),
+  facebookLiveVisitorDetail: (visitorId, limit = 100) =>
+    rpc("admin_facebook_live_visitor_detail", {
+      p_token: getAdminToken(),
+      p_visitor_id: visitorId,
+      p_limit: limit,
+    }),
   blogAnalytics: (slug = null, limit = 300) =>
     rpc("admin_blog_analytics", {
       p_token: getAdminToken(),
@@ -939,9 +951,133 @@ export async function pingPageVisit({ visitId, visitorId, durationSeconds, final
   }
 }
 
+export async function startFacebookLiveView({
+  visitorId,
+  sessionId,
+  wasLive = false,
+  path = "/",
+  userAgent,
+  deviceType,
+  browser,
+  os,
+  language,
+  timezone,
+  screenWidth,
+  screenHeight,
+}) {
+  if (!isSupabaseConfigured || !getSupabase() || !visitorId) return null;
+  try {
+    const { data, error } = await getSupabase().rpc("public_start_facebook_live_view", {
+      p_visitor_id: visitorId,
+      p_session_id: sessionId || "",
+      p_was_live: Boolean(wasLive),
+      p_path: path || "/",
+      p_user_agent: userAgent || "",
+      p_device_type: deviceType || "",
+      p_browser: browser || "",
+      p_os: os || "",
+      p_language: language || "",
+      p_timezone: timezone || "",
+      p_screen_width: screenWidth || null,
+      p_screen_height: screenHeight || null,
+    });
+    if (error) {
+      console.warn("Facebook Live view start failed:", error.message);
+      return null;
+    }
+    return data;
+  } catch (e) {
+    console.warn("Facebook Live view start failed:", e?.message || e);
+    return null;
+  }
+}
+
+export async function pingFacebookLiveView({
+  viewId,
+  visitorId,
+  durationSeconds,
+  wasLive = null,
+  finalize = false,
+}) {
+  if (!isSupabaseConfigured || !getSupabase() || !viewId || !visitorId) return;
+  try {
+    const { error } = await getSupabase().rpc("public_ping_facebook_live_view", {
+      p_id: viewId,
+      p_visitor_id: visitorId,
+      p_duration_seconds: durationSeconds,
+      p_was_live: wasLive,
+      p_finalize: finalize,
+    });
+    if (error) console.warn("Facebook Live ping failed:", error.message);
+  } catch (e) {
+    console.warn("Facebook Live ping failed:", e?.message || e);
+  }
+}
+
+export async function trackFacebookLiveEvent({
+  action,
+  visitorId,
+  sessionId,
+  viewId = null,
+  wasLive = false,
+  path = "/",
+  userAgent,
+  deviceType,
+  browser,
+  os,
+  language,
+  timezone,
+  meta = {},
+}) {
+  if (!isSupabaseConfigured || !getSupabase() || !action) return null;
+  try {
+    const { data, error } = await getSupabase().rpc("public_track_facebook_live_event", {
+      p_action: action,
+      p_visitor_id: visitorId || "",
+      p_session_id: sessionId || "",
+      p_view_id: viewId || null,
+      p_was_live: Boolean(wasLive),
+      p_path: path || "/",
+      p_user_agent: userAgent || "",
+      p_device_type: deviceType || "",
+      p_browser: browser || "",
+      p_os: os || "",
+      p_language: language || "",
+      p_timezone: timezone || "",
+      p_meta: meta || {},
+    });
+    if (error) {
+      console.warn("Facebook Live event failed:", error.message);
+      return null;
+    }
+    return data;
+  } catch (e) {
+    console.warn("Facebook Live event failed:", e?.message || e);
+    return null;
+  }
+}
+
 export async function getPublicProgram(slug) {
   assertConfigured();
   return rpc("public_get_program", { p_slug: slug });
+}
+
+export async function listContentAlerts(limit = 12, days = 21) {
+  if (!isSupabaseConfigured || !getSupabase()) return [];
+  try {
+    const { data, error } = await getSupabase().rpc("public_list_content_alerts", {
+      p_limit: limit,
+      p_days: days,
+    });
+    if (error) {
+      console.warn("Content alerts failed:", error.message);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    console.warn("Content alerts failed:", e?.message || e);
+    return [];
+  }
 }
 
 export async function getPublicMeeting(id) {

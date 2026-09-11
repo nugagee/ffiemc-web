@@ -73,8 +73,10 @@ import CompanionUsagePage from "../pages/admin/utilities/CompanionUsagePage";
 import { MeetingJoinPage } from "../pages/MeetingJoinPage";
 import AnnouncementsPanel from "../components/admin/AnnouncementsPanel";
 import BannerAnalyticsPage from "../components/admin/BannerAnalyticsPage";
+import FacebookLiveAnalyticsPage from "../components/admin/FacebookLiveAnalyticsPage";
 import { BlogPreview } from "../pages/BlogPreview";
 import { NetworkStatus } from "../components/NetworkStatus";
+import { ContentPostAlert } from "../components/ContentPostAlert";
 
 const PublicShell = () => {
   const location = useLocation();
@@ -91,6 +93,7 @@ const PublicShell = () => {
           <AnnouncementPopup />
         </PopupPriorityProvider>
       )}
+      {!isAdminShell && <ContentPostAlert />}
       {!isAdminShell && <Navbar />}
       <main className={isAdminShell ? "flex-1 min-h-0 overflow-hidden" : "flex-1 w-full max-w-full"}>
         <Outlet />
@@ -410,6 +413,14 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="banners">
                     <BannerAnalyticsPage view="activity" />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="banners/live-analytics"
+                element={
+                  <RequirePermission feature="banners">
+                    <FacebookLiveAnalyticsPage />
                   </RequirePermission>
                 }
               />

@@ -71,6 +71,7 @@ export const ADMIN_NAV = [
     children: [
       { id: "banners-manage", to: "/admin/banners", label: "Manage", icon: "Plus", end: true, feature: "banners" },
       { id: "banners-analytics", to: "/admin/banners/analytics", label: "Analytics", icon: "BarChart3", end: true, feature: "banners" },
+      { id: "banners-live-analytics", to: "/admin/banners/live-analytics", label: "Live analytics", icon: "Radio", end: true, feature: "banners" },
       { id: "banners-activity", to: "/admin/banners/activity", label: "Activity log", icon: "ScrollText", end: true, feature: "banners" },
     ],
   },
