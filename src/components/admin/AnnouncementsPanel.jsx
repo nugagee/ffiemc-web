@@ -20,6 +20,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import ImageUrlField from "./ImageUrlField";
 import { PageToolbar } from "./PageToolbar";
 import { MonthWelcomeBannerPanel } from "./MonthWelcomeBannerPanel";
+import { FacebookLivePanel } from "./FacebookLivePanel";
 
 function toLocalInput(value) {
   if (!value) return "";
@@ -315,7 +316,7 @@ function payloadFromForm(form) {
 
 export function AnnouncementsPanel() {
   const { can } = useAuth();
-  const canEdit = can("banners", "edit") || can("home.announcements", "edit") || can("home.monthWelcome", "edit") || can("home.hero", "edit");
+  const canEdit = can("banners", "edit") || can("home.announcements", "edit") || can("home.monthWelcome", "edit") || can("home.facebookLive", "edit") || can("home.hero", "edit");
   const canDelete = can("banners", "delete") || can("home.announcements", "delete") || can("home.hero", "edit");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -430,6 +431,10 @@ export function AnnouncementsPanel() {
 
   return (
     <div data-testid="manager-announcements">
+      <Card className="p-5 mb-8 border-red-100 bg-gradient-to-br from-red-50/50 to-white">
+        <FacebookLivePanel canEdit={canEdit} />
+      </Card>
+
       <Card className="p-5 mb-8 border-amber-100 bg-gradient-to-br from-amber-50/40 to-white">
         <MonthWelcomeBannerPanel canEdit={canEdit} />
       </Card>

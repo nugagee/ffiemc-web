@@ -7,6 +7,7 @@ import { Badge } from '../components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../components/ui/carousel';
 import { HomeBlogSection, mergeBlogPosts } from '../components/home/HomeBlogSection';
 import { HomeLatestResources } from '../components/home/HomeLatestResources';
+import { FacebookLiveSection } from '../components/home/FacebookLiveSection';
 import { CONVENTION_BLOG_POSTS } from '../data/conventionContent';
 import { Calendar, Clock, MapPin, Users, Heart, Flame, ArrowRight, Play, ChevronRight, Quote, Star, Facebook, Twitter, Instagram, Music, MessageCircle, Share, ThumbsUp } from 'lucide-react';
 import { useCollection } from '../hooks/useCollection';
@@ -156,10 +157,10 @@ export const Home = () => {
                             size="sm"
                             className="flex-1 sm:flex-none h-9 sm:h-12 px-3 sm:px-8 text-xs sm:text-lg font-semibold rounded-full border border-white sm:border-2 text-white hover:bg-white hover:text-red-600 bg-transparent backdrop-blur-sm"
                           >
-                            <Link to="/services">
+                            <a href="#watch-live">
                               <Play className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-5 sm:w-5 shrink-0" />
                               Watch Live
-                            </Link>
+                            </a>
                           </Button>
                         </div>
                       </div>
@@ -206,6 +207,8 @@ export const Home = () => {
           </div>
         </section>
       )}
+
+      <FacebookLiveSection />
 
       {/* Welcome Section with Video */}
       <section className="py-12 sm:py-20 bg-gradient-to-br from-gray-50 to-white relative overflow-hidden">
