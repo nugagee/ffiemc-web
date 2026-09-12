@@ -5,6 +5,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { Provider } from 'react-redux';
 import store from './store';
+import { enforceLatestBuild } from './utils/buildVersion';
 
 // Clear leftover CRA/service workers that can pin an old homepage shell in production.
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
@@ -17,6 +18,8 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     }).catch(() => {});
   }
 }
+
+enforceLatestBuild();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

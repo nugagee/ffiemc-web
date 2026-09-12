@@ -23,6 +23,10 @@ backend/.venv/
 !.env.example
 backend/.env
 
+# Generated at build time (see scripts/write-build-version.js)
+/public/version.json
+.env.production.local
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
