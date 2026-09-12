@@ -2,6 +2,28 @@ Options -MultiViews
 DirectorySlash Off
 RewriteEngine On
 
+# ---------------------------------------------------------------------------
+# Caching: never cache the SPA shell (index.html). Hashed JS/CSS can be cached.
+# Without this, / often keeps an old index.html → old JS until a full reload
+# on another path (e.g. /blog) fetches a fresh shell.
+# ---------------------------------------------------------------------------
+<IfModule mod_headers.c>
+  <FilesMatch "^index\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
+  # CRA emit hashed filenames — safe to cache long-term
+  <FilesMatch "\.(?:js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  <FilesMatch "\.(?:png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+</IfModule>
+
 # /admin is a React route, not a server folder. If cPanel has an /admin
 # directory, DirectorySlash + !-d would 404 or list files instead of the SPA.
 RewriteRule ^admin(/.*)?$ index.html [L,QSA]
