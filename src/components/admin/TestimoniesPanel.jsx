@@ -83,6 +83,7 @@ export const TestimoniesPanel = () => {
       testimony: current.testimony || "",
       image: current.image || "",
       featured: Boolean(current.featured),
+      share_anonymous: Boolean(current.share_anonymous),
       admin_notes: current.admin_notes || "",
     });
     setNotifyUser(Boolean(current.email) && !current.publish_notify_sent);
@@ -112,6 +113,7 @@ export const TestimoniesPanel = () => {
         testimony: form.testimony,
         image: form.image,
         featured: form.featured,
+        share_anonymous: form.share_anonymous,
         admin_notes: form.admin_notes,
       };
       const row = await authApi.reviewTestimony(
@@ -240,12 +242,20 @@ export const TestimoniesPanel = () => {
                       {t.title || t.testimony}
                     </p>
                   </div>
-                  <Badge className={`${statusTone[t.status] || statusTone.published} hover:bg-inherit`}>
-                    {t.status || "published"}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <Badge className={`${statusTone[t.status] || statusTone.published} hover:bg-inherit`}>
+                      {t.status || "published"}
+                    </Badge>
+                    {t.share_anonymous && (
+                      <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
+                        Anonymous
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <p className="text-xs text-gray-400 mt-2">
                   {t.source === "form" ? "Form submission" : "Admin"} · {fmt(t.created_at)}
+                  {t.share_anonymous ? " · Public: Anonymous" : ""}
                 </p>
               </button>
             ))
@@ -356,6 +366,12 @@ export const TestimoniesPanel = () => {
                 disabled={!canEdit}
                 onChange={(v) => setForm({ ...form, image: v })}
               />
+              {form.share_anonymous && (
+                <p className="text-xs text-amber-700 -mt-2">
+                  Photo is stored for admin only — the public site will show a generic “A” avatar
+                  while Publish anonymously is on.
+                </p>
+              )}
 
               <div className="space-y-2">
                 <Label>Admin notes (internal)</Label>
@@ -376,6 +392,24 @@ export const TestimoniesPanel = () => {
                   checked={form.featured}
                   disabled={!canEdit}
                   onCheckedChange={(v) => setForm({ ...form, featured: Boolean(v) })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">Publish anonymously</p>
+                  <p className="text-xs text-gray-500">
+                    Public site shows “Anonymous” and a blank avatar. Name, email, and phone below
+                    stay visible here for audit only.
+                    {selected.share_anonymous
+                      ? " Submitter requested anonymity."
+                      : " Submitter did not request anonymity — you can still enable this."}
+                  </p>
+                </div>
+                <Switch
+                  checked={form.share_anonymous}
+                  disabled={!canEdit}
+                  onCheckedChange={(v) => setForm({ ...form, share_anonymous: Boolean(v) })}
                 />
               </div>
 

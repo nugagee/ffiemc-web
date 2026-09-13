@@ -367,7 +367,7 @@ export const SITE_PAGES = [
         { name: "accent", label: "Accent line" },
         { name: "intro", label: "Intro text", type: "textarea" },
       ]) },
-      { key: "posts", label: "Blog & church resources", hint: "Articles, Sunday sermons, choir, Monday Bible study, Daily Manna, comments, and analytics", ...collection("blog") },
+      { key: "posts", label: "Blog & church resources", hint: "Articles and Daily Manna on /blog; Sunday sermons, choir, and Monday Bible study on /sermons. Admin tools for comments and analytics stay here.", ...collection("blog") },
     ],
   },
   {
@@ -594,7 +594,7 @@ export const DEFAULT_PAGE_CONTENT = {
     eventsPreview: {
       badge: "What's Happening",
       heading: "Upcoming Events",
-      body: "Don't miss FFYC'26 — The Refiner. Join us for worship, teaching, and renewal across every branch and campus.",
+      body: "Stay connected with church programmes, conferences, and special gatherings across every branch and campus.",
     },
     sermonsPreview: {
       badge: "Messages",
@@ -865,10 +865,22 @@ export const DEFAULT_PAGE_CONTENT = {
     hero: { badge: "What's Happening", headline: "Upcoming", accent: "Events", intro: "Join us for these opportunities to worship, learn, and grow together in faith." },
   },
   sermons: {
-    hero: { badge: "Messages", headline: "Sermons &", accent: "Media", intro: "Be encouraged and inspired by powerful messages from God's Word." },
+    hero: {
+      badge: "Messages",
+      headline: "Sermons &",
+      accent: "Church Media",
+      intro:
+        "Sunday sermons, choir ministrations, and Monday Bible study — watch or read without leaving the site.",
+    },
   },
   blog: {
-    hero: { badge: "From Our Heart", headline: "The Fire", accent: "Blog", intro: "Encouragement, teaching, and updates from Fire-Fire International Evangelical Church." },
+    hero: {
+      badge: "From Our Heart",
+      headline: "The Fire",
+      accent: "Blog",
+      intro:
+        "Articles and Daily Manna from Fire-Fire International Evangelical Church. Sunday sermons, choir, and Bible study live under Sermons.",
+    },
   },
   testimonies: {
     hero: { badge: "Life Changing Stories", headline: "What God", accent: "Is Doing", intro: "Hear from our church family about how God has transformed lives through His love and this community." },

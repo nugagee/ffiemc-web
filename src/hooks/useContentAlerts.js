@@ -8,7 +8,7 @@ export function useContentAlerts() {
 
   const refresh = useCallback(async () => {
     try {
-      const rows = await listContentAlerts();
+      const rows = await listContentAlerts(3, 21);
       setAlerts(filterUndismissedAlerts(rows || []));
     } catch {
       setAlerts([]);

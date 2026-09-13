@@ -22,17 +22,14 @@ export function ResourceDownloadMenu({ resource, label = "Download" }) {
   );
 }
 
-export function BlogHubTabs({ active, onChange }) {
-  const tabs = [
+export function BlogHubTabs({ active, onChange, tabs }) {
+  const list = tabs || [
     { id: "articles", label: "Articles", icon: FileText },
-    { id: "sunday-sermon", label: "Sunday Sermons", icon: Church },
-    { id: "choir", label: "Choir", icon: Mic2 },
-    { id: "bible-study", label: "Monday Bible Study", icon: BookOpen },
     { id: "daily-manna", label: "Daily Manna", icon: Sun },
   ];
   return (
     <div className="flex flex-wrap justify-center gap-2">
-      {tabs.map((tab) => {
+      {list.map((tab) => {
         const Icon = tab.icon;
         const selected = active === tab.id;
         return (
@@ -53,6 +50,16 @@ export function BlogHubTabs({ active, onChange }) {
       })}
     </div>
   );
+}
+
+export const SERMONS_HUB_TABS = [
+  { id: "sunday-sermon", label: "Sunday Sermons", icon: Church },
+  { id: "choir", label: "Choir", icon: Mic2 },
+  { id: "bible-study", label: "Monday Bible Study", icon: BookOpen },
+];
+
+export function SermonsHubTabs({ active, onChange }) {
+  return <BlogHubTabs active={active} onChange={onChange} tabs={SERMONS_HUB_TABS} />;
 }
 
 export function BlogCategoryFilter({ value, onChange }) {

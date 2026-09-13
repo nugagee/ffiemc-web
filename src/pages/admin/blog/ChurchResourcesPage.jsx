@@ -31,6 +31,8 @@ const KIND_META = {
     dateLabel: "Week of (Monday)",
     hint: "Upload a .txt or .md file to import content, or write directly in the editor.",
     media: false,
+    publicPath: "/sermons?tab=bible-study",
+    tabHint: "Monday Bible Study",
   },
   daily_manna: {
     title: "Daily Manna",
@@ -38,6 +40,8 @@ const KIND_META = {
     dateLabel: "Date",
     hint: "Publish a daily devotional. Upload .txt/.md to auto-fill the editor.",
     media: false,
+    publicPath: "/blog?tab=daily-manna",
+    tabHint: "Daily Manna",
   },
   sunday_sermon: {
     title: "Sunday service sermons",
@@ -45,6 +49,7 @@ const KIND_META = {
     dateLabel: "Service date",
     hint: "Add YouTube, Facebook, and/or Audiomack links. Visitors can watch on the website without leaving the page.",
     media: true,
+    publicPath: "/sermons?tab=sunday-sermon",
     tabHint: "Sunday Sermons",
   },
   choir_ministration: {
@@ -53,6 +58,7 @@ const KIND_META = {
     dateLabel: "Service date",
     hint: "Publish choir / worship videos with platform links for in-site preview and download/open.",
     media: true,
+    publicPath: "/sermons?tab=choir",
     tabHint: "Choir",
   },
 };
@@ -205,8 +211,11 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
             <h2 className="text-2xl font-bold text-gray-900">{meta.title}</h2>
             <p className="text-sm text-gray-500 mt-1">{meta.hint}</p>
             <p className="text-sm text-gray-500 mt-1">
-              Public page: <Link to="/blog" className="text-red-600 hover:underline">/blog</Link>
-              {meta.tabHint ? ` → ${meta.tabHint} tab` : ` → ${meta.title} tab`}
+              Public page:{" "}
+              <Link to={meta.publicPath || "/blog"} className="text-red-600 hover:underline">
+                {meta.publicPath || "/blog"}
+              </Link>
+              {meta.tabHint ? ` → ${meta.tabHint} tab` : ""}
             </p>
           </div>
         )}

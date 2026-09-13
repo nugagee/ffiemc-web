@@ -23,6 +23,7 @@ const emptyForm = {
   title: "",
   testimony: "",
   consent_public: false,
+  share_anonymous: false,
   branch_id: "",
 };
 
@@ -181,6 +182,19 @@ export const ShareTestimony = () => {
 
                 <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} required={false} label="Church branch (optional)" />
 
+                <div className="flex items-start gap-3 rounded-lg border border-gray-100 bg-white p-4">
+                  <Checkbox
+                    id="share_anonymous"
+                    checked={form.share_anonymous}
+                    onCheckedChange={(v) => setForm({ ...form, share_anonymous: Boolean(v) })}
+                  />
+                  <Label htmlFor="share_anonymous" className="font-normal text-sm text-gray-700 leading-relaxed">
+                    Share anonymously on the website. Your story can still be published, but your
+                    name and photo will appear as{" "}
+                    <span className="font-medium text-gray-900">Anonymous (optional)</span>. 
+                  </Label>
+                </div>
+
                 <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
                   <Checkbox
                     id="consent_public"
@@ -188,9 +202,19 @@ export const ShareTestimony = () => {
                     onCheckedChange={(v) => setForm({ ...form, consent_public: Boolean(v) })}
                   />
                   <Label htmlFor="consent_public" className="font-normal text-sm text-gray-700 leading-relaxed">
-                    I consent to Fire-Fire International Evangelical Church reviewing and, if
-                    approved, publishing my testimony (name and story) on the website and related
-                    church communications. See our{" "}
+                    {form.share_anonymous ? (
+                      <>
+                        I consent to Fire-Fire International Evangelical Church reviewing and, if
+                        approved, publishing my testimony anonymously (story only — not my name or
+                        photo) on the website and related church communications. See our{" "}
+                      </>
+                    ) : (
+                      <>
+                        I consent to Fire-Fire International Evangelical Church reviewing and, if
+                        approved, publishing my testimony (name and story) on the website and related
+                        church communications. See our{" "}
+                      </>
+                    )}
                     <Link to="/privacy" className="text-red-700 underline underline-offset-2">
                       privacy policy
                     </Link>

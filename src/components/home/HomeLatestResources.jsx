@@ -15,19 +15,29 @@ function fmtShort(d) {
   }
 }
 
-function rememberBlogTab(tab) {
+const SERMONS_TABS = new Set(["sunday-sermon", "choir", "bible-study"]);
+
+function rememberTab(tab) {
   try {
-    sessionStorage.setItem("ffiemc_blog_tab", tab);
+    if (SERMONS_TABS.has(tab)) sessionStorage.setItem("ffiemc_sermons_tab", tab);
+    else sessionStorage.setItem("ffiemc_blog_tab", tab);
   } catch {
     /* ignore */
   }
 }
 
-function blogLinkProps(tab) {
+function resourceLinkProps(tab) {
+  if (SERMONS_TABS.has(tab)) {
+    return {
+      to: `/sermons?tab=${tab}`,
+      state: { sermonsTab: tab },
+      onClick: () => rememberTab(tab),
+    };
+  }
   return {
-    to: "/blog",
+    to: tab === "daily-manna" ? "/blog?tab=daily-manna" : "/blog",
     state: { blogTab: tab },
-    onClick: () => rememberBlogTab(tab),
+    onClick: () => rememberTab(tab),
   };
 }
 
@@ -55,7 +65,7 @@ function MediaSpotlight({ item, tab, label, icon: Icon, emptyHint }) {
       transition={{ duration: 0.45, ease: "easeOut" }}
     >
       <Link
-        {...blogLinkProps(tab)}
+        {...resourceLinkProps(tab)}
         className="group relative block overflow-hidden rounded-[1.75rem] min-h-[280px] sm:min-h-[320px] text-white shadow-xl shadow-red-950/10"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-red-950 to-zinc-900">
@@ -118,34 +128,34 @@ function ReadingLane({ icon: Icon, title, subtitle, tab, accent, items, dateKey,
       className="relative overflow-hidden rounded-[1.75rem] bg-white border border-red-100/80 shadow-[0_18px_50px_-28px_rgba(127,29,29,0.35)]"
     >
       <div className={`h-1.5 bg-gradient-to-r ${accent}`} />
-      <div className="p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-3 mb-5">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white shadow-md shadow-red-600/25 shrink-0">
-              <Icon className="h-5 w-5" />
+      <div className="p-3 sm:p-6">
+        <div className="flex items-start justify-between gap-2 sm:gap-3 mb-3 sm:mb-5">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <span className="inline-flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white shadow-md shadow-red-600/25 shrink-0">
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
             </span>
             <div className="min-w-0">
-              <h3 className="font-semibold text-gray-900 text-lg">{title}</h3>
-              <p className="text-xs text-gray-500">{subtitle}</p>
+              <h3 className="font-semibold text-gray-900 text-base sm:text-lg">{title}</h3>
+              <p className="text-[11px] sm:text-xs text-gray-500">{subtitle}</p>
             </div>
           </div>
           <Link
-            {...blogLinkProps(tab)}
-            className="text-sm font-semibold text-red-600 hover:text-red-700 inline-flex items-center gap-1 shrink-0"
+            {...resourceLinkProps(tab)}
+            className="text-xs sm:text-sm font-semibold text-red-600 hover:text-red-700 inline-flex items-center gap-1 shrink-0"
           >
-            All <ArrowRight className="h-4 w-4" />
+            All <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Link>
         </div>
 
         {items.length ? (
-          <ul className="space-y-2">
+          <ul className="space-y-1 sm:space-y-2">
             {items.slice(0, 3).map((item, index) => (
               <li key={item.id}>
                 <Link
-                  {...blogLinkProps(tab)}
-                  className="group flex items-start gap-3 rounded-2xl px-3 py-3 hover:bg-red-50/80 transition-colors"
+                  {...resourceLinkProps(tab)}
+                  className="group flex items-start gap-2 sm:gap-3 rounded-xl sm:rounded-2xl px-2 py-2 sm:px-3 sm:py-3 hover:bg-red-50/80 transition-colors"
                 >
-                  <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-50 text-[11px] font-bold text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors">
+                  <span className="mt-0.5 inline-flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-red-50 text-[10px] sm:text-[11px] font-bold text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors">
                     {index + 1}
                   </span>
                   <span className="min-w-0 flex-1">
@@ -153,16 +163,16 @@ function ReadingLane({ icon: Icon, title, subtitle, tab, accent, items, dateKey,
                       {item.title}
                     </span>
                     {item[dateKey] ? (
-                      <span className="block text-xs text-gray-400 mt-1">{fmtShort(item[dateKey])}</span>
+                      <span className="block text-[11px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">{fmtShort(item[dateKey])}</span>
                     ) : null}
                   </span>
-                  <ArrowRight className="h-4 w-4 text-gray-300 mt-1 shrink-0 group-hover:text-red-500 group-hover:translate-x-0.5 transition-all" />
+                  <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-300 mt-1 shrink-0 group-hover:text-red-500 group-hover:translate-x-0.5 transition-all" />
                 </Link>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-gray-400 px-1 py-8 text-center">{emptyHint}</p>
+          <p className="text-sm text-gray-400 px-1 py-5 sm:py-8 text-center">{emptyHint}</p>
         )}
       </div>
     </motion.div>
@@ -256,7 +266,7 @@ export function HomeLatestResources() {
 
         <div className="mt-10 sm:mt-12 text-center">
           <Button asChild size="lg" className="bg-red-600 hover:bg-red-700 text-white px-8">
-            <Link to="/blog">
+            <Link to="/sermons">
               Open church resources <ArrowRight className="h-4 w-4 ml-2" />
             </Link>
           </Button>

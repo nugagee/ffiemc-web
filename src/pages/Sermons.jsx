@@ -1,75 +1,108 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
-import { Play, Music, BookOpen } from 'lucide-react';
-import { useCollection } from '../hooks/useCollection';
-import { sermons as mockSermons } from '../mock';
-import { useSettings } from '../context/SettingsContext';
-import { pageSection } from '../data/sitePages';
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Badge } from "../components/ui/badge";
+import { useChurchResources } from "../hooks/useChurchResources";
+import { useSettings } from "../context/SettingsContext";
+import { pageSection } from "../data/sitePages";
+import { ChurchResourceCards, SermonsHubTabs } from "../components/blog/BlogHub";
+import { MediaResourceCards } from "../components/blog/MediaResourceCards";
 
-const fmtDate = (d) => {
+const VALID_TABS = new Set(["sunday-sermon", "choir", "bible-study"]);
+const STORAGE_KEY = "ffiemc_sermons_tab";
+
+function initialTab(location) {
+  const fromState = location?.state?.sermonsTab || location?.state?.blogTab;
+  if (VALID_TABS.has(fromState)) return fromState;
   try {
-    return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const params = new URLSearchParams(location?.search || "");
+    const fromQuery = params.get("tab");
+    if (VALID_TABS.has(fromQuery)) return fromQuery;
   } catch {
-    return d;
+    /* ignore */
   }
-};
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY) || sessionStorage.getItem("ffiemc_blog_tab");
+    if (VALID_TABS.has(stored)) {
+      sessionStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem("ffiemc_blog_tab");
+      return stored;
+    }
+  } catch {
+    /* ignore */
+  }
+  return "sunday-sermon";
+}
 
 export const Sermons = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { settings } = useSettings();
-  const hero = pageSection(settings, 'sermons', 'hero');
-  const { items, loading } = useCollection('/sermons');
-  const sermons = items.length ? items : mockSermons;
+  const hero = pageSection(settings, "sermons", "hero");
+  const { items: sundaySermons, loading: sundayLoading } = useChurchResources("sunday_sermon");
+  const { items: choirItems, loading: choirLoading } = useChurchResources("choir_ministration");
+  const { items: bibleStudies, loading: bibleLoading } = useChurchResources("bible_study");
+  const [tab, setTab] = useState(() => initialTab(location));
+
+  useEffect(() => {
+    const fromState = location?.state?.sermonsTab || location?.state?.blogTab;
+    if (VALID_TABS.has(fromState)) {
+      setTab(fromState);
+      return;
+    }
+    try {
+      const params = new URLSearchParams(location?.search || "");
+      const fromQuery = params.get("tab");
+      if (VALID_TABS.has(fromQuery)) setTab(fromQuery);
+    } catch {
+      /* ignore */
+    }
+  }, [location?.state?.sermonsTab, location?.state?.blogTab, location?.search]);
+
+  const onTabChange = (next) => {
+    if (!VALID_TABS.has(next)) return;
+    setTab(next);
+    navigate({ pathname: "/sermons", search: `?tab=${next}` }, { replace: true, state: { sermonsTab: next } });
+  };
+
+  const sectionLoading =
+    tab === "sunday-sermon" ? sundayLoading : tab === "choir" ? choirLoading : bibleLoading;
 
   return (
     <div className="min-h-screen" data-testid="sermons-page">
-      <section className="bg-gradient-to-br from-gray-900 via-gray-800 to-black py-20 text-white">
+      <section className="bg-gradient-to-br from-gray-900 via-gray-800 to-black py-16 sm:py-20 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Badge className="bg-red-600 text-white hover:bg-red-600 mb-4">{hero.badge}</Badge>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            {hero.headline} <span className="text-red-500 block">{hero.accent}</span>
+          <Badge className="bg-red-600 text-white hover:bg-red-600 mb-4">
+            {hero.badge || "Messages"}
+          </Badge>
+          <h1 className="text-4xl md:text-6xl font-bold mb-4">
+            {hero.headline || "Sermons &"}{" "}
+            <span className="text-red-500 block">{hero.accent || "Church Media"}</span>
           </h1>
           <p className="text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            {hero.intro}
+            {hero.intro ||
+              "Sunday sermons, choir ministrations, and Monday Bible study — watch or read on this site."}
           </p>
+          <div className="mt-8">
+            <SermonsHubTabs active={tab} onChange={onTabChange} />
+          </div>
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <section className="py-12 sm:py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {loading ? (
-            <p className="text-center text-gray-500">Loading sermons...</p>
-          ) : sermons.length === 0 ? (
-            <p className="text-center text-gray-500" data-testid="sermons-empty">No sermons yet.</p>
+          {sectionLoading ? (
+            <p className="text-center text-gray-500">Loading…</p>
+          ) : tab === "sunday-sermon" ? (
+            <MediaResourceCards items={sundaySermons} badge="Sunday sermon" />
+          ) : tab === "choir" ? (
+            <MediaResourceCards items={choirItems} badge="Choir" />
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {sermons.map((sermon) => (
-                <Card key={sermon.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300" data-testid={`sermon-card-${sermon.id}`}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        {sermon.series && <Badge className="bg-red-600 text-white">{sermon.series}</Badge>}
-                        <CardTitle className="text-2xl">{sermon.title}</CardTitle>
-                        <div className="text-sm text-gray-500">{sermon.pastor} • {fmtDate(sermon.date)}</div>
-                      </div>
-                      <div className="bg-red-600 p-3 rounded-full"><Play className="h-6 w-6 text-white" /></div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <CardDescription className="text-base">{sermon.description}</CardDescription>
-                    {sermon.scripture && <p className="text-sm text-gray-500"><BookOpen className="h-4 w-4 inline mr-1 text-red-600" /><strong>Scripture:</strong> {sermon.scripture}</p>}
-                    <div className="flex gap-3">
-                      {sermon.videoUrl && <Button asChild size="sm" className="bg-red-600 hover:bg-red-700"><a href={sermon.videoUrl} target="_blank" rel="noreferrer"><Play className="h-4 w-4 mr-2" />Watch</a></Button>}
-                      {sermon.audioUrl && <Button asChild size="sm" variant="outline" className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white"><a href={sermon.audioUrl} target="_blank" rel="noreferrer"><Music className="h-4 w-4 mr-2" />Listen</a></Button>}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <ChurchResourceCards items={bibleStudies} dateKey="week_of" dateLabel="Week of" />
           )}
         </div>
       </section>
     </div>
   );
 };
+
+export default Sermons;

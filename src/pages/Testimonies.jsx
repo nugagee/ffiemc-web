@@ -13,6 +13,7 @@ import { useCollection } from "../hooks/useCollection";
 import { testimonies as mockTestimonies } from "../mock";
 import { useSettings } from "../context/SettingsContext";
 import { pageSection } from "../data/sitePages";
+import { publicTestimonyView } from "../lib/testimonyDisplay";
 
 export const Testimonies = () => {
   const { settings } = useSettings();
@@ -50,7 +51,9 @@ export const Testimonies = () => {
             ) : testimonies.length === 0 ? (
               <p className="text-center text-gray-500 col-span-full">No testimonies yet.</p>
             ) : (
-              testimonies.map((testimony) => (
+              testimonies.map((raw) => {
+                const testimony = publicTestimonyView(raw);
+                return (
                 <Card
                   key={testimony.id || testimony._id}
                   className="relative overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] border-0 shadow-lg"
@@ -60,23 +63,23 @@ export const Testimonies = () => {
                   </div>
                   <CardHeader>
                     <div className="flex items-center space-x-4">
-                      {testimony.image ? (
+                      {testimony.displayImage ? (
                         <img
-                          src={testimony.image}
-                          alt={testimony.name}
+                          src={testimony.displayImage}
+                          alt={testimony.displayName}
                           className="w-16 h-16 rounded-full object-cover shadow-lg"
                         />
                       ) : (
                         <div className="w-16 h-16 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-xl font-semibold shadow-lg">
-                          {(testimony.name || "?").charAt(0)}
+                          {testimony.isAnonymous ? "A" : (testimony.displayName || "?").charAt(0)}
                         </div>
                       )}
                       <div>
-                        <CardTitle className="text-xl">{testimony.name}</CardTitle>
-                        <p className="text-sm text-red-600 font-medium">{testimony.role}</p>
-                        {testimony.dateJoined && (
+                        <CardTitle className="text-xl">{testimony.displayName}</CardTitle>
+                        <p className="text-sm text-red-600 font-medium">{testimony.displayRole}</p>
+                        {testimony.displayDateJoined && (
                           <p className="text-xs text-gray-500">
-                            Member since {testimony.dateJoined}
+                            Member since {testimony.displayDateJoined}
                           </p>
                         )}
                       </div>
@@ -99,7 +102,8 @@ export const Testimonies = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+                );
+              })
             )}
           </div>
           <div className="text-center mt-12">

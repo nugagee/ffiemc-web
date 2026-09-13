@@ -152,7 +152,7 @@ export function HomeBlogSection({
             className="border-white/20 text-white hover:bg-white hover:text-gray-900 shrink-0"
           >
             <Link to="/blog">
-              View all resources <ArrowRight className="ml-2 h-4 w-4" />
+              View all articles <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </div>

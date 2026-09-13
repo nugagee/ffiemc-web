@@ -92,6 +92,12 @@ async function publicList(collection, includeAll = false) {
   const table = TABLE_MAP[collection];
   if (!table) return [];
 
+  // Redacted list — never expose submitter identity for anonymous testimonies
+  if (collection === "testimonies" && !includeAll) {
+    const rows = await rpc("public_list_testimonies");
+    return (Array.isArray(rows) ? rows : []).map(withId);
+  }
+
   if (collection === "blog" && !includeAll) {
     const now = new Date().toISOString();
     const liveQuery = getSupabase()
@@ -263,6 +269,7 @@ const api = {
           p_testimony: body.testimony || body.message || "",
           p_consent_public: body.consent_public !== false && body.consentPublic !== false,
           p_branch_id: body.branch_id || null,
+          p_share_anonymous: Boolean(body.share_anonymous || body.shareAnonymous),
         });
         return { data: { id } };
       }

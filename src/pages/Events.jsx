@@ -17,27 +17,91 @@ const fmtDate = (d) => {
   }
 };
 
+const eventEndDate = (event) => {
+  const raw = event?.endDate || event?.end_date || event?.ends_at || event?.date;
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
 const eventCtaLink = (event) => {
   if (event.registerSlug) return `/register/${event.registerSlug}`;
   if ((event.title || '').toLowerCase().includes('youth convention')) return '/register/youth-convention-2026';
   return null;
 };
 
+function EventCard({ event, past = false }) {
+  const cta = !past ? eventCtaLink(event) : null;
+  return (
+    <Card
+      key={event.id}
+      className={`overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${event.featured && !past ? 'ring-2 ring-red-200' : ''} ${past ? 'opacity-95' : ''}`}
+      data-testid={`event-card-${event.id}`}
+    >
+      <div className="relative aspect-video overflow-hidden">
+        <img
+          src={event.image || 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=800&h=450&fit=crop'}
+          alt={event.title}
+          className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-white">
+            <Calendar className="h-4 w-4 shrink-0" />
+            <span className="font-semibold text-sm">{fmtDate(event.date)}</span>
+          </div>
+          {past ? (
+            <Badge className="bg-gray-800/90 text-white border-0">Past</Badge>
+          ) : event.featured ? (
+            <Badge className="bg-yellow-500 text-black">Featured</Badge>
+          ) : null}
+        </div>
+      </div>
+      <CardHeader>
+        <CardTitle>{event.title}</CardTitle>
+        <CardDescription className="flex flex-col gap-1 mt-2">
+          {event.time && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{event.time}</span>}
+          {event.location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{event.location}</span>}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-gray-600 text-sm leading-relaxed">{event.description}</p>
+        {cta && (
+          <Button asChild className="w-full bg-red-600 hover:bg-red-700">
+            <Link to={cta}>Register Now</Link>
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export const Events = () => {
   const { settings } = useSettings();
   const hero = pageSection(settings, 'events', 'hero');
   const { items, loading } = useCollection('/events');
-  const list = useMemo(() => {
+  const { upcoming, past } = useMemo(() => {
     const source = items.length ? items : mockEvents;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return [...source].sort((a, b) => {
+    const upcomingList = [];
+    const pastList = [];
+    source.forEach((event) => {
+      const end = eventEndDate(event);
+      if (end && end < today) pastList.push(event);
+      else upcomingList.push(event);
+    });
+    const byDateAsc = (a, b) => {
       if (a.featured && !b.featured) return -1;
       if (!a.featured && b.featured) return 1;
-      const da = a.date ? new Date(a.date) : today;
-      const db = b.date ? new Date(b.date) : today;
-      return da - db;
-    });
+      return (eventEndDate(a)?.getTime() || 0) - (eventEndDate(b)?.getTime() || 0);
+    };
+    const byDateDesc = (a, b) => (eventEndDate(b)?.getTime() || 0) - (eventEndDate(a)?.getTime() || 0);
+    upcomingList.sort(byDateAsc);
+    pastList.sort(byDateDesc);
+    return { upcoming: upcomingList, past: pastList };
   }, [items]);
 
   return (
@@ -55,54 +119,42 @@ export const Events = () => {
       </section>
 
       <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-14">
           {loading ? (
             <p className="text-center text-gray-500">Loading events...</p>
-          ) : list.length === 0 ? (
-            <p className="text-center text-gray-500" data-testid="events-empty">No events scheduled yet.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {list.map((event) => {
-                const cta = eventCtaLink(event);
-                return (
-                  <Card key={event.id} className={`overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${event.featured ? 'ring-2 ring-red-200' : ''}`} data-testid={`event-card-${event.id}`}>
-                    <div className="relative aspect-video overflow-hidden">
-                      <img
-                        src={event.image || 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=800&h=450&fit=crop'}
-                        alt={event.title}
-                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 text-white">
-                          <Calendar className="h-4 w-4 shrink-0" />
-                          <span className="font-semibold text-sm">{fmtDate(event.date)}</span>
-                        </div>
-                        {event.featured && <Badge className="bg-yellow-500 text-black">Featured</Badge>}
-                      </div>
-                    </div>
-                    <CardHeader>
-                      <CardTitle>{event.title}</CardTitle>
-                      <CardDescription className="flex flex-col gap-1 mt-2">
-                        {event.time && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{event.time}</span>}
-                        {event.location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{event.location}</span>}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-gray-600 text-sm leading-relaxed">{event.description}</p>
-                      {cta && (
-                        <Button asChild className="w-full bg-red-600 hover:bg-red-700">
-                          <Link to={cta}>Register Now</Link>
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+            <>
+              <div>
+                <div className="mb-8">
+                  <Badge className="bg-red-100 text-red-700 hover:bg-red-100 mb-3">Coming up</Badge>
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Upcoming events</h2>
+                </div>
+                {upcoming.length === 0 ? (
+                  <p className="text-gray-500" data-testid="events-upcoming-empty">No upcoming events right now. Check back soon.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {upcoming.map((event) => <EventCard key={event.id} event={event} />)}
+                  </div>
+                )}
+              </div>
+
+              {past.length > 0 && (
+                <div>
+                  <div className="mb-8">
+                    <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100 mb-3">Archive</Badge>
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Past events</h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {past.map((event) => <EventCard key={event.id} event={event} past />)}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
     </div>
   );
 };
+
+export default Events;

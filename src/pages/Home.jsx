@@ -13,6 +13,7 @@ import { Calendar, Clock, MapPin, Users, Heart, Flame, ArrowRight, Play, Chevron
 import { useCollection } from '../hooks/useCollection';
 import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
+import { publicTestimonyView } from '../lib/testimonyDisplay';
 import {
   heroSlides as mockHeroSlides,
   events as mockEvents,
@@ -51,15 +52,28 @@ export const Home = () => {
   const upcomingEvents = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const eventEnd = (e) => {
+      const raw = e.endDate || e.end_date || e.ends_at || e.date;
+      if (!raw) return null;
+      const d = new Date(raw);
+      if (Number.isNaN(d.getTime())) return null;
+      d.setHours(0, 0, 0, 0);
+      return d;
+    };
     return [...events]
+      .filter((e) => {
+        const end = eventEnd(e);
+        // Past events (including featured) leave the upcoming strip
+        if (end && end < today) return false;
+        return true;
+      })
       .sort((a, b) => {
         if (a.featured && !b.featured) return -1;
         if (!a.featured && b.featured) return 1;
-        const da = a.date ? new Date(a.date) : today;
-        const db = b.date ? new Date(b.date) : today;
+        const da = eventEnd(a) || today;
+        const db = eventEnd(b) || today;
         return da - db;
       })
-      .filter((e) => e.featured || !e.date || new Date(e.date) >= today)
       .slice(0, 3);
   }, [events]);
 
@@ -72,7 +86,7 @@ export const Home = () => {
 
   const eventCtaLabel = (event) => {
     if (event.registerSlug || (event.title || '').toLowerCase().includes('youth convention')) {
-      return 'Register Now';
+      return 'View details';
     }
     return 'Learn More';
   };
@@ -304,46 +318,56 @@ export const Home = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {upcomingEvents.map((event) => (
-              <Card key={event.id} className="overflow-hidden bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20 transition-all duration-300 hover:scale-105">
-                <div className="relative aspect-video overflow-hidden">
-                  <img
-                    src={event.image || 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=800&h=450&fit=crop'}
-                    alt={event.title}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-2">
-                    <Badge className={`${event.featured ? 'bg-yellow-500 text-black' : 'bg-white/20 text-white'}`}>
-                      {event.featured ? 'Featured' : 'Event'}
-                    </Badge>
-                    <div className="text-right">
-                      <p className="text-lg font-bold">
-                        {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </p>
-                      <p className="text-sm text-red-100">{event.time}</p>
+          {upcomingEvents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {upcomingEvents.map((event) => (
+                <Card key={event.id} className="overflow-hidden bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20 transition-all duration-300 hover:scale-105">
+                  <div className="relative aspect-video overflow-hidden">
+                    <img
+                      src={event.image || 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=800&h=450&fit=crop'}
+                      alt={event.title}
+                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+                    <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-2">
+                      <Badge className={`${event.featured ? 'bg-yellow-500 text-black' : 'bg-white/20 text-white'}`}>
+                        {event.featured ? 'Featured' : 'Event'}
+                      </Badge>
+                      <div className="text-right">
+                        <p className="text-lg font-bold">
+                          {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                        <p className="text-sm text-red-100">{event.time}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <CardHeader className="space-y-2">
-                  <CardTitle className="text-2xl">{event.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <CardDescription className="text-red-100 text-base">
-                    {event.description}
-                  </CardDescription>
-                  <div className="flex items-center text-sm text-red-200">
-                    <MapPin className="h-4 w-4 mr-2 shrink-0" />
-                    {event.location}
-                  </div>
-                  <Button asChild variant="outline" size="sm" className="border-white/30 text-white hover:bg-white hover:text-red-600">
-                    <Link to={eventCtaLink(event)}>{eventCtaLabel(event)}</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  <CardHeader className="space-y-2">
+                    <CardTitle className="text-2xl">{event.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <CardDescription className="text-red-100 text-base">
+                      {event.description}
+                    </CardDescription>
+                    <div className="flex items-center text-sm text-red-200">
+                      <MapPin className="h-4 w-4 mr-2 shrink-0" />
+                      {event.location}
+                    </div>
+                    <Button asChild variant="outline" size="sm" className="border-white/30 text-white hover:bg-white hover:text-red-600">
+                      <Link to={eventCtaLink(event)}>{eventCtaLabel(event)}</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="mx-auto max-w-xl rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md px-6 py-10 sm:px-10 sm:py-12 text-center">
+              <Calendar className="h-10 w-10 mx-auto mb-4 text-red-100/90" />
+              <p className="text-xl sm:text-2xl font-semibold text-white">No upcoming events right now</p>
+              <p className="mt-2 text-sm sm:text-base text-red-100 leading-relaxed">
+                Check back soon for new programmes, conferences, and special gatherings.
+              </p>
+            </div>
+          )}
 
           <div className="text-center mt-12">
             <Button asChild size="lg" className="bg-white text-red-600 hover:bg-gray-100 px-8 py-6 text-lg font-semibold">
@@ -545,7 +569,9 @@ export const Home = () => {
               plugins={[testimonyAutoplay]}
             >
               <CarouselContent className="-ml-4">
-                {carouselTestimonies.map((testimony) => (
+                {carouselTestimonies.map((raw) => {
+                  const testimony = publicTestimonyView(raw);
+                  return (
                   <CarouselItem
                     key={testimony.id || testimony.name}
                     className="pl-4 basis-full md:basis-1/2"
@@ -558,22 +584,22 @@ export const Home = () => {
                       </div>
                       <CardHeader className="space-y-4">
                         <div className="flex items-center space-x-4">
-                          {testimony.image ? (
+                          {testimony.displayImage ? (
                             <img
-                              src={testimony.image}
-                              alt={testimony.name}
+                              src={testimony.displayImage}
+                              alt={testimony.displayName}
                               className="w-16 h-16 rounded-full object-cover shadow-lg"
                             />
                           ) : (
                             <div className="w-16 h-16 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-xl font-semibold shadow-lg">
-                              {(testimony.name || '?').charAt(0)}
+                              {testimony.isAnonymous ? 'A' : (testimony.displayName || '?').charAt(0)}
                             </div>
                           )}
                           <div>
-                            <CardTitle className="text-xl text-gray-900">{testimony.name}</CardTitle>
-                            <p className="text-sm text-red-600 font-medium">{testimony.role}</p>
-                            {testimony.dateJoined && (
-                              <p className="text-xs text-gray-500">Member since {testimony.dateJoined}</p>
+                            <CardTitle className="text-xl text-gray-900">{testimony.displayName}</CardTitle>
+                            <p className="text-sm text-red-600 font-medium">{testimony.displayRole}</p>
+                            {testimony.displayDateJoined && (
+                              <p className="text-xs text-gray-500">Member since {testimony.displayDateJoined}</p>
                             )}
                           </div>
                         </div>
@@ -591,7 +617,8 @@ export const Home = () => {
                       </CardContent>
                     </Card>
                   </CarouselItem>
-                ))}
+                  );
+                })}
               </CarouselContent>
               <CarouselPrevious className="hidden sm:flex -left-3 lg:-left-12" />
               <CarouselNext className="hidden sm:flex -right-3 lg:-right-12" />

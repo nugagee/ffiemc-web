@@ -125,11 +125,12 @@ export const events = [
     id: "youth-convention-2026",
     title: "Fire-Fire Youth Convention 2026 — The Refiner",
     date: "2026-09-09",
+    endDate: "2026-09-12",
     time: "Day & Night · Wed 9 – Sat 12 Sep",
     location: "Fire-Fire HQ, Ibadan",
     description: "Join young people from every branch and campus for FFYC'26 — worship, teaching, and renewal. Register now for the annual youth convention.",
     image: "/ffyc-2026-flyer.png",
-    featured: true,
+    featured: false,
     registerSlug: "youth-convention-2026",
   },
   {
