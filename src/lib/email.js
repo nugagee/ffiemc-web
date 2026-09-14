@@ -722,3 +722,52 @@ export async function deliverMeetingInvites({ meeting, invites, calendarUrl, pag
   return results;
 }
 
+/** Notify superadmin / church notification inbox of a public media contribution. */
+export async function sendMediaContributionSubmissionEmail({
+  fullName,
+  amount,
+  monthLabel,
+  note = "",
+  receiptUrl = "",
+  paymentDate = "",
+  monthSlug = "",
+  adminEmail,
+}) {
+  const to = adminEmail || "adenugaolajideadewale@gmail.com";
+  const money = `₦${Number(amount || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://ffiem.org";
+  const auditUrl = `${origin}/admin/utilities/media-contributions`;
+  const reportUrl = monthSlug ? `${origin}/contribute/media/${monthSlug}/report` : "";
+  const paidOn = paymentDate
+    ? new Date(`${paymentDate}T12:00:00`).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
+
+  return postFormSubmit(to, {
+    name: fullName,
+    amount: money,
+    month: monthLabel || "",
+    payment_date: paidOn,
+    note: note || "",
+    receipt_url: receiptUrl || "Not attached",
+    report_url: reportUrl || "",
+    admin_audit: auditUrl,
+    _subject: `Media contribution received — ${fullName} (${money})`,
+    _template: "table",
+    _captcha: "false",
+    message:
+      `A social media team member submitted a contribution via the payment link.\n\n` +
+      `Name: ${fullName}\n` +
+      `Amount: ${money}\n` +
+      `Payment date: ${paidOn}\n` +
+      `Month: ${monthLabel || "—"}\n` +
+      `Note: ${note || "—"}\n` +
+      `Receipt: ${receiptUrl || "Not attached"}\n` +
+      (reportUrl ? `Report: ${reportUrl}\n` : "") +
+      `Admin: ${auditUrl}\n`,
+  });
+}
+

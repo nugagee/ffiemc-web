@@ -148,9 +148,10 @@ export const ADMIN_NAV = [
     label: "Utilities",
     icon: "Wrench",
     matchPrefix: "/admin/utilities",
-    anyOf: [{ feature: "utilities" }, { feature: "church_meetings" }, { feature: "fire_buddy" }],
+    anyOf: [{ feature: "utilities" }, { feature: "church_meetings" }, { feature: "fire_buddy" }, { feature: "social_media_contributions" }],
     children: [
       { id: "util-meetings", to: "/admin/utilities/meetings", label: "Meetings", icon: "Video", end: true, feature: "church_meetings" },
+      { id: "util-media-contrib", to: "/admin/utilities/media-contributions", label: "Media contributions", icon: "Wallet", end: true, feature: "social_media_contributions" },
       { id: "util-speech", to: "/admin/utilities/speech", label: "Speech to text", icon: "Mic", end: true, feature: "utilities" },
       { id: "util-notes", to: "/admin/utilities/notes", label: "Notes & diary", icon: "StickyNote", end: true, feature: "utilities" },
       { id: "util-translate", to: "/admin/utilities/translate", label: "Translate", icon: "Languages", end: true, feature: "utilities" },

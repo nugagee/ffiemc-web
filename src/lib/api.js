@@ -775,6 +775,93 @@ export const authApi = {
     }),
   deleteUtilityNote: (id) =>
     rpc("admin_delete_utility_note", { p_token: getAdminToken(), p_id: id }),
+
+  listMediaTeamMembers: () =>
+    rpc("admin_list_media_team_members", { p_token: getAdminToken() }),
+  upsertMediaTeamMember: (id, data) =>
+    rpc("admin_upsert_media_team_member", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data || {},
+    }),
+  deleteMediaTeamMember: (id) =>
+    rpc("admin_delete_media_team_member", { p_token: getAdminToken(), p_id: id }),
+  syncMediaTeamMembers: () =>
+    rpc("admin_sync_media_team_members", { p_token: getAdminToken() }),
+  listMediaContributionMonths: () =>
+    rpc("admin_list_media_contribution_months", { p_token: getAdminToken() }),
+  upsertMediaContributionMonth: (id, data) =>
+    rpc("admin_upsert_media_contribution_month", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data || {},
+    }),
+  deleteMediaContributionMonth: (id) =>
+    rpc("admin_delete_media_contribution_month", { p_token: getAdminToken(), p_id: id }),
+  getMediaContributionMonth: (id) =>
+    rpc("admin_get_media_contribution_month", { p_token: getAdminToken(), p_id: id }),
+  upsertMediaContribution: (id, data) =>
+    rpc("admin_upsert_media_contribution", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data || {},
+    }),
+  deleteMediaContribution: (id) =>
+    rpc("admin_delete_media_contribution", { p_token: getAdminToken(), p_id: id }),
+  upsertMediaCommitment: (id, data) =>
+    rpc("admin_upsert_media_commitment", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data || {},
+    }),
+  deleteMediaCommitment: (id) =>
+    rpc("admin_delete_media_commitment", { p_token: getAdminToken(), p_id: id }),
+  getMediaContributionAnalytics: () =>
+    rpc("admin_media_contribution_analytics", { p_token: getAdminToken() }),
+  getPublicMediaContributionMonth: (slug) =>
+    rpc("public_get_media_contribution_month", { p_slug: slug }),
+  submitMediaContribution: ({
+    slug,
+    teamMemberId = null,
+    fullName = "",
+    amount,
+    note = "",
+    receiptUrl = "",
+    paymentDate = null,
+  }) =>
+    rpc("submit_media_contribution", {
+      p_slug: slug,
+      p_team_member_id: teamMemberId || null,
+      p_full_name: fullName || "",
+      p_amount: amount,
+      p_note: note || "",
+      p_receipt_url: receiptUrl || "",
+      p_payment_date: paymentDate || null,
+    }),
+  getPublicMediaContributionReport: (slug) =>
+    rpc("public_media_contribution_report", { p_slug: slug }),
+  uploadContributionReceipt: async (file) => {
+    assertConfigured();
+    const ext = String(file.name || "receipt").split(".").pop()?.toLowerCase() || "jpg";
+    const allowed = ["jpg", "jpeg", "png", "gif", "webp", "pdf"];
+    if (!allowed.includes(ext)) {
+      throw new Error("Upload a JPG, PNG, WEBP, or PDF receipt");
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      throw new Error("Receipt must be under 8MB");
+    }
+    const path = `contributions/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error } = await getSupabase().storage.from("media").upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type || (ext === "pdf" ? "application/pdf" : `image/${ext}`),
+    });
+    if (error) throw new Error(error.message);
+    const { data } = getSupabase().storage.from("media").getPublicUrl(path);
+    if (!data?.publicUrl) throw new Error("Could not get receipt URL");
+    return { url: data.publicUrl, path };
+  },
+
   aiQuota: () => rpc("admin_ai_quota", { p_token: getAdminToken() }),
   aiReserveTurn: () => rpc("admin_ai_reserve_turn", { p_token: getAdminToken() }),
   aiLogTurn: ({

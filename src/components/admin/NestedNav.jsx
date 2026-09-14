@@ -37,6 +37,7 @@ import {
   Languages,
   Type,
   Bot,
+  Wallet,
 } from "lucide-react";
 import { pathMatches } from "../../data/adminNav";
 
@@ -75,6 +76,7 @@ const ICONS = {
   Languages,
   Type,
   Bot,
+  Wallet,
 };
 
 function Icon({ name, size = 16 }) {

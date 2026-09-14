@@ -21,6 +21,7 @@ export const DASHBOARD_FEATURES = [
   { key: "church_meetings", group: "Utilities", label: "Church meetings", hint: "Schedule meetings, invite members, video join and calendar", actions: ["view", "edit", "delete"] },
   { key: "utilities", group: "Utilities", label: "Admin utilities", hint: "Speech to text, notes & diary, translate, and text tools", actions: ["view", "edit", "delete"] },
   { key: "fire_buddy", group: "Utilities", label: "Fire Buddy", hint: "AI assistant for content writing, announcements, and admin help — with usage limits", actions: ["view", "edit"] },
+  { key: "social_media_contributions", group: "Utilities", label: "Social media contributions", hint: "Monthly team dues, payment links, equipment commitments, and shareable audit reports", actions: ["view", "edit", "delete"] },
 ];
 
 const copy = (fields) => ({ kind: "copy", fields });

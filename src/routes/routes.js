@@ -70,7 +70,10 @@ import TranslatePage from "../pages/admin/utilities/TranslatePage";
 import TextToolsPage from "../pages/admin/utilities/TextToolsPage";
 import CompanionBotPage from "../pages/admin/utilities/CompanionBotPage";
 import CompanionUsagePage from "../pages/admin/utilities/CompanionUsagePage";
+import MediaContributionsPage from "../pages/admin/utilities/MediaContributionsPage";
 import { MeetingJoinPage } from "../pages/MeetingJoinPage";
+import MediaContributionSubmitPage from "../pages/MediaContributionSubmitPage";
+import MediaContributionReportPage from "../pages/MediaContributionReportPage";
 import AnnouncementsPanel from "../components/admin/AnnouncementsPanel";
 import BannerAnalyticsPage from "../components/admin/BannerAnalyticsPage";
 import FacebookLiveAnalyticsPage from "../components/admin/FacebookLiveAnalyticsPage";
@@ -140,6 +143,8 @@ const AllPages = () => (
             <Route path="/register/:slug" element={<ProgramRegisterPage />} />
             <Route path="/join-church" element={<ChurchMembershipPage />} />
             <Route path="/volunteer/:slug" element={<VolunteerRegisterPage />} />
+            <Route path="/contribute/media/:slug" element={<MediaContributionSubmitPage />} />
+            <Route path="/contribute/media/:slug/report" element={<MediaContributionReportPage />} />
             <Route path="/meeting/:id" element={<MeetingJoinPage />} />
             <Route path="/login" element={<Login />} />
             <Route
@@ -386,6 +391,14 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="fire_buddy" action="edit">
                     <CompanionUsagePage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="utilities/media-contributions"
+                element={
+                  <RequirePermission feature="social_media_contributions">
+                    <MediaContributionsPage />
                   </RequirePermission>
                 }
               />
