@@ -132,11 +132,11 @@ export default function MediaContributionReportPage() {
           </div>
 
           <Card className="border-0 shadow-md mb-6">
-            <CardContent className="p-5">
-              <h2 className="font-semibold text-gray-900 mb-3">Contributions</h2>
+            <CardContent className="px-3 py-3 sm:px-5 sm:py-5">
+              <h2 className="font-semibold text-gray-900 mb-2 sm:mb-3">Contributions</h2>
               <ul className="space-y-2">
                 {(report.contributions || []).map((c, i) => (
-                  <li key={`${c.full_name}-${i}`} className="flex items-start justify-between gap-3 border-b border-gray-50 pb-3">
+                  <li key={`${c.full_name}-${i}`} className="flex items-start justify-between gap-2 sm:gap-3 border-b border-gray-50 pb-2 sm:pb-3">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-gray-900">{c.full_name}</p>
                       <ContributionProofDetails
@@ -160,11 +160,11 @@ export default function MediaContributionReportPage() {
           </Card>
 
           <Card className="border-0 shadow-md mb-6">
-            <CardContent className="p-5">
-              <h2 className="font-semibold text-gray-900 mb-3">Equipment & commitments</h2>
-              <ul className="space-y-3">
+            <CardContent className="px-3 py-3 sm:px-5 sm:py-5">
+              <h2 className="font-semibold text-gray-900 mb-2 sm:mb-3">Equipment & commitments</h2>
+              <ul className="space-y-2 sm:space-y-3">
                 {(report.commitments || []).map((c, i) => (
-                  <li key={`${c.title}-${i}`} className="flex justify-between gap-3">
+                  <li key={`${c.title}-${i}`} className="flex justify-between gap-2 sm:gap-3">
                     <div>
                       <p className="font-medium text-gray-900">{c.title}</p>
                       {c.description ? <p className="text-sm text-gray-500">{c.description}</p> : null}
@@ -181,13 +181,13 @@ export default function MediaContributionReportPage() {
           </Card>
 
           <Card className="border-0 shadow-md mb-8">
-            <CardContent className="p-5">
-              <h2 className="font-semibold text-gray-900 mb-3">Roster status</h2>
-              <ul className="space-y-2">
+            <CardContent className="px-3 py-3 sm:px-5 sm:py-5">
+              <h2 className="font-semibold text-gray-900 mb-2 sm:mb-3">Roster status</h2>
+              <ul className="space-y-1.5 sm:space-y-2">
                 {(report.roster || []).map((m) => (
                   <li
                     key={m.full_name}
-                    className={`flex items-start justify-between gap-3 rounded-lg px-3 py-2.5 text-sm ${
+                    className={`flex items-start justify-between gap-2 sm:gap-3 rounded-lg px-2 py-2 sm:px-3 sm:py-2.5 text-sm ${
                       m.paid ? "bg-gray-50" : "bg-amber-50/60"
                     }`}
                   >
