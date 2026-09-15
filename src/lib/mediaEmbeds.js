@@ -86,3 +86,16 @@ export function resourceMediaDate(item = {}) {
 export function isMediaResourceKind(kind) {
   return kind === "sunday_sermon" || kind === "choir_ministration";
 }
+
+/** Resolve video vs written for church resources (Monday Bible Study uses both). */
+export function churchResourceFormat(item = {}) {
+  const explicit = String(item?.content_format || "").toLowerCase();
+  if (explicit === "video" || explicit === "written") return explicit;
+  if (isMediaResourceKind(item?.kind)) return "video";
+  if (item?.youtube_url || item?.facebook_url || item?.audiomack_url) return "video";
+  return "written";
+}
+
+export function isMediaChurchResource(item = {}) {
+  return churchResourceFormat(item) === "video";
+}

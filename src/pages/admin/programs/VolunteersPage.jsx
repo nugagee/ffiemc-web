@@ -15,6 +15,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { TableActions } from "../../../components/admin/TableActions";
 import { TablePagination, usePagedRows } from "../../../components/admin/TablePagination";
 import { RecordViewDialog } from "../../../components/admin/RecordViewDialog";
+import { VolunteerApplicationMessages } from "../../../components/admin/VolunteerApplicationMessages";
 import { PersonNameFields } from "../../../components/forms/PersonNameFields";
 import { personFromRow, withPersonPayload } from "../../../lib/personName";
 
@@ -213,6 +214,7 @@ export default function VolunteersPage({ view = "applications" }) {
         open={Boolean(viewRow)}
         onOpenChange={(o) => { if (!o) setViewRow(null); }}
         title={viewRow?.full_name || "Application"}
+        contentClassName="max-w-2xl"
         fields={viewRow ? [
           { label: "Email", value: viewRow.email },
           { label: "Phone", value: viewRow.phone },
@@ -226,6 +228,18 @@ export default function VolunteersPage({ view = "applications" }) {
           { label: "Notes", value: viewRow.notes },
           { label: "Review notes", value: viewRow.review_notes },
         ] : []}
+        footer={
+          viewRow ? (
+            <div className="space-y-4">
+              <VolunteerApplicationMessages application={viewRow} canEdit={canEdit} />
+              <div className="flex justify-end">
+                <Button type="button" variant="outline" onClick={() => setViewRow(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          ) : null
+        }
       />
       </>
       )}

@@ -129,6 +129,7 @@ export const TestimoniesPanel = () => {
             name: form.name,
             email: form.email,
             adminEmail: settings.notificationEmail || "adenugaolajideadewale@gmail.com",
+            secondaryEmails: settings.secondaryNotificationEmails,
           });
         } catch (emailErr) {
           console.warn("Publish notify email failed:", emailErr.message);

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useCollection } from '../hooks/useCollection';
 import { useChurchResources } from '../hooks/useChurchResources';
+import { useNewsArticles } from '../hooks/useNewsArticles';
 import { blogPosts as mockBlog } from '../mock';
 import { mergeBlogPosts } from '../lib/blog';
 import { CONVENTION_BLOG_POSTS } from '../data/conventionContent';
@@ -14,6 +15,7 @@ import {
   BlogHubTabs,
   ChurchResourceCards,
 } from '../components/blog/BlogHub';
+import { NewsArticleCards } from '../components/blog/NewsArticleCards';
 
 const fmtDate = (d) => {
   try {
@@ -27,7 +29,7 @@ function mergePosts(apiPosts) {
   return mergeBlogPosts(apiPosts, CONVENTION_BLOG_POSTS);
 }
 
-const VALID_TABS = new Set(['articles', 'daily-manna']);
+const VALID_TABS = new Set(['articles', 'christian-news', 'daily-manna']);
 const MOVED_TO_SERMONS = new Set(['sunday-sermon', 'choir', 'bible-study']);
 
 function initialTab(location) {
@@ -66,6 +68,11 @@ export const Blog = () => {
   const { items: dailyManna, loading: mannaLoading } = useChurchResources('daily_manna');
   const [tab, setTab] = useState(() => initialTab(location));
   const [category, setCategory] = useState('All');
+  const [newsCategory, setNewsCategory] = useState('christian');
+  const { items: newsItems, loading: newsLoading } = useNewsArticles(
+    null,
+    tab === 'christian-news'
+  );
 
   useEffect(() => {
     try {
@@ -118,7 +125,8 @@ export const Blog = () => {
     return posts.filter((p) => String(p.category || '').toLowerCase() === category.toLowerCase());
   }, [posts, category]);
 
-  const sectionLoading = tab === 'articles' ? loading : mannaLoading;
+  const sectionLoading =
+    tab === 'articles' ? loading : tab === 'christian-news' ? newsLoading : mannaLoading;
 
   return (
     <div className="min-h-screen" data-testid="blog-page">
@@ -130,7 +138,7 @@ export const Blog = () => {
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
             {hero.intro ||
-              'Articles and Daily Manna from Fire-Fire International Evangelical Church. For Sunday sermons, choir, and Bible study, visit Sermons.'}
+              'Articles, Christian & education news, and Daily Manna from Fire-Fire International Evangelical Church. For Sunday sermons, choir, and Bible study, visit Sermons.'}
           </p>
           <div className="mt-8">
             <BlogHubTabs active={tab} onChange={onTabChange} />
@@ -148,6 +156,21 @@ export const Blog = () => {
                 <BlogCategoryFilter value={category} onChange={setCategory} />
               </div>
               <ArticleCards posts={filteredPosts} fmtDate={fmtDate} />
+            </>
+          ) : tab === 'christian-news' ? (
+            <>
+              <div className="mb-4 text-center max-w-2xl mx-auto">
+                <p className="text-sm text-gray-500">
+                  Faith/church and Nigerian education headlines only — from publishers like
+                  Christianity Today (Nigeria) and Punch Education. Use filter, sort, and layout
+                  controls below. Read full stories on the original website.
+                </p>
+              </div>
+              <NewsArticleCards
+                items={newsItems}
+                filter={newsCategory}
+                onFilterChange={setNewsCategory}
+              />
             </>
           ) : (
             <ChurchResourceCards items={dailyManna} dateKey="study_date" dateLabel="Date" />

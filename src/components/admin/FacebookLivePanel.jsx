@@ -82,8 +82,9 @@ export function FacebookLivePanel({ canEdit = true }) {
           </div>
           <p className="text-sm text-gray-500 mt-1 max-w-2xl">
             When you go live on Facebook, flip <strong>We are live</strong> so the homepage
-            shows the stream immediately. Paste the live video share link for in-page playback;
-            visitors still see the Facebook page feed beside it.
+            shows the stream, live chat, and reactions. Paste the live video share link for
+            in-page playback. When offline, visitors see the Facebook page feed beside the
+            offline panel.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, BookOpen, Calendar, Church, Download, Eye, FileText, Mic2, Sun, User } from "lucide-react";
+import { ArrowRight, BookOpen, Calendar, Church, Download, Eye, FileText, Mic2, Newspaper, Sun, User } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
@@ -25,6 +25,7 @@ export function ResourceDownloadMenu({ resource, label = "Download" }) {
 export function BlogHubTabs({ active, onChange, tabs }) {
   const list = tabs || [
     { id: "articles", label: "Articles", icon: FileText },
+    { id: "christian-news", label: "Christian News", icon: Newspaper },
     { id: "daily-manna", label: "Daily Manna", icon: Sun },
   ];
   return (
@@ -148,11 +149,16 @@ export function ArticleCards({ posts = [], fmtDate }) {
   );
 }
 
-export function ChurchResourceCards({ items = [], dateKey, dateLabel }) {
+export function ChurchResourceCards({
+  items = [],
+  dateKey,
+  dateLabel,
+  emptyHint = "No entries published yet. Check back soon.",
+}) {
   const [preview, setPreview] = useState(null);
 
   if (!items.length) {
-    return <p className="text-center text-gray-500 py-10">No entries published yet. Check back soon.</p>;
+    return <p className="text-center text-gray-500 py-10">{emptyHint}</p>;
   }
   return (
     <>

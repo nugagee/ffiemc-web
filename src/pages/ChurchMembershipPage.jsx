@@ -95,6 +95,8 @@ export function ChurchMembershipPage() {
           branchName: result.branchName,
           status: "pending",
           adminEmail: settings.notificationEmail,
+          secondaryEmails: settings.secondaryNotificationEmails,
+          emailSubjects: settings.emailSubjects,
         });
         await markChurchMemberEmailed(result.id);
       } catch (emailErr) {

@@ -38,6 +38,8 @@ import {
   Type,
   Bot,
   Wallet,
+  PenSquare,
+  Settings,
 } from "lucide-react";
 import { pathMatches } from "../../data/adminNav";
 
@@ -77,6 +79,8 @@ const ICONS = {
   Type,
   Bot,
   Wallet,
+  PenSquare,
+  Settings,
 };
 
 function Icon({ name, size = 16 }) {

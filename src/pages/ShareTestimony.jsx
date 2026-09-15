@@ -47,6 +47,8 @@ export const ShareTestimony = () => {
         await sendTestimonySubmissionEmails({
           ...form,
           adminEmail: settings.notificationEmail || "adenugaolajideadewale@gmail.com",
+          secondaryEmails: settings.secondaryNotificationEmails,
+          emailSubjects: settings.emailSubjects,
         });
         if (data?.id) {
           await authApi.markTestimonyConfirmationSent(data.id).catch(() => {});

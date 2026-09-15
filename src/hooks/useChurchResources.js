@@ -15,13 +15,14 @@ async function fetchResources(kind) {
     const { data, error } = await getSupabase().rpc("public_list_church_resources", { p_kind: kind });
     if (error) throw error;
     const rows = Array.isArray(data) ? data.filter(Boolean) : [];
-    if (rows.length) return rows;
+    // Use database rows whenever Supabase responds — even if only videos exist.
+    // Demo fallbacks apply only when the database is empty or unreachable.
+    return rows;
   } catch {
-    /* fallback */
+    if (kind === "bible_study") return CONVENTION_BIBLE_STUDIES;
+    if (kind === "daily_manna") return CONVENTION_DAILY_MANNA;
+    return [];
   }
-  if (kind === "bible_study") return CONVENTION_BIBLE_STUDIES;
-  if (kind === "daily_manna") return CONVENTION_DAILY_MANNA;
-  return [];
 }
 
 export function useChurchResources(kind) {

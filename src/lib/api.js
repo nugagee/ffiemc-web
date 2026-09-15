@@ -530,6 +530,18 @@ export const authApi = {
       p_token: getAdminToken(),
       p_kind: kind || null,
     }),
+  listNewsArticles: (category = null, limit = 100) =>
+    rpc("admin_list_news_articles", {
+      p_token: getAdminToken(),
+      p_category: category || null,
+      p_limit: limit,
+    }),
+  setNewsArticleHidden: (id, hidden = true) =>
+    rpc("admin_set_news_article_hidden", {
+      p_token: getAdminToken(),
+      p_id: id,
+      p_hidden: Boolean(hidden),
+    }),
   upsertChurchResource: (id, data) =>
     rpc("admin_upsert_church_resource", {
       p_token: getAdminToken(),
@@ -560,6 +572,11 @@ export const authApi = {
       p_token: getAdminToken(),
       p_visitor_id: visitorId,
       p_limit: limit,
+    }),
+  hideFacebookLiveComment: (id) =>
+    rpc("admin_hide_facebook_live_comment", {
+      p_token: getAdminToken(),
+      p_id: id,
     }),
   blogAnalytics: (slug = null, limit = 300) =>
     rpc("admin_blog_analytics", {
@@ -683,6 +700,17 @@ export const authApi = {
     rpc("admin_delete_volunteer_application", { p_token: getAdminToken(), p_id: id }),
   listVolunteerAudit: (applicationId = null) =>
     rpc("admin_list_volunteer_audit", { p_token: getAdminToken(), p_application_id: applicationId || null }),
+  listVolunteerApplicationMessages: (applicationId) =>
+    rpc("admin_list_volunteer_application_messages", {
+      p_token: getAdminToken(),
+      p_application_id: applicationId,
+    }),
+  addVolunteerApplicationMessage: (applicationId, data) =>
+    rpc("admin_add_volunteer_application_message", {
+      p_token: getAdminToken(),
+      p_application_id: applicationId,
+      p_data: data || {},
+    }),
   saveFormDropdowns: (catalogs) =>
     rpc("admin_save_form_dropdowns", { p_token: getAdminToken(), p_catalogs: catalogs || [] }),
   listNotificationCategories: () =>

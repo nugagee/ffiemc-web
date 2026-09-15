@@ -40,6 +40,8 @@ import AdminLayout from "../pages/admin/AdminLayout";
 import { AdminHome, RequirePermission } from "../components/RequirePermission";
 import VisitorsPage from "../pages/admin/VisitorsPage";
 import ContactsPage from "../pages/admin/ContactsPage";
+import ComposeEmailPage from "../pages/admin/ComposeEmailPage";
+import WebsitePage from "../pages/admin/WebsitePage";
 import AdminsPage from "../pages/admin/AdminsPage";
 import AdminActivityPage from "../pages/admin/AdminActivityPage";
 import PageEditor from "../pages/admin/PageEditor";
@@ -48,6 +50,7 @@ import BlogPostEditor from "../pages/admin/blog/BlogPostEditor";
 import BlogAnalyticsPage from "../pages/admin/blog/BlogAnalyticsPage";
 import BlogCommentsPage from "../pages/admin/blog/BlogCommentsPage";
 import ChurchResourcesPage from "../pages/admin/blog/ChurchResourcesPage";
+import ChristianNewsAdminPage from "../pages/admin/blog/ChristianNewsAdminPage";
 import PrayerInboxPage from "../pages/admin/PrayerInboxPage";
 import PastorsPage from "../pages/admin/PastorsPage";
 import ProgramsPage from "../pages/admin/programs/ProgramsPage";
@@ -172,6 +175,15 @@ const AllPages = () => (
                   </RequirePermission>
                 }
               />
+              <Route path="email/compose" element={<Navigate to="/admin/utilities/compose" replace />} />
+              <Route
+                path="website"
+                element={
+                  <RequirePermission feature="contact.church" action="edit">
+                    <WebsitePage />
+                  </RequirePermission>
+                }
+              />
               <Route path="admins" element={<AdminsPage />} />
               <Route path="activity" element={<AdminActivityPage />} />
               <Route
@@ -203,6 +215,14 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="blog.posts" action="edit">
                     <ChurchResourcesPage kind="bible_study" />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="blog/christian-news"
+                element={
+                  <RequirePermission feature="blog.posts" action="edit">
+                    <ChristianNewsAdminPage />
                   </RequirePermission>
                 }
               />
@@ -402,6 +422,14 @@ const AllPages = () => (
                   </RequirePermission>
                 }
               />
+              <Route
+                path="utilities/compose"
+                element={
+                  <RequirePermission feature="utilities">
+                    <ComposeEmailPage />
+                  </RequirePermission>
+                }
+              />
               <Route path="programs/registrations" element={<Navigate to="/admin/registrations/programs" replace />} />
               <Route path="programs/members" element={<Navigate to="/admin/registrations/members" replace />} />
               <Route path="programs/volunteers" element={<Navigate to="/admin/registrations/volunteers" replace />} />
@@ -502,7 +530,6 @@ const AllPages = () => (
                 }
               />
               <Route path="pages/:pageKey" element={<PageEditor />} />
-              <Route path="website" element={<Navigate to="/admin/pages/contact" replace />} />
               <Route path="hero" element={<Navigate to="/admin/pages/home" replace />} />
               <Route path="events" element={<Navigate to="/admin/pages/events" replace />} />
               <Route path="sermons" element={<Navigate to="/admin/pages/sermons" replace />} />

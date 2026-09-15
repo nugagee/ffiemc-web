@@ -4,7 +4,7 @@ import { ArrowRight, BookOpen, Church, Mic2, Play, Sun } from "lucide-react";
 import { useChurchResources } from "../../hooks/useChurchResources";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { mediaPlatforms, resourceMediaDate } from "../../lib/mediaEmbeds";
+import { churchResourceFormat, mediaPlatforms, resourceMediaDate } from "../../lib/mediaEmbeds";
 
 function fmtShort(d) {
   if (!d) return "";
@@ -17,21 +17,34 @@ function fmtShort(d) {
 
 const SERMONS_TABS = new Set(["sunday-sermon", "choir", "bible-study"]);
 
-function rememberTab(tab) {
+function rememberTab(tab, cat) {
   try {
-    if (SERMONS_TABS.has(tab)) sessionStorage.setItem("ffiemc_sermons_tab", tab);
-    else sessionStorage.setItem("ffiemc_blog_tab", tab);
+    if (SERMONS_TABS.has(tab)) {
+      sessionStorage.setItem("ffiemc_sermons_tab", tab);
+      if (tab === "bible-study" && (cat === "video" || cat === "written")) {
+        sessionStorage.setItem("ffiemc_sermons_bible_cat", cat);
+      }
+    } else {
+      sessionStorage.setItem("ffiemc_blog_tab", tab);
+    }
   } catch {
     /* ignore */
   }
 }
 
-function resourceLinkProps(tab) {
+function resourceLinkProps(tab, cat) {
   if (SERMONS_TABS.has(tab)) {
+    const params = new URLSearchParams({ tab });
+    if (tab === "bible-study" && (cat === "video" || cat === "written")) {
+      params.set("cat", cat);
+    }
     return {
-      to: `/sermons?tab=${tab}`,
-      state: { sermonsTab: tab },
-      onClick: () => rememberTab(tab),
+      to: `/sermons?${params.toString()}`,
+      state: {
+        sermonsTab: tab,
+        ...(tab === "bible-study" && cat ? { sermonsCat: cat } : {}),
+      },
+      onClick: () => rememberTab(tab, cat),
     };
   }
   return {
@@ -41,7 +54,7 @@ function resourceLinkProps(tab) {
   };
 }
 
-function MediaSpotlight({ item, tab, label, icon: Icon, emptyHint }) {
+function MediaSpotlight({ item, tab, cat, label, icon: Icon, emptyHint }) {
   if (!item) {
     return (
       <div className="relative overflow-hidden rounded-[1.75rem] min-h-[280px] sm:min-h-[320px] bg-gradient-to-br from-zinc-900 via-red-950 to-zinc-900 text-white flex flex-col justify-end p-6 sm:p-8">
@@ -65,7 +78,7 @@ function MediaSpotlight({ item, tab, label, icon: Icon, emptyHint }) {
       transition={{ duration: 0.45, ease: "easeOut" }}
     >
       <Link
-        {...resourceLinkProps(tab)}
+        {...resourceLinkProps(tab, cat)}
         className="group relative block overflow-hidden rounded-[1.75rem] min-h-[280px] sm:min-h-[320px] text-white shadow-xl shadow-red-950/10"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-red-950 to-zinc-900">
@@ -118,7 +131,7 @@ function MediaSpotlight({ item, tab, label, icon: Icon, emptyHint }) {
   );
 }
 
-function ReadingLane({ icon: Icon, title, subtitle, tab, accent, items, dateKey, emptyHint }) {
+function ReadingLane({ icon: Icon, title, subtitle, tab, cat, accent, items, dateKey, emptyHint }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 18 }}
@@ -140,7 +153,7 @@ function ReadingLane({ icon: Icon, title, subtitle, tab, accent, items, dateKey,
             </div>
           </div>
           <Link
-            {...resourceLinkProps(tab)}
+            {...resourceLinkProps(tab, cat)}
             className="text-xs sm:text-sm font-semibold text-red-600 hover:text-red-700 inline-flex items-center gap-1 shrink-0"
           >
             All <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -152,7 +165,7 @@ function ReadingLane({ icon: Icon, title, subtitle, tab, accent, items, dateKey,
             {items.slice(0, 3).map((item, index) => (
               <li key={item.id}>
                 <Link
-                  {...resourceLinkProps(tab)}
+                  {...resourceLinkProps(tab, cat)}
                   className="group flex items-start gap-2 sm:gap-3 rounded-xl sm:rounded-2xl px-2 py-2 sm:px-3 sm:py-3 hover:bg-red-50/80 transition-colors"
                 >
                   <span className="mt-0.5 inline-flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-red-50 text-[10px] sm:text-[11px] font-bold text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors">
@@ -186,11 +199,14 @@ export function HomeLatestResources() {
   const { items: choir, loading: l4 } = useChurchResources("choir_ministration");
 
   const loading = l1 || l2 || l3 || l4;
+  const bibleVideos = bible.filter((item) => churchResourceFormat(item) === "video");
+  const bibleWritten = bible.filter((item) => churchResourceFormat(item) === "written");
   const hasAny = bible.length || manna.length || sunday.length || choir.length;
   if (!loading && !hasAny) return null;
 
   const latestSunday = sunday[0];
   const latestChoir = choir[0];
+  const latestBibleVideo = bibleVideos[0];
 
   return (
     <section
@@ -214,7 +230,7 @@ export function HomeLatestResources() {
             Latest from the pulpit & choir
           </h2>
           <p className="mt-4 text-gray-600 text-base sm:text-lg leading-relaxed">
-            Catch the newest Sunday sermon, choir ministration, Bible study, and Daily Manna — watch or read without leaving the site.
+            Catch the newest Sunday sermon, choir ministration, Monday Bible study, and Daily Manna — watch or read without leaving the site.
           </p>
         </div>
 
@@ -239,28 +255,38 @@ export function HomeLatestResources() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+              <MediaSpotlight
+                item={latestBibleVideo}
+                tab="bible-study"
+                cat="video"
+                label="Monday Bible study"
+                icon={BookOpen}
+                emptyHint="Bible study sermon videos will appear here after they are published under Monday Bible Study."
+              />
               <ReadingLane
                 icon={BookOpen}
-                title="Bible study"
-                subtitle="Monday notes"
+                title="Bible study notes"
+                subtitle="Written Monday study"
                 tab="bible-study"
+                cat="written"
                 accent="from-red-700 to-orange-500"
-                items={bible}
+                items={bibleWritten}
                 dateKey="week_of"
                 emptyHint="Monday Bible study notes coming soon."
               />
-              <ReadingLane
-                icon={Sun}
-                title="Daily Manna"
-                subtitle="Daily devotion"
-                tab="daily-manna"
-                accent="from-amber-500 to-red-500"
-                items={manna}
-                dateKey="study_date"
-                emptyHint="Fresh Daily Manna devotionals coming soon."
-              />
             </div>
+
+            <ReadingLane
+              icon={Sun}
+              title="Daily Manna"
+              subtitle="Daily devotion"
+              tab="daily-manna"
+              accent="from-amber-500 to-red-500"
+              items={manna}
+              dateKey="study_date"
+              emptyHint="Fresh Daily Manna devotionals coming soon."
+            />
           </div>
         )}
 

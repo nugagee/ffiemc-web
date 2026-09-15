@@ -20,10 +20,14 @@ export const ADMIN_NAV = [
   },
   {
     id: "contacts",
-    to: "/admin/contacts",
-    label: "Messages",
+    label: "Messages & email",
     icon: "Mail",
-    feature: "contacts",
+    matchPrefix: ["/admin/contacts", "/admin/website"],
+    anyOf: [{ feature: "contacts" }, { feature: "contact.church" }],
+    children: [
+      { id: "contacts-inbox", to: "/admin/contacts", label: "Inbox", icon: "Inbox", end: true, feature: "contacts" },
+      { id: "contacts-email-settings", to: "/admin/website", label: "Email & church settings", icon: "Settings", end: true, feature: "contact.church", action: "edit" },
+    ],
   },
   {
     id: "blog",
@@ -36,6 +40,7 @@ export const ADMIN_NAV = [
       { id: "blog-analytics", to: "/admin/blog/analytics", label: "Analytics", icon: "BarChart3", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-comments", to: "/admin/blog/comments", label: "Comments", icon: "MessageSquare", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-bible", to: "/admin/blog/bible-study", label: "Monday Bible Study", icon: "BookOpen", end: true, feature: "blog.posts", action: "edit" },
+      { id: "blog-news", to: "/admin/blog/christian-news", label: "Christian News", icon: "Newspaper", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-manna", to: "/admin/blog/daily-manna", label: "Daily Manna", icon: "Sun", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-sunday", to: "/admin/blog/sunday-sermons", label: "Sunday sermons", icon: "Church", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-choir", to: "/admin/blog/choir", label: "Choir ministrations", icon: "Mic", end: true, feature: "blog.posts", action: "edit" },
@@ -152,6 +157,7 @@ export const ADMIN_NAV = [
     children: [
       { id: "util-meetings", to: "/admin/utilities/meetings", label: "Meetings", icon: "Video", end: true, feature: "church_meetings" },
       { id: "util-media-contrib", to: "/admin/utilities/media-contributions", label: "Media contributions", icon: "Wallet", end: true, feature: "social_media_contributions" },
+      { id: "util-compose", to: "/admin/utilities/compose", label: "Compose email", icon: "PenSquare", end: true, feature: "utilities" },
       { id: "util-speech", to: "/admin/utilities/speech", label: "Speech to text", icon: "Mic", end: true, feature: "utilities" },
       { id: "util-notes", to: "/admin/utilities/notes", label: "Notes & diary", icon: "StickyNote", end: true, feature: "utilities" },
       { id: "util-translate", to: "/admin/utilities/translate", label: "Translate", icon: "Languages", end: true, feature: "utilities" },

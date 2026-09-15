@@ -265,6 +265,7 @@ export const CONVENTION_BIBLE_STUDIES = [
   {
     id: "bs-week-1-sep-2026",
     kind: "bible_study",
+    content_format: "written",
     title: "Monday Bible Study — Faith for All Things",
     slug: "monday-bible-study-faith-for-all-things",
     week_of: "2026-09-01",

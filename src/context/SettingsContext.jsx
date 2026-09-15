@@ -36,7 +36,9 @@ const FALLBACK = {
     audiomack: defaultChurch.audiomack || "",
   },
   serviceTimes: defaultTimes,
-  notificationEmail: defaultChurch.notificationEmail || "",
+  notificationEmail: defaultChurch.notificationEmail || "adenugaolajideadewale@gmail.com",
+  secondaryNotificationEmails: defaultChurch.secondaryNotificationEmails || "",
+  emailSubjects: {},
   welcomeHeadline: defaultWelcome.headline || "",
   welcomeBody: defaultWelcome.body || "",
   servicesIntro: DEFAULT_PAGE_CONTENT.services?.hero?.intro || "",
@@ -94,6 +96,15 @@ export const SettingsProvider = ({ children }) => {
       phone: church.phone || data.phone || FALLBACK.phone,
       email: church.email || data.email || FALLBACK.email,
       notificationEmail: church.notificationEmail || data.notificationEmail || FALLBACK.notificationEmail,
+      secondaryNotificationEmails:
+        church.secondaryNotificationEmails ||
+        data.secondaryNotificationEmails ||
+        FALLBACK.secondaryNotificationEmails,
+      emailSubjects: {
+        ...(FALLBACK.emailSubjects || {}),
+        ...(data.emailSubjects || {}),
+        ...(church.emailSubjects || {}),
+      },
       socials: {
         ...FALLBACK.socials,
         ...(data.socials || {}),

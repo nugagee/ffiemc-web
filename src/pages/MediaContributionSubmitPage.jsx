@@ -99,6 +99,8 @@ export default function MediaContributionSubmitPage() {
           paymentDate: result.payment_date || paymentDate,
           monthSlug: result.month_slug || slug,
           adminEmail: settings.notificationEmail || "adenugaolajideadewale@gmail.com",
+          secondaryEmails: settings.secondaryNotificationEmails,
+          emailSubjects: settings.emailSubjects,
         });
       } catch (emailErr) {
         console.warn("Contribution notify email failed:", emailErr.message);

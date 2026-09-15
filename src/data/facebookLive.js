@@ -59,3 +59,26 @@ export function resolveLiveEmbedSrc(config, pageUrl) {
   if (!page) return "";
   return facebookLiveVideoEmbedSrc(`${page}/live`);
 }
+
+/** Stable key for reactions/comments for the current (or last) broadcast. */
+export function liveBroadcastKey(config, pageUrl = "") {
+  const video = String(config?.videoUrl || "").trim().replace(/\/$/, "").toLowerCase();
+  if (video) return video.slice(0, 240);
+  const page = String(pageUrl || "").trim().replace(/\/$/, "").toLowerCase();
+  if (page) return `${page}/live`.slice(0, 240);
+  return "homepage-live";
+}
+
+/** Facebook-style reactions for live watch party. */
+export const LIVE_REACTIONS = [
+  { id: "like", emoji: "👍", label: "Like" },
+  { id: "love", emoji: "❤️", label: "Love" },
+  { id: "care", emoji: "🤗", label: "Care" },
+  { id: "wow", emoji: "😮", label: "Wow" },
+  { id: "fire", emoji: "🔥", label: "Fire" },
+  { id: "amen", emoji: "🙏", label: "Amen" },
+];
+
+export function liveReactionMeta(id) {
+  return LIVE_REACTIONS.find((r) => r.id === id) || { id, emoji: "•", label: id };
+}

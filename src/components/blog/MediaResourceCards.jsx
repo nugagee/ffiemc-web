@@ -116,12 +116,16 @@ export function MediaWatchDialog({ item, open, onClose, initialPlatform }) {
   );
 }
 
-export function MediaResourceCards({ items = [], badge = "Service" }) {
+export function MediaResourceCards({
+  items = [],
+  badge = "Service",
+  emptyHint = "No videos published yet. Check back after the next service.",
+}) {
   const [watching, setWatching] = useState(null);
   const [platform, setPlatform] = useState("");
 
   if (!items.length) {
-    return <p className="text-center text-gray-500 py-10">No videos published yet. Check back after the next service.</p>;
+    return <p className="text-center text-gray-500 py-10">{emptyHint}</p>;
   }
 
   const openWatch = (item, platformId = "") => {
@@ -135,8 +139,13 @@ export function MediaResourceCards({ items = [], badge = "Service" }) {
         {items.map((item) => {
           const platforms = mediaPlatforms(item);
           const thumb = item.thumbnail_url || "";
-          const dateLabel = item.service_date
-            ? new Date(item.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+          const rawDate = item.service_date || item.week_of || item.study_date;
+          const dateLabel = rawDate
+            ? new Date(rawDate).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })
             : "";
           return (
             <article

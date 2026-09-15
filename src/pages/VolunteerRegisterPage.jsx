@@ -71,8 +71,12 @@ export function VolunteerRegisterPage() {
           roleInterest: form.role_interest,
           branchName: result.branchName,
           skills: form.skills,
-          adminEmail: result.adminEmail || settings.notificationEmail,
-          fallbackAdminEmail: settings.notificationEmail,
+          experienceLevel: form.experience_level,
+          availability: form.availability,
+          notes: form.notes,
+          adminEmail: settings.notificationEmail,
+          secondaryEmails: settings.secondaryNotificationEmails,
+          emailSubjects: settings.emailSubjects,
         });
         await markVolunteerApplicationEmailed(result.id);
       } catch (emailErr) {

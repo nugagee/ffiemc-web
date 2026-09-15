@@ -1,3 +1,7 @@
+import { subjectFromSettings } from "./emailSubjects";
+
+export const DEFAULT_ADMIN_EMAIL = "adenugaolajideadewale@gmail.com";
+
 export function parseEmailList(...values) {
   const seen = new Set();
   const out = [];
@@ -14,50 +18,144 @@ export function parseEmailList(...values) {
   return out;
 }
 
-async function postFormSubmit(to, body) {
-  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    const errBody = await response.json().catch(() => ({}));
-    throw new Error(errBody.message || "Could not send email");
-  }
-  return response.json();
+/** Resolve primary + secondary admin notify addresses (FormSubmit recipients). */
+export function resolveAdminNotifyEmails({
+  adminEmail,
+  adminEmails,
+  secondaryEmails,
+  fallbackAdminEmail,
+} = {}) {
+  const list = parseEmailList(adminEmails, adminEmail, secondaryEmails, fallbackAdminEmail);
+  if (!list.length) list.push(DEFAULT_ADMIN_EMAIL);
+  return list;
 }
 
-export async function sendContactEmails({ name, email, subject, message, phone, adminEmail }) {
-  const to = adminEmail || "adenugaolajideadewale@gmail.com";
-  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
+/** Build notify list from site settings (Website → Contact). */
+export function adminEmailsFromSettings(settings = {}, extra = {}) {
+  return resolveAdminNotifyEmails({
+    adminEmail: settings?.notificationEmail || extra.adminEmail,
+    secondaryEmails: settings?.secondaryNotificationEmails,
+    adminEmails: extra.adminEmails,
+    fallbackAdminEmail: extra.fallbackAdminEmail || DEFAULT_ADMIN_EMAIL,
+  });
+}
+
+/**
+ * Post to FormSubmit AJAX.
+ * Uses form-urlencoded first (simple CORS request — fewer "Failed to fetch" / preflight issues).
+ * Falls back to JSON if needed.
+ *
+ * Important: the `to` address must already have activated FormSubmit (confirmation email).
+ * Prefer posting to your primary admin inbox and delivering to users via `_autoresponse` / `_cc`.
+ */
+async function postFormSubmit(to, body) {
+  const endpoint = `https://formsubmit.co/ajax/${encodeURIComponent(String(to).trim())}`;
+  const payload = { _captcha: "false", ...body };
+
+  const attempt = async (headers, serialize) => {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body: serialize(payload),
+    });
+    const errBody = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(errBody.message || `FormSubmit error (${response.status})`);
+    }
+    if (errBody.success === "false" || errBody.success === false) {
+      throw new Error(errBody.message || "FormSubmit rejected the request");
+    }
+    return errBody;
+  };
+
+  try {
+    // Prefer urlencoded — avoids CORS preflight that often causes "Failed to fetch"
+    const params = new URLSearchParams();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value == null) return;
+      params.append(key, typeof value === "string" ? value : String(value));
+    });
+    return await attempt(
+      { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+      () => params
+    );
+  } catch (err) {
+    const msg = String(err?.message || err || "");
+    const isNetwork =
+      err instanceof TypeError ||
+      /failed to fetch|networkerror|load failed|cors/i.test(msg);
+
+    if (!isNetwork) throw err;
+
+    try {
+      return await attempt(
+        { Accept: "application/json", "Content-Type": "application/json" },
+        (data) => JSON.stringify(data)
+      );
+    } catch (err2) {
+      throw new Error(
+        "Could not reach FormSubmit (Failed to fetch). " +
+          "Check your connection, disable ad blockers for formsubmit.co, " +
+          "and ensure the admin notification inbox has activated FormSubmit. " +
+          "Details: " +
+          (err2?.message || msg)
+      );
+    }
+  }
+}
+
+/** Post the same payload to each admin inbox; autoresponse only on the first. */
+async function notifyAdminInboxes(recipients, body, { autoresponse } = {}) {
+  const list = recipients?.length ? recipients : [DEFAULT_ADMIN_EMAIL];
+  let last;
+  for (let i = 0; i < list.length; i += 1) {
+    last = await postFormSubmit(list[i], {
+      ...body,
+      ...(i === 0 && autoresponse ? { _autoresponse: autoresponse } : {}),
+      coordinators_notified: list.join(", "),
+    });
+  }
+  return last;
+}
+
+export async function sendContactEmails({
+  name,
+  email,
+  subject,
+  message,
+  phone,
+  adminEmail,
+  secondaryEmails,
+  adminEmails,
+  emailSubjects,
+}) {
+  const recipients = resolveAdminNotifyEmails({ adminEmail, secondaryEmails, adminEmails });
+  const mailSubject = subjectFromSettings(
+    { emailSubjects },
+    "contact",
+    { subject, fullName: name }
+  );
+  return notifyAdminInboxes(
+    recipients,
+    {
       name,
       email,
       phone: phone || "",
       subject,
       message,
-      _subject: `New FFIEMC website enquiry: ${subject}`,
+      _subject: mailSubject,
       _template: "table",
       _captcha: "false",
-      _autoresponse:
+      _replyto: email || DEFAULT_ADMIN_EMAIL,
+    },
+    {
+      autoresponse:
         `Hi ${name.split(" ")[0] || name},\n\n` +
         `Thank you for contacting Fire-Fire International Evangelical Church. We've received your message and will get back to you soon.\n\n` +
         `Your message:\n${message}\n\n` +
         `— Fire-Fire International Evangelical Church`,
-    }),
-  });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.message || "Could not send confirmation emails");
-  }
-
-  return response.json();
+    }
+  );
 }
 
 /** Notify admin of a new testimony submission and send submitter a confirmation. */
@@ -70,16 +168,20 @@ export async function sendTestimonySubmissionEmails({
   title,
   testimony,
   adminEmail,
+  secondaryEmails,
+  adminEmails,
+  emailSubjects,
 }) {
-  const to = adminEmail || "adenugaolajideadewale@gmail.com";
+  const recipients = resolveAdminNotifyEmails({ adminEmail, secondaryEmails, adminEmails });
   const first = (name || "").split(" ")[0] || name;
-  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
+  const mailSubject = subjectFromSettings(
+    { emailSubjects },
+    "testimony",
+    { fullName: name, title }
+  );
+  return notifyAdminInboxes(
+    recipients,
+    {
       name,
       email,
       phone: phone || "",
@@ -87,24 +189,20 @@ export async function sendTestimonySubmissionEmails({
       member_since: dateJoined || "",
       title: title || "",
       testimony,
-      _subject: `New testimony submission from ${name}`,
+      _subject: mailSubject,
       _template: "table",
       _captcha: "false",
-      _autoresponse:
+      _replyto: email || DEFAULT_ADMIN_EMAIL,
+    },
+    {
+      autoresponse:
         `Hi ${first},\n\n` +
         `Thank you for sharing your testimony with Fire-Fire International Evangelical Church.\n\n` +
         `We've received your story and our team will review it before it appears on the website. ` +
         `We'll email you again if it's published.\n\n` +
         `— Fire-Fire International Evangelical Church`,
-    }),
-  });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.message || "Could not send testimony emails");
-  }
-
-  return response.json();
+    }
+  );
 }
 
 /** Optional email when a testimony is published (admin checkbox). */
@@ -261,9 +359,14 @@ export async function sendProgramRegistrationEmails({
   endsAt,
   confirmationId,
   fallbackAdminEmail,
+  secondaryEmails,
 }) {
-  const recipients = parseEmailList(adminEmails, adminEmail, fallbackAdminEmail);
-  if (!recipients.length) recipients.push("adenugaolajideadewale@gmail.com");
+  const recipients = resolveAdminNotifyEmails({
+    adminEmails,
+    adminEmail,
+    secondaryEmails,
+    fallbackAdminEmail,
+  });
   const greeting = firstName || (fullName || "").split(" ")[0] || "Friend";
   const eventLabel = shortCode ? `${shortCode} — ${programTitle}` : programTitle;
   const when = [startsAt, endsAt]
@@ -423,10 +526,20 @@ function firstNameFromMembership(data) {
 
 /** Church membership: notify admin with full form + acknowledgement to applicant. */
 export async function sendChurchMembershipEmails(data = {}) {
-  const to = data.adminEmail || data.fallbackAdminEmail || "adenugaolajideadewale@gmail.com";
+  const recipients = resolveAdminNotifyEmails({
+    adminEmail: data.adminEmail,
+    secondaryEmails: data.secondaryEmails,
+    adminEmails: data.adminEmails,
+    fallbackAdminEmail: data.fallbackAdminEmail,
+  });
   const fields = membershipEmailFields(data);
   const first = firstNameFromMembership(data);
   const fullName = fields.full_name || "Applicant";
+  const mailSubject = subjectFromSettings(
+    { emailSubjects: data.emailSubjects },
+    "membership",
+    { fullName }
+  );
 
   const applicantCopy = membershipPlainText(data, {
     heading: "APPLICATION RECEIVED",
@@ -442,19 +555,52 @@ export async function sendChurchMembershipEmails(data = {}) {
       `Fire-Fire International Evangelical Church`,
   });
 
-  return postFormSubmit(to, {
-    ...fields,
-    name: fullName,
-    email: fields.email,
-    _subject: `New church membership registration — ${fullName}`,
-    _template: "table",
-    _captcha: "false",
-    _replyto: fields.email || "info@firefireintl.org",
-    _autoresponse: applicantCopy,
-  });
+  return notifyAdminInboxes(
+    recipients,
+    {
+      ...fields,
+      name: fullName,
+      email: fields.email,
+      _subject: mailSubject,
+      _template: "table",
+      _captcha: "false",
+      _replyto: fields.email || DEFAULT_ADMIN_EMAIL,
+    },
+    { autoresponse: applicantCopy }
+  );
 }
 
-/** Volunteer application: notify assigned admin + confirmation to applicant. */
+/** Volunteer application: notify team + site admins, confirm to applicant. */
+export function buildVolunteerApplicantConfirmation({
+  fullName,
+  teamName,
+  roleInterest = "",
+  branchName = "",
+}) {
+  const first = (fullName || "").split(" ")[0] || fullName || "Friend";
+  const team = teamName || "our volunteer team";
+  return (
+    `Dear ${first},\n\n` +
+    `Thank you for registering your interest in serving with the ${team} at Fire-Fire International Evangelical Church.\n\n` +
+    `APPLICATION RECEIVED\n` +
+    `--------------------\n` +
+    `Name: ${fullName || "—"}\n` +
+    `Team: ${team}\n` +
+    (roleInterest ? `Role interest: ${roleInterest}\n` : "") +
+    (branchName ? `Branch: ${branchName}\n` : "") +
+    `\nWhat happens next:\n` +
+    `1. Our team will review your application carefully.\n` +
+    `2. You may receive a follow-up email if we need more information.\n` +
+    `3. Once a decision is made, we will contact you by email.\n\n` +
+    `Please keep this email for your records. We appreciate your willingness to serve and look forward to connecting with you.\n\n` +
+    `God bless you.\n\n` +
+    `With warm regards,\n` +
+    `The ${team}\n` +
+    `Fire-Fire International Evangelical Church\n` +
+    `https://ffiem.org`
+  );
+}
+
 export async function sendVolunteerApplicationEmails({
   fullName,
   email,
@@ -463,15 +609,38 @@ export async function sendVolunteerApplicationEmails({
   roleInterest,
   branchName = "",
   skills = "",
+  experienceLevel = "",
+  availability = "",
+  notes = "",
   adminEmail,
+  adminEmails,
+  secondaryEmails,
   fallbackAdminEmail,
+  emailSubjects,
 }) {
-  const to = adminEmail || fallbackAdminEmail || "adenugaolajideadewale@gmail.com";
-  const first = (fullName || "").split(" ")[0] || fullName || "Friend";
-  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
+  const recipients = resolveAdminNotifyEmails({
+    adminEmails,
+    adminEmail,
+    secondaryEmails,
+    fallbackAdminEmail,
+  });
+
+  const applicantCopy = buildVolunteerApplicantConfirmation({
+    fullName,
+    teamName,
+    roleInterest,
+    branchName,
+  });
+
+  const mailSubject = subjectFromSettings(
+    { emailSubjects },
+    "volunteer",
+    { teamName, fullName, role: roleInterest }
+  );
+
+  return notifyAdminInboxes(
+    recipients,
+    {
       name: fullName,
       email,
       phone: phone || "",
@@ -479,22 +648,68 @@ export async function sendVolunteerApplicationEmails({
       role: roleInterest || "",
       church_branch: branchName || "",
       skills: skills || "",
-      _subject: `New volunteer application — ${teamName} — ${fullName}`,
+      experience_level: experienceLevel || "",
+      availability: availability || "",
+      notes: notes || "",
+      _subject: mailSubject,
       _template: "table",
       _captcha: "false",
-      _autoresponse:
-        `Hi ${first},\n\n` +
-        `Thank you for registering your interest in the ${teamName} at Fire-Fire International Evangelical Church.\n\n` +
-        `We've received your application. An assigned admin will review it and you'll hear from us after approval.\n\n` +
-        `— Fire-Fire International Evangelical Church`,
-    }),
-  });
+      _replyto: email || DEFAULT_ADMIN_EMAIL,
+    },
+    { autoresponse: applicantCopy }
+  );
+}
 
-  if (!response.ok) {
-    const errBody = await response.json().catch(() => ({}));
-    throw new Error(errBody.message || "Could not send volunteer emails");
-  }
-  return response.json();
+/**
+ * Admin follow-up to a volunteer applicant.
+ * Posts to the activated admin inbox (FormSubmit destination), and delivers the
+ * actual follow-up to the applicant via `_autoresponse` (FormSubmit sends that
+ * to the form `email` field). Avoids posting directly to unactivated Gmail addresses,
+ * which often fails with "Failed to fetch" / activation walls.
+ */
+export async function sendVolunteerFollowUpEmail({
+  toEmail,
+  applicantName,
+  teamName = "Media Department",
+  subject,
+  body,
+  adminName = "",
+  replyToEmail = "",
+}) {
+  const applicant = (toEmail || "").trim();
+  if (!applicant) throw new Error("Applicant email is required");
+  if (!(body || "").trim()) throw new Error("Message body is required");
+
+  const first = (applicantName || "").split(" ")[0] || applicantName || "Friend";
+  const fromName = adminName || `${teamName} · Fire-Fire International Evangelical Church`;
+  const adminInbox = (replyToEmail || DEFAULT_ADMIN_EMAIL).trim() || DEFAULT_ADMIN_EMAIL;
+  const mailSubject =
+    subject || `Follow-up on your ${teamName} volunteer application`;
+
+  const applicantMessage =
+    `Dear ${first},\n\n` +
+    `${body.trim()}\n\n` +
+    `— ${fromName}\n` +
+    `Fire-Fire International Evangelical Church\n` +
+    `https://ffiem.org`;
+
+  return postFormSubmit(adminInbox, {
+    name: fromName,
+    email: applicant,
+    applicant_name: applicantName || "",
+    team: teamName,
+    _subject: mailSubject,
+    _template: "box",
+    _captcha: "false",
+    _replyto: adminInbox,
+    _cc: applicant,
+    message:
+      `Follow-up email for volunteer applicant.\n` +
+      `To: ${applicant} (${applicantName || "—"})\n` +
+      `Team: ${teamName}\n\n` +
+      `--- Message delivered to applicant ---\n${applicantMessage}`,
+    _autoresponse: applicantMessage,
+  });
 }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -508,30 +723,27 @@ export async function sendMemberAnnouncementEmail({
   body,
   programTitle = "",
   fromName = "Fire-Fire International Evangelical Church",
+  replyToEmail = DEFAULT_ADMIN_EMAIL,
 }) {
   if (!toEmail) throw new Error("Recipient email is required");
   const first = (fullName || "").split(" ")[0] || fullName || "Friend";
   const programLine = programTitle ? `\n\nProgram: ${programTitle}` : "";
+  const adminInbox = (replyToEmail || DEFAULT_ADMIN_EMAIL).trim();
+  const message =
+    `Hi ${first},\n\n${body}${programLine}\n\n` +
+    `— ${fromName}`;
 
-  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(toEmail)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      _subject: subject || title || "Church announcement",
-      _template: "box",
-      _captcha: "false",
-      _replyto: "info@firefireintl.org",
-      message:
-        `Hi ${first},\n\n${body}${programLine}\n\n` +
-        `— ${fromName}`,
-    }),
+  return postFormSubmit(adminInbox, {
+    name: fromName,
+    email: toEmail,
+    _subject: subject || title || "Church announcement",
+    _template: "box",
+    _captcha: "false",
+    _replyto: adminInbox,
+    _cc: toEmail,
+    message: `Member announcement to ${toEmail}\n\n---\n${message}`,
+    _autoresponse: message,
   });
-
-  if (!response.ok) {
-    const errBody = await response.json().catch(() => ({}));
-    throw new Error(errBody.message || "Email delivery failed");
-  }
-  return response.json();
 }
 
 /**
@@ -732,8 +944,11 @@ export async function sendMediaContributionSubmissionEmail({
   paymentDate = "",
   monthSlug = "",
   adminEmail,
+  secondaryEmails,
+  adminEmails,
+  emailSubjects,
 }) {
-  const to = adminEmail || "adenugaolajideadewale@gmail.com";
+  const recipients = resolveAdminNotifyEmails({ adminEmail, secondaryEmails, adminEmails });
   const money = `₦${Number(amount || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
   const origin = typeof window !== "undefined" ? window.location.origin : "https://ffiem.org";
   const auditUrl = `${origin}/admin/utilities/media-contributions`;
@@ -746,7 +961,13 @@ export async function sendMediaContributionSubmissionEmail({
       })
     : "—";
 
-  return postFormSubmit(to, {
+  const mailSubject = subjectFromSettings(
+    { emailSubjects },
+    "mediaContribution",
+    { fullName, amount: money, monthLabel }
+  );
+
+  return notifyAdminInboxes(recipients, {
     name: fullName,
     amount: money,
     month: monthLabel || "",
@@ -755,9 +976,10 @@ export async function sendMediaContributionSubmissionEmail({
     receipt_url: receiptUrl || "Not attached",
     report_url: reportUrl || "",
     admin_audit: auditUrl,
-    _subject: `Media contribution received — ${fullName} (${money})`,
+    _subject: mailSubject,
     _template: "table",
     _captcha: "false",
+    _replyto: DEFAULT_ADMIN_EMAIL,
     message:
       `A social media team member submitted a contribution via the payment link.\n\n` +
       `Name: ${fullName}\n` +
@@ -770,4 +992,70 @@ export async function sendMediaContributionSubmissionEmail({
       `Admin: ${auditUrl}\n`,
   });
 }
+
+/**
+ * Admin compose: send a free-form email to one or more recipients.
+ * Uses FormSubmit per recipient (same stack as other FFIEMC alerts).
+ * Prefer Supabase Edge + Resend when REACT_APP_USE_EDGE_EMAIL=true (see supabase/functions/send-email).
+ */
+export async function sendAdminComposedEmail({
+  to,
+  cc = "",
+  subject,
+  body,
+  fromName = "FFIEMC Admin",
+  replyToEmail = DEFAULT_ADMIN_EMAIL,
+}) {
+  const recipients = parseEmailList(to, cc);
+  if (!recipients.length) throw new Error("Add at least one valid recipient email");
+  if (!String(subject || "").trim()) throw new Error("Subject is required");
+  if (!String(body || "").trim()) throw new Error("Message body is required");
+
+  const edgeUrl = process.env.REACT_APP_SUPABASE_URL;
+  const useEdge = String(process.env.REACT_APP_USE_EDGE_EMAIL || "").toLowerCase() === "true";
+
+  if (useEdge && edgeUrl) {
+    const { getAdminToken } = await import("./api");
+    const token = typeof getAdminToken === "function" ? getAdminToken() : "";
+    const response = await fetch(`${edgeUrl}/functions/v1/send-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token || process.env.REACT_APP_SUPABASE_ANON_KEY || ""}`,
+      },
+      body: JSON.stringify({
+        to: recipients,
+        subject: subject.trim(),
+        text: body.trim(),
+        fromName,
+        replyTo: replyToEmail,
+      }),
+    });
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      throw new Error(errBody.error || errBody.message || "Edge email send failed");
+    }
+    return response.json();
+  }
+
+  let last;
+  for (let i = 0; i < recipients.length; i += 1) {
+    const recipient = recipients[i];
+    // Post through activated admin inbox; deliver to recipient via autoresponse + CC
+    last = await postFormSubmit(replyToEmail || DEFAULT_ADMIN_EMAIL, {
+      name: fromName,
+      email: recipient,
+      _subject: subject.trim(),
+      _template: "box",
+      _captcha: "false",
+      _replyto: replyToEmail || DEFAULT_ADMIN_EMAIL,
+      _cc: recipient,
+      message:
+        `Admin composed email.\nTo: ${recipient}\n\n--- Message ---\n${body.trim()}`,
+      _autoresponse: body.trim(),
+    });
+  }
+  return last;
+}
+
 

@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Upload } from "lucide-react";
+import { BookOpen, Film, FolderInput, Plus, Pencil, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { authApi, formatApiError } from "../../../lib/api";
 import { readTextFile } from "../../../lib/resourceDocument";
-import { isMediaResourceKind } from "../../../lib/mediaEmbeds";
+import { churchResourceFormat, isMediaResourceKind } from "../../../lib/mediaEmbeds";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import ImageUrlField from "../../../components/admin/ImageUrlField";
 import { PageToolbar } from "../../../components/admin/PageToolbar";
@@ -29,8 +29,8 @@ const KIND_META = {
     title: "Monday Bible Study",
     dateField: "week_of",
     dateLabel: "Week of (Monday)",
-    hint: "Upload a .txt or .md file to import content, or write directly in the editor.",
-    media: false,
+    hint: "Choose Videos for sermon recordings, or Written for the study notes document. Both publish under Monday Bible Study — not Sunday sermons.",
+    supportsFormat: true,
     publicPath: "/sermons?tab=bible-study",
     tabHint: "Monday Bible Study",
   },
@@ -39,6 +39,7 @@ const KIND_META = {
     dateField: "study_date",
     dateLabel: "Date",
     hint: "Publish a daily devotional. Upload .txt/.md to auto-fill the editor.",
+    supportsFormat: false,
     media: false,
     publicPath: "/blog?tab=daily-manna",
     tabHint: "Daily Manna",
@@ -47,7 +48,8 @@ const KIND_META = {
     title: "Sunday service sermons",
     dateField: "service_date",
     dateLabel: "Service date",
-    hint: "Add YouTube, Facebook, and/or Audiomack links. Visitors can watch on the website without leaving the page.",
+    hint: "Sunday service videos only. For Monday Bible Study videos, use Blog → Monday Bible Study → Videos.",
+    supportsFormat: false,
     media: true,
     publicPath: "/sermons?tab=sunday-sermon",
     tabHint: "Sunday Sermons",
@@ -57,14 +59,21 @@ const KIND_META = {
     dateField: "service_date",
     dateLabel: "Service date",
     hint: "Publish choir / worship videos with platform links for in-site preview and download/open.",
+    supportsFormat: false,
     media: true,
     publicPath: "/sermons?tab=choir",
     tabHint: "Choir",
   },
 };
 
-const emptyForm = (kind) => ({
+const BIBLE_FORMATS = [
+  { id: "video", label: "Videos / sermons", icon: Film },
+  { id: "written", label: "Written version", icon: BookOpen },
+];
+
+const emptyForm = (kind, contentFormat = "written") => ({
   kind,
+  content_format: kind === "bible_study" ? contentFormat : isMediaResourceKind(kind) ? "video" : "written",
   title: "",
   slug: "",
   excerpt: "",
@@ -80,20 +89,38 @@ const emptyForm = (kind) => ({
   published: true,
 });
 
+function publicPathFor(meta, format) {
+  if (!meta?.publicPath) return "/blog";
+  if (meta.supportsFormat && (format === "video" || format === "written")) {
+    return `${meta.publicPath}&cat=${format}`;
+  }
+  return meta.publicPath;
+}
+
 export default function ChurchResourcesPage({ kind = "bible_study" }) {
   const meta = KIND_META[kind] || KIND_META.bible_study;
-  const isMedia = meta.media || isMediaResourceKind(kind);
   const { can } = useAuth();
   const canEdit = can("blog.posts", "edit");
   const canDelete = can("blog.posts", "delete");
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [listFormat, setListFormat] = useState(meta.supportsFormat ? "video" : "all");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState(emptyForm(kind));
+  const [form, setForm] = useState(() => emptyForm(kind, "video"));
   const [saving, setSaving] = useState(false);
   const fileRef = useRef(null);
+
+  const formIsMedia =
+    meta.supportsFormat
+      ? form.content_format === "video"
+      : Boolean(meta.media || isMediaResourceKind(kind));
+
+  const visibleRows = useMemo(() => {
+    if (!meta.supportsFormat || listFormat === "all") return rows;
+    return rows.filter((row) => churchResourceFormat(row) === listFormat);
+  }, [rows, listFormat, meta.supportsFormat]);
 
   const load = async () => {
     setLoading(true);
@@ -109,12 +136,15 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
 
   useEffect(() => {
     load();
-    setForm(emptyForm(kind));
+    setForm(emptyForm(kind, meta.supportsFormat ? "video" : "written"));
+    setListFormat(meta.supportsFormat ? "video" : "all");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind]);
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm(kind));
+    const format = meta.supportsFormat ? (listFormat === "written" ? "written" : "video") : undefined;
+    setForm(emptyForm(kind, format || "written"));
     setOpen(true);
   };
 
@@ -122,6 +152,7 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
     setEditing(row);
     setForm({
       kind: row.kind || kind,
+      content_format: churchResourceFormat(row),
       title: row.title || "",
       slug: row.slug || "",
       excerpt: row.excerpt || "",
@@ -147,7 +178,9 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
       const plain = text.replace(/<[^>]+>/g, " ").trim();
       setForm((prev) => ({
         ...prev,
-        content: text.includes("<") ? text : `<p>${text.replace(/\n\n+/g, "</p><p>").replace(/\n/g, "<br/>")}</p>`,
+        content: text.includes("<")
+          ? text
+          : `<p>${text.replace(/\n\n+/g, "</p><p>").replace(/\n/g, "<br/>")}</p>`,
         excerpt: prev.excerpt || plain.slice(0, 180),
         title: prev.title || file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "),
       }));
@@ -164,7 +197,13 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
       toast.error("Title is required");
       return;
     }
-    if (isMedia && !form.youtube_url && !form.facebook_url && !form.audiomack_url && !form.attachment_url) {
+    if (
+      formIsMedia &&
+      !form.youtube_url &&
+      !form.facebook_url &&
+      !form.audiomack_url &&
+      !form.attachment_url
+    ) {
       toast.error("Add at least one video/audio link or attachment");
       return;
     }
@@ -173,6 +212,7 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
       await authApi.upsertChurchResource(editing?.id || null, form);
       toast.success(editing ? "Updated" : "Created");
       setOpen(false);
+      if (meta.supportsFormat) setListFormat(form.content_format === "written" ? "written" : "video");
       await load();
     } catch (err) {
       toast.error(formatApiError(err.message) || "Save failed");
@@ -198,7 +238,34 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
     }
   };
 
+  const moveToMondayBibleStudy = async (row) => {
+    const ok = await confirm({
+      title: "Move to Monday Bible Study?",
+      description:
+        "This video will leave Sunday sermons and appear under Monday Bible Study → Videos on the public site.",
+      confirmLabel: "Move",
+    });
+    if (!ok) return;
+    try {
+      await authApi.upsertChurchResource(row.id, {
+        ...row,
+        kind: "bible_study",
+        content_format: "video",
+        week_of: row.week_of || row.service_date || "",
+        service_date: "",
+      });
+      toast.success("Moved to Monday Bible Study → Videos");
+      await load();
+    } catch (err) {
+      toast.error(formatApiError(err.message) || "Could not move entry");
+    }
+  };
+
   const dateValue = form[meta.dateField] || "";
+  const previewPath = publicPathFor(
+    meta,
+    meta.supportsFormat ? form.content_format || listFormat : null
+  );
 
   return (
     <div>
@@ -212,10 +279,16 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
             <p className="text-sm text-gray-500 mt-1">{meta.hint}</p>
             <p className="text-sm text-gray-500 mt-1">
               Public page:{" "}
-              <Link to={meta.publicPath || "/blog"} className="text-red-600 hover:underline">
-                {meta.publicPath || "/blog"}
+              <Link to={previewPath} className="text-red-600 hover:underline">
+                {previewPath}
               </Link>
-              {meta.tabHint ? ` → ${meta.tabHint} tab` : ""}
+              {meta.tabHint ? ` → ${meta.tabHint}` : ""}
+              {meta.supportsFormat ? (
+                <span>
+                  {" "}
+                  → {listFormat === "written" ? "Written version" : "Videos / sermons"}
+                </span>
+              ) : null}
             </p>
           </div>
         )}
@@ -226,48 +299,109 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
         ) : null}
       />
 
+      {meta.supportsFormat ? (
+        <div className="flex flex-wrap gap-2 mb-5">
+          {BIBLE_FORMATS.map((f) => {
+            const Icon = f.icon;
+            const active = listFormat === f.id;
+            const count = rows.filter((r) => churchResourceFormat(r) === f.id).length;
+            return (
+              <Button
+                key={f.id}
+                type="button"
+                size="sm"
+                variant={active ? "default" : "outline"}
+                className={active ? "bg-red-600 hover:bg-red-700" : ""}
+                onClick={() => setListFormat(f.id)}
+              >
+                <Icon className="h-4 w-4 mr-1.5" />
+                {f.label}
+                <span className="ml-1.5 tabular-nums opacity-80">({count})</span>
+              </Button>
+            );
+          })}
+        </div>
+      ) : null}
+
       {loading ? (
         <p className="text-gray-500">Loading…</p>
-      ) : rows.length === 0 ? (
-        <Card className="p-10 text-center text-gray-500">No entries yet.</Card>
+      ) : visibleRows.length === 0 ? (
+        <Card className="p-10 text-center text-gray-500">
+          {meta.supportsFormat
+            ? `No ${listFormat === "written" ? "written studies" : "bible study videos"} yet. Add one here — it will appear under Monday Bible Study on the public sermons page.`
+            : "No entries yet."}
+        </Card>
       ) : (
         <div className="space-y-3">
-          {rows.map((row) => (
-            <Card key={row.id} className="p-4 flex flex-wrap items-start gap-4 justify-between">
-              <div className="min-w-0 flex-1 flex gap-3">
-                {isMedia && row.thumbnail_url ? (
-                  <img src={row.thumbnail_url} alt="" className="h-16 w-24 rounded-lg object-cover shrink-0 bg-gray-100" />
-                ) : null}
-                <div className="min-w-0">
-                  <p className="font-semibold text-gray-900">{row.title}</p>
-                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{row.excerpt}</p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    {meta.dateLabel}: {row[meta.dateField] || "—"} · {row.published ? "Published" : "Draft"}
-                    {isMedia ? (
-                      <>
-                        {" · "}
-                        {[row.youtube_url && "YouTube", row.facebook_url && "Facebook", row.audiomack_url && "Audiomack"]
-                          .filter(Boolean)
-                          .join(" · ") || "No links"}
-                      </>
-                    ) : null}
-                  </p>
+          {visibleRows.map((row) => {
+            const rowFormat = churchResourceFormat(row);
+            const rowIsMedia = rowFormat === "video";
+            return (
+              <Card key={row.id} className="p-4 flex flex-wrap items-start gap-4 justify-between">
+                <div className="min-w-0 flex-1 flex gap-3">
+                  {rowIsMedia && row.thumbnail_url ? (
+                    <img
+                      src={row.thumbnail_url}
+                      alt=""
+                      className="h-16 w-24 rounded-lg object-cover shrink-0 bg-gray-100"
+                    />
+                  ) : null}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-900">{row.title}</p>
+                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">{row.excerpt}</p>
+                    <p className="text-xs text-gray-400 mt-2">
+                      {meta.supportsFormat ? (
+                        <>
+                          {rowFormat === "video" ? "Video / sermon" : "Written"} ·{" "}
+                        </>
+                      ) : null}
+                      {meta.dateLabel}: {row[meta.dateField] || "—"} ·{" "}
+                      {row.published ? "Published" : "Draft"}
+                      {rowIsMedia ? (
+                        <>
+                          {" · "}
+                          {[
+                            row.youtube_url && "YouTube",
+                            row.facebook_url && "Facebook",
+                            row.audiomack_url && "Audiomack",
+                          ]
+                            .filter(Boolean)
+                            .join(" · ") || "No links"}
+                        </>
+                      ) : null}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                {canEdit && (
-                  <Button size="icon" variant="outline" onClick={() => openEdit(row)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                )}
-                {canDelete && (
-                  <Button size="icon" variant="outline" className="text-red-600" onClick={() => remove(row.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </Card>
-          ))}
+                <div className="flex gap-2">
+                  {canEdit && kind === "sunday_sermon" ? (
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      title="Move to Monday Bible Study"
+                      onClick={() => moveToMondayBibleStudy(row)}
+                    >
+                      <FolderInput className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+                  {canEdit && (
+                    <Button size="icon" variant="outline" onClick={() => openEdit(row)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="text-red-600"
+                      onClick={() => remove(row.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -277,9 +411,49 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
             <DialogTitle>{editing ? `Edit ${meta.title}` : `New ${meta.title}`}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            {!isMedia && (
+            {meta.supportsFormat ? (
+              <div className="space-y-2">
+                <Label>Category *</Label>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {BIBLE_FORMATS.map((f) => {
+                    const Icon = f.icon;
+                    const active = form.content_format === f.id;
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, content_format: f.id }))}
+                        className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+                          active
+                            ? "border-red-500 bg-red-50 text-red-900"
+                            : "border-gray-200 bg-white text-gray-700 hover:border-red-200"
+                        }`}
+                      >
+                        <Icon className="h-5 w-5 shrink-0" />
+                        <span>
+                          <span className="block font-semibold text-sm">{f.label}</span>
+                          <span className="block text-xs opacity-70 mt-0.5">
+                            {f.id === "video"
+                              ? "YouTube / Facebook / Audiomack under Monday Bible Study"
+                              : "Notes & documents under Monday Bible Study"}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {!formIsMedia && (
               <div className="flex flex-wrap gap-2">
-                <input ref={fileRef} type="file" accept=".txt,.md,.html,.htm" className="hidden" onChange={onImportFile} />
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".txt,.md,.html,.htm"
+                  className="hidden"
+                  onChange={onImportFile}
+                />
                 <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
                   <Upload className="h-4 w-4 mr-2" /> Import .txt / .md
                 </Button>
@@ -299,10 +473,14 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
             </div>
             <div className="space-y-2">
               <Label>Short description</Label>
-              <Textarea rows={2} value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} />
+              <Textarea
+                rows={2}
+                value={form.excerpt}
+                onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
+              />
             </div>
 
-            {isMedia ? (
+            {formIsMedia ? (
               <>
                 <div className="grid sm:grid-cols-1 gap-3 rounded-xl border border-gray-100 bg-gray-50/70 p-4">
                   <p className="text-sm font-medium text-gray-800">Media links</p>
@@ -349,7 +527,7 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
                     rows={3}
                     value={form.content}
                     onChange={(e) => setForm({ ...form, content: e.target.value })}
-                    placeholder="Scripture reference, preacher, choir set list…"
+                    placeholder="Scripture reference, teacher, study theme…"
                   />
                 </div>
               </>
@@ -369,12 +547,17 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
             )}
 
             <div className="flex items-center gap-2">
-              <Switch checked={Boolean(form.published)} onCheckedChange={(published) => setForm({ ...form, published })} />
+              <Switch
+                checked={Boolean(form.published)}
+                onCheckedChange={(published) => setForm({ ...form, published })}
+              />
               <Label>Published</Label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
             <Button className="bg-red-600 hover:bg-red-700" disabled={saving} onClick={save}>
               {saving ? "Saving…" : "Save"}
             </Button>

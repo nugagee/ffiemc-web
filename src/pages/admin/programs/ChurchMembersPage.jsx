@@ -226,6 +226,7 @@ export default function ChurchMembersPage() {
           branchName: result.branchName,
           status: "pending",
           adminEmail: settings.notificationEmail,
+          secondaryEmails: settings.secondaryNotificationEmails,
         });
         await authApi.markChurchMemberEmailed(result.id);
       } catch (err) {

@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
+import { cn } from "../../lib/utils";
 
 function displayValue(value) {
   if (value == null || value === "") return "—";
@@ -14,10 +15,15 @@ function displayValue(value) {
   return String(value);
 }
 
-export function RecordViewDialog({ open, onOpenChange, title = "Record", fields = [], footer }) {
+export function RecordViewDialog({ open, onOpenChange, title = "Record", fields = [], footer, contentClassName = "" }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[min(90dvh,100%)] overflow-y-auto p-4 sm:p-6">
+      <DialogContent
+        className={cn(
+          "max-w-lg max-h-[min(90dvh,100%)] overflow-y-auto p-4 sm:p-6",
+          contentClassName
+        )}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

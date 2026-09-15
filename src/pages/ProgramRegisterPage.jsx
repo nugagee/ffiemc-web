@@ -87,6 +87,7 @@ export function ProgramRegisterPage() {
           endsAt: result.endsAt || program.endsAt,
           confirmationId: result.id,
           fallbackAdminEmail: settings.notificationEmail,
+          secondaryEmails: settings.secondaryNotificationEmails,
         });
         await markProgramRegistrationEmailed(result.id);
       } catch (emailErr) {

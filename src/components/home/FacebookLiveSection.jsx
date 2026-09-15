@@ -4,11 +4,13 @@ import { useSettings } from "../../context/SettingsContext";
 import {
   facebookPagePluginSrc,
   getFacebookLiveConfig,
+  liveBroadcastKey,
   resolveLiveEmbedSrc,
 } from "../../data/facebookLive";
 import { useFacebookLiveAnalytics } from "../../hooks/useFacebookLiveAnalytics";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { FacebookLiveEngagement } from "./FacebookLiveEngagement";
 
 function LivePulse() {
   return (
@@ -32,6 +34,10 @@ export function FacebookLiveSection() {
   );
   const pagePluginSrc = useMemo(() => facebookPagePluginSrc(pageUrl), [pageUrl]);
   const isLive = Boolean(config.isLive);
+  const broadcastKey = useMemo(
+    () => (isLive ? liveBroadcastKey(config, pageUrl) : ""),
+    [isLive, config, pageUrl]
+  );
 
   const { trackAction } = useFacebookLiveAnalytics({
     enabled: config.enabled,
@@ -89,7 +95,7 @@ export function FacebookLiveSection() {
             </h2>
             <p className="text-white/70 max-w-2xl text-sm sm:text-base leading-relaxed">
               {isLive
-                ? "Join the live broadcast from our Facebook page — worship, Word, and fellowship streaming now."
+                ? "Join the live broadcast — watch, react, and chat with the church family right here."
                 : config.idleBody}
             </p>
           </div>
@@ -178,24 +184,28 @@ export function FacebookLiveSection() {
             )}
           </div>
 
-          <div className="rounded-2xl overflow-hidden border border-white/10 bg-white shadow-xl min-h-[320px] sm:min-h-[420px]">
-            {!ready ? (
-              <div className="h-full min-h-[320px] flex items-center justify-center bg-gray-50 text-gray-400 text-sm">
-                Loading Facebook feed…
-              </div>
-            ) : (
-              <iframe
-                title="Fire-Fire Facebook page"
-                src={pagePluginSrc}
-                className="w-full h-full min-h-[420px]"
-                style={{ border: "none", overflow: "hidden" }}
-                scrolling="no"
-                frameBorder="0"
-                allow="clipboard-write; encrypted-media; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            )}
-          </div>
+          {isLive ? (
+            <FacebookLiveEngagement broadcastKey={broadcastKey} trackAction={trackAction} />
+          ) : (
+            <div className="rounded-2xl overflow-hidden border border-white/10 bg-white shadow-xl min-h-[320px] sm:min-h-[420px]">
+              {!ready ? (
+                <div className="h-full min-h-[320px] flex items-center justify-center bg-gray-50 text-gray-400 text-sm">
+                  Loading Facebook feed…
+                </div>
+              ) : (
+                <iframe
+                  title="Fire-Fire Facebook page"
+                  src={pagePluginSrc}
+                  className="w-full h-full min-h-[420px]"
+                  style={{ border: "none", overflow: "hidden" }}
+                  scrolling="no"
+                  frameBorder="0"
+                  allow="clipboard-write; encrypted-media; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
     </section>

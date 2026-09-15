@@ -9,24 +9,27 @@ import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { toast } from 'sonner';
 import { Plus, Trash2, Save } from 'lucide-react';
+import { DEFAULT_EMAIL_SUBJECTS, EMAIL_SUBJECT_FIELDS, mergeEmailSubjects } from '../../lib/emailSubjects';
 
 const SOCIAL_KEYS = ['facebook', 'twitter', 'instagram', 'tiktok', 'youtube', 'audiomack'];
 
 export const ChurchInfoPanel = () => {
   const { refresh } = useSettings();
   const { can } = useAuth();
-  const canEdit = can('website', 'edit');
+  const canEdit = can('contact.church', 'edit') || can('website', 'edit');
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     api.get('/settings').then((r) => {
-      const d = r.data;
+      const d = r.data || {};
       setForm({
         name: d.name || '', motto: d.motto || '', mission: d.mission || '',
         location: d.location || '', pastor: d.pastor || '', phone: d.phone || '',
         email: d.email || '', logo: d.logo || '',
         notificationEmail: d.notificationEmail || 'adenugaolajideadewale@gmail.com',
+        secondaryNotificationEmails: d.secondaryNotificationEmails || '',
+        emailSubjects: mergeEmailSubjects(d.emailSubjects),
         welcomeHeadline: d.welcomeHeadline || '',
         welcomeBody: d.welcomeBody || '',
         servicesIntro: d.servicesIntro || '',
@@ -39,6 +42,7 @@ export const ChurchInfoPanel = () => {
         programmes: d.programmes && d.programmes.length ? d.programmes : [],
         socials: SOCIAL_KEYS.reduce((a, k) => ({ ...a, [k]: (d.socials || {})[k] || '' }), {}),
         serviceTimes: d.serviceTimes && d.serviceTimes.length ? d.serviceTimes : [],
+        _fullSettings: d,
       });
     });
   }, []);
@@ -58,8 +62,39 @@ export const ChurchInfoPanel = () => {
   const save = async () => {
     setSaving(true);
     try {
-      await api.put('/settings', form);
+      const { _fullSettings, ...fields } = form;
+      const current = _fullSettings || (await api.get('/settings')).data || {};
+      const pages = current.pages || {};
+      const church = {
+        ...(pages.contact?.church || {}),
+        name: fields.name,
+        pastor: fields.pastor,
+        logo: fields.logo,
+        location: fields.location,
+        phone: fields.phone,
+        email: fields.email,
+        notificationEmail: fields.notificationEmail,
+        secondaryNotificationEmails: fields.secondaryNotificationEmails,
+        ...Object.fromEntries(SOCIAL_KEYS.map((k) => [k, fields.socials?.[k] || ''])),
+      };
+      const payload = {
+        ...current,
+        ...fields,
+        notificationEmail: String(fields.notificationEmail || '').trim() || 'adenugaolajideadewale@gmail.com',
+        secondaryNotificationEmails: String(fields.secondaryNotificationEmails || '').trim(),
+        emailSubjects: mergeEmailSubjects(fields.emailSubjects),
+        pages: {
+          ...pages,
+          contact: {
+            ...(pages.contact || {}),
+            church,
+          },
+        },
+      };
+      delete payload._fullSettings;
+      await api.put('/settings', payload);
       await refresh({ notify: true });
+      setForm({ ...form, _fullSettings: payload });
       toast.success('Church info saved');
     } catch (err) {
       toast.error(formatApiError(err.response?.data?.detail) || 'Save failed');
@@ -71,7 +106,7 @@ export const ChurchInfoPanel = () => {
   return (
     <div data-testid="manager-churchinfo" className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Website</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Email & church settings</h2>
         {canEdit && (
           <Button onClick={save} disabled={saving} className="bg-red-600 hover:bg-red-700" data-testid="save-churchinfo-btn">
             <Save className="h-4 w-4 mr-2" />{saving ? 'Saving...' : 'Save Changes'}
@@ -97,16 +132,77 @@ export const ChurchInfoPanel = () => {
       </Card>
 
       <Card>
+        <CardHeader><CardTitle className="text-lg">Admin notification emails</CardTitle></CardHeader>
+        <CardContent className="grid gap-4">
+          <div className="space-y-2">
+            <Label>Primary admin email</Label>
+            <Input
+              type="email"
+              value={form.notificationEmail}
+              onChange={(e) => setField('notificationEmail', e.target.value)}
+              data-testid="ci-notify-email"
+              placeholder="adenugaolajideadewale@gmail.com"
+            />
+            <p className="text-xs text-gray-500">
+              Main inbox for contact forms, volunteer applications, testimonies, membership, media contributions, and other admin alerts.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Secondary emails (optional)</Label>
+            <Textarea
+              rows={3}
+              value={form.secondaryNotificationEmails}
+              onChange={(e) => setField('secondaryNotificationEmails', e.target.value)}
+              data-testid="ci-notify-emails-secondary"
+              placeholder="pastor@example.com, team@example.com"
+            />
+            <p className="text-xs text-gray-500">
+              Extra inboxes that also receive the same admin alerts. Separate with commas or new lines.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Email titles (subjects) per feature</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <p className="text-xs text-gray-500">
+            Customize the subject line FormSubmit / outbound mail uses for each alert type.
+            Use placeholders like {'{fullName}'} — they are filled automatically.
+          </p>
+          {EMAIL_SUBJECT_FIELDS.map((field) => (
+            <div key={field.key} className="space-y-2">
+              <Label>{field.label}</Label>
+              <Input
+                value={form.emailSubjects?.[field.key] || DEFAULT_EMAIL_SUBJECTS[field.key] || ''}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    emailSubjects: {
+                      ...(form.emailSubjects || {}),
+                      [field.key]: e.target.value,
+                    },
+                  })
+                }
+                data-testid={`ci-email-subject-${field.key}`}
+              />
+              <p className="text-xs text-gray-400">{field.hint}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader><CardTitle className="text-lg">Contact</CardTitle></CardHeader>
         <CardContent className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2 md:col-span-2"><Label>Address / Location</Label><Input value={form.location} onChange={(e) => setField('location', e.target.value)} data-testid="ci-location" /></div>
           <div className="space-y-2"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setField('phone', e.target.value)} data-testid="ci-phone" /></div>
           <div className="space-y-2"><Label>Public email</Label><Input value={form.email} onChange={(e) => setField('email', e.target.value)} data-testid="ci-email" /></div>
-          <div className="space-y-2 md:col-span-2">
-            <Label>Notification email (contact form copies)</Label>
-            <Input type="email" value={form.notificationEmail} onChange={(e) => setField('notificationEmail', e.target.value)} data-testid="ci-notify-email" />
-            <p className="text-xs text-gray-500">Visitors get a confirmation, and a copy is sent here. Default: adenugaolajideadewale@gmail.com</p>
-          </div>
+          <p className="text-xs text-gray-500 md:col-span-2">
+            Public email is shown on the website (footer/contact). Admin alerts use the notification emails above.
+          </p>
         </CardContent>
       </Card>
 

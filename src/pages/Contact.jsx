@@ -40,6 +40,8 @@ export const Contact = () => {
         await sendContactEmails({
           ...formData,
           adminEmail: settings.notificationEmail || 'adenugaolajideadewale@gmail.com',
+          secondaryEmails: settings.secondaryNotificationEmails,
+          emailSubjects: settings.emailSubjects,
         });
         if (data?.id && isSupabaseConfigured) {
           await getSupabase()?.rpc('mark_contact_emailed', { p_id: data.id });

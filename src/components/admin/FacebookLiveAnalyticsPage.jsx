@@ -6,6 +6,8 @@ import {
   Clock,
   Eye,
   Facebook,
+  Heart,
+  MessageCircle,
   Monitor,
   Radio,
   Users,
@@ -14,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { authApi, formatApiError } from "../../lib/api";
 import { formatReadTime } from "../../lib/blogAnalytics";
+import { LIVE_REACTIONS } from "../../data/facebookLive";
 import { exportToCsv, filterRows } from "../../lib/exportCsv";
 import { DataToolbar } from "./DataToolbar";
 import { PageToolbar } from "./PageToolbar";
@@ -51,6 +54,8 @@ function actionLabel(action) {
     watch_cta: "Watch live CTA",
     embed_focus: "Embed focus",
     page_plugin_click: "Page plugin",
+    react: "Reaction",
+    comment: "Comment",
   };
   return map[action] || action;
 }
@@ -65,11 +70,14 @@ export default function FacebookLiveAnalyticsPage() {
     visitors: [],
     recent_sessions: [],
     recent_events: [],
+    recent_comments: [],
+    reaction_breakdown: {},
   });
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [hidingId, setHidingId] = useState("");
 
   const load = async (r) => {
     setLoading(true);
@@ -80,6 +88,8 @@ export default function FacebookLiveAnalyticsPage() {
         visitors: report?.visitors || [],
         recent_sessions: report?.recent_sessions || [],
         recent_events: report?.recent_events || [],
+        recent_comments: report?.recent_comments || [],
+        reaction_breakdown: report?.reaction_breakdown || {},
       });
     } catch (err) {
       toast.error(formatApiError(err.message) || "Could not load live analytics");
@@ -170,7 +180,30 @@ export default function FacebookLiveAnalyticsPage() {
     },
     { label: "While LIVE", value: summary.live_sessions || 0, icon: Radio },
     { label: "Opened Facebook", value: summary.open_facebook || 0, icon: Facebook },
+    { label: "Reactions", value: summary.reactions || 0, icon: Heart },
+    { label: "Live comments", value: summary.comments || 0, icon: MessageCircle },
   ];
+
+  const hideComment = async (id) => {
+    if (!id || hidingId) return;
+    setHidingId(id);
+    try {
+      await authApi.hideFacebookLiveComment(id);
+      toast.success("Comment hidden");
+      setData((prev) => ({
+        ...prev,
+        recent_comments: (prev.recent_comments || []).filter((c) => c.id !== id),
+        summary: {
+          ...prev.summary,
+          comments: Math.max(0, (prev.summary?.comments || 1) - 1),
+        },
+      }));
+    } catch (err) {
+      toast.error(formatApiError(err.message) || "Could not hide comment");
+    } finally {
+      setHidingId("");
+    }
+  };
 
   return (
     <div className="relative space-y-6">
@@ -178,8 +211,8 @@ export default function FacebookLiveAnalyticsPage() {
         <p className="text-xs uppercase tracking-[0.25em] text-red-600 font-semibold">Banners</p>
         <h1 className="text-3xl font-bold mt-2">Facebook Live analytics</h1>
         <p className="text-sm text-gray-500 mt-2 max-w-2xl">
-          How visitors use the homepage Watch Live section — impressions, on-screen time while the
-          block is visible, live vs offline views, and Facebook opens. Identifiers are anonymous.
+          How visitors use the homepage Watch Live section — impressions, on-screen time, live
+          reactions and chat, and Facebook opens. Identifiers are anonymous.
         </p>
       </div>
 
@@ -206,7 +239,7 @@ export default function FacebookLiveAnalyticsPage() {
         )}
       />
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {cards.map((c) => (
           <Card key={c.label} className="p-4">
             <div className="flex items-center justify-between gap-3">
@@ -216,6 +249,58 @@ export default function FacebookLiveAnalyticsPage() {
             <p className="text-2xl font-bold text-gray-900 mt-2">{loading ? "…" : c.value}</p>
           </Card>
         ))}
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card className="p-4">
+          <h3 className="font-semibold text-gray-900 mb-3">Reaction breakdown</h3>
+          <div className="flex flex-wrap gap-2">
+            {LIVE_REACTIONS.map((r) => {
+              const n = data.reaction_breakdown?.[r.id] || 0;
+              return (
+                <span
+                  key={r.id}
+                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm bg-white"
+                >
+                  <span>{r.emoji}</span>
+                  <span className="text-gray-700">{r.label}</span>
+                  <span className="font-semibold tabular-nums text-gray-900">{loading ? "…" : n}</span>
+                </span>
+              );
+            })}
+          </div>
+          {!loading && !Object.keys(data.reaction_breakdown || {}).length && (
+            <p className="text-sm text-gray-500 mt-3">No reactions in this range yet.</p>
+          )}
+        </Card>
+
+        <Card className="p-4 overflow-hidden">
+          <h3 className="font-semibold text-gray-900 mb-3">Recent live comments</h3>
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {(data.recent_comments || []).map((c) => (
+              <div key={c.id} className="rounded-lg border px-3 py-2">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="text-sm font-medium text-gray-900">{c.author_name || "Guest"}</span>
+                  <span className="text-xs text-gray-400 ml-auto">{formatDate(c.created_at)}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    disabled={hidingId === c.id}
+                    onClick={() => hideComment(c.id)}
+                  >
+                    Hide
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{c.body}</p>
+              </div>
+            ))}
+            {!loading && !data.recent_comments?.length && (
+              <p className="text-sm text-gray-500">No live comments in this range.</p>
+            )}
+          </div>
+        </Card>
       </div>
 
       <div>

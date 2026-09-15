@@ -128,6 +128,7 @@ export default function ProgramRegistrationsPage() {
         endsAt: result.endsAt,
         confirmationId: result.id,
         fallbackAdminEmail: settings.notificationEmail,
+        secondaryEmails: settings.secondaryNotificationEmails,
       });
       await authApi.markProgramRegistrationEmailed(result.id);
     } catch (err) {
