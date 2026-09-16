@@ -553,6 +553,37 @@ export const authApi = {
       p_token: getAdminToken(),
       p_id: id,
     }),
+  listSpecialPrograms: () =>
+    rpc("admin_list_special_programs", {
+      p_token: getAdminToken(),
+    }),
+  upsertSpecialProgram: (id, data) =>
+    rpc("admin_upsert_special_program", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data || {},
+    }),
+  deleteSpecialProgram: (id) =>
+    rpc("admin_delete_special_program", {
+      p_token: getAdminToken(),
+      p_id: id,
+    }),
+  listSpecialProgramItems: (programId) =>
+    rpc("admin_list_special_program_items", {
+      p_token: getAdminToken(),
+      p_program_id: programId,
+    }),
+  upsertSpecialProgramItem: (id, data) =>
+    rpc("admin_upsert_special_program_item", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data || {},
+    }),
+  deleteSpecialProgramItem: (id) =>
+    rpc("admin_delete_special_program_item", {
+      p_token: getAdminToken(),
+      p_id: id,
+    }),
   announcementStats: () =>
     rpc("admin_announcement_stats", { p_token: getAdminToken() }),
   listAnnouncementEvents: (announcementId = null, limit = 500) =>

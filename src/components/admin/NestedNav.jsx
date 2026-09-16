@@ -40,6 +40,7 @@ import {
   Wallet,
   PenSquare,
   Settings,
+  Sparkles,
 } from "lucide-react";
 import { pathMatches } from "../../data/adminNav";
 
@@ -81,6 +82,7 @@ const ICONS = {
   Wallet,
   PenSquare,
   Settings,
+  Sparkles,
 };
 
 function Icon({ name, size = 16 }) {

@@ -51,6 +51,8 @@ import BlogAnalyticsPage from "../pages/admin/blog/BlogAnalyticsPage";
 import BlogCommentsPage from "../pages/admin/blog/BlogCommentsPage";
 import ChurchResourcesPage from "../pages/admin/blog/ChurchResourcesPage";
 import ChristianNewsAdminPage from "../pages/admin/blog/ChristianNewsAdminPage";
+import SpecialProgramsPage from "../pages/admin/blog/SpecialProgramsPage";
+import SpecialProgramItemsPage from "../pages/admin/blog/SpecialProgramItemsPage";
 import PrayerInboxPage from "../pages/admin/PrayerInboxPage";
 import PastorsPage from "../pages/admin/PastorsPage";
 import ProgramsPage from "../pages/admin/programs/ProgramsPage";
@@ -223,6 +225,22 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="blog.posts" action="edit">
                     <ChristianNewsAdminPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="blog/special-programs"
+                element={
+                  <RequirePermission feature="blog.posts" action="edit">
+                    <SpecialProgramsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="blog/special-programs/:programId"
+                element={
+                  <RequirePermission feature="blog.posts" action="edit">
+                    <SpecialProgramItemsPage />
                   </RequirePermission>
                 }
               />

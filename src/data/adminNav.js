@@ -44,6 +44,7 @@ export const ADMIN_NAV = [
       { id: "blog-manna", to: "/admin/blog/daily-manna", label: "Daily Manna", icon: "Sun", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-sunday", to: "/admin/blog/sunday-sermons", label: "Sunday sermons", icon: "Church", end: true, feature: "blog.posts", action: "edit" },
       { id: "blog-choir", to: "/admin/blog/choir", label: "Choir ministrations", icon: "Mic", end: true, feature: "blog.posts", action: "edit" },
+      { id: "blog-special", to: "/admin/blog/special-programs", label: "Special programs", icon: "Sparkles", end: true, feature: "blog.posts", action: "edit" },
       {
         id: "blog-all",
         to: "/admin/blog",

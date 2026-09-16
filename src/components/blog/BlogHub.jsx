@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, BookOpen, Calendar, Church, Download, Eye, FileText, Mic2, Newspaper, Sun, User } from "lucide-react";
+import { ArrowRight, BookOpen, Calendar, Church, Download, Eye, FileText, Mic2, Newspaper, Sparkles, Sun, User } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
@@ -57,6 +57,7 @@ export const SERMONS_HUB_TABS = [
   { id: "sunday-sermon", label: "Sunday Sermons", icon: Church },
   { id: "choir", label: "Choir", icon: Mic2 },
   { id: "bible-study", label: "Monday Bible Study", icon: BookOpen },
+  { id: "special-programs", label: "Special Programs", icon: Sparkles },
 ];
 
 export function SermonsHubTabs({ active, onChange }) {
