@@ -80,7 +80,62 @@ ${catechismSnapshotList}
 <p>Keep the conversation going. Know the faith. Teach the faith. Live the faith.</p>
 <p><em>— Fire-Fire International Evangelical Church</em></p>`;
 
+const HISTORY_IMG =
+  "https://images.unsplash.com/photo-1438032005730-c779502df39b?w=1200&h=630&fit=crop";
+
+const CHURCH_HISTORY_BLOG_CONTENT = `<p><em>"The Holy Spirit — the founder of the Church as well as the foundation upon which Christianity is laid — is our Master."</em></p>
+<p>Beloved family, this evening we remember where God began with us — and how He has faithfully led Fire-Fire International Evangelical Church from a small gathering to a mountain ministry raising armies of faith.</p>
+
+<h3>A Divine Beginning — April 3, 1991</h3>
+<p>The Fire-Fire Evangelical Ministry began with a group of <strong>ten people</strong> — Fire youths and Fire children. It came into existence on <strong>April 3, 1991</strong>, after the General Overseer, <strong>Pastor S.O. Moronranti</strong>, received an order from the Lord for the establishment of this ministry.</p>
+
+<h3>The Call of Our Founder</h3>
+<p>Pastor S.O. Moronranti was for many years a cloth trader well known in the business until God directed him to leave the trade because of the inevitable ministerial assignment before him. He had no choice but to yield to the leading of the Holy Spirit.</p>
+<p>Before his call, he served as a Sunday school teacher and usher at Christ Apostolic Church Oke-Itura, Academy Ibadan, where he worked tremendously for the expansion of God's kingdom until he was called out.</p>
+
+<h3>From Balaro to the Mountain</h3>
+<p>The ministry started at <strong>Balaro Academy, Ibadan South East LGA, Oyo State</strong>. In time, the church moved to its headquarters at <strong>Papa/Agric area, off Olojuoro Road, Olunloyo, Ibadan</strong> — the mountain ministry site appointed by God.</p>
+<p>The church began as a normal Christian assembly until God gave authority for the mission of mountain ministry — the sole reason the church has her headquarters where it presently belongs.</p>
+
+<h3>Milestones of Faithfulness</h3>
+<ul>
+<li><strong>1991 — Ministry Established:</strong> The Lord's mandate received; ten members gathered as Fire youths and Fire children.</li>
+<li><strong>1991 — Balaro Academy:</strong> First meeting place in Ibadan South East LGA.</li>
+<li><strong>1990s — Headquarters at Papa/Agric:</strong> Relocation to the mountain ministry site in Olunloyo, Ibadan.</li>
+<li><strong>2000s — God's Quarry Bible College:</strong> A seminary to train, nurture, and equip armies of faith.</li>
+<li><strong>Today — Fire-Fire International:</strong> A Bible-believing, holiness-preaching, mountain-praying church reaching nations through gospel, prayer, and discipleship.</li>
+</ul>
+
+<h3>What We Stand On</h3>
+<p>The merging of raw gospel preaching with scriptural prayer is the major belief upon which the church exhibits. <strong>Holiness</strong> is our watchword and theme. We practise the Apostles' doctrine. Discipline and diligence are upheld in every section and department.</p>
+<p>With our motto — <em>"teach one by one another"</em> — we evangelise through tracts, morning cry, handbills, posters, billboards, and radio outreach. The mountain ministry covers a <strong>24-hour prayer cycle</strong>, with programmes daily, weekly, monthly, and quarterly.</p>
+
+<h3>Heaven — Our Focus</h3>
+<p>The centrality of our preaching and teaching is Heaven — the kingdom of God. Brethren, you are charged to be there. God bless you.</p>
+
+<h3>Read the full story</h3>
+<p>This is only a glimpse. On our website you can walk through every chapter of Our Story — from the divine beginning to Heaven, our focus.</p>
+<p>👉 <strong><a href="/about#history">Read more on the About page — History of the Church</a></strong></p>
+<p><em>— Fire-Fire International Evangelical Church</em></p>`;
+
 export const CONVENTION_BLOG_POSTS = [
+  {
+    id: CONVENTION_BLOG_IDS.churchHistoryEvening,
+    title: "From Balaro to the Mountain — Our Church History",
+    slug: "from-balaro-to-the-mountain-church-history",
+    excerpt:
+      "Evening reflection: how God founded Fire-Fire in 1991 at Balaro Academy, called Pastor S.O. Moronranti, and led us to the mountain ministry at Papa/Agric, Olunloyo — and how Heaven remains our focus.",
+    category: "About",
+    author: "Fire-Fire International Evangelical Church",
+    image: HISTORY_IMG,
+    featured: true,
+    published: true,
+    status: "published",
+    tags: "history,about,evening,milestones,balaro",
+    published_at: "2026-09-18T18:00:00.000Z",
+    sort_order: -3,
+    content: CHURCH_HISTORY_BLOG_CONTENT,
+  },
   {
     id: CONVENTION_BLOG_IDS.septemberCatechism,
     title: "Ready to Give an Answer — Our Church Catechism",

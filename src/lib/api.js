@@ -435,6 +435,26 @@ export const authApi = {
       p_status: status,
       p_email_sent: emailSent ?? null,
     }),
+  submitExperienceSurvey: (payload) =>
+    rpc("submit_experience_survey", {
+      p_data: payload || {},
+    }),
+  listExperienceSurveys: (limit = 200) =>
+    rpc("admin_list_experience_surveys", {
+      p_token: getAdminToken(),
+      p_limit: limit,
+    }),
+  updateExperienceSurvey: (id, data) =>
+    rpc("admin_update_experience_survey", {
+      p_token: getAdminToken(),
+      p_id: id,
+      p_data: data || {},
+    }),
+  deleteExperienceSurvey: (id) =>
+    rpc("admin_delete_experience_survey", {
+      p_token: getAdminToken(),
+      p_id: id,
+    }),
   listAdmins: () => rpc("admin_list", { p_token: getAdminToken() }),
   createAdmin: (payload) =>
     rpc("admin_create", {

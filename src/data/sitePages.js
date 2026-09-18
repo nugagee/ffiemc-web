@@ -7,6 +7,7 @@ export const DASHBOARD_FEATURES = [
   { key: "overview", group: "Dashboard", label: "Overview / analytics", hint: "Dashboard charts and totals", actions: ["view"] },
   { key: "visitors", group: "Dashboard", label: "Visitor tracking", hint: "Recent public page views", actions: ["view"] },
   { key: "contacts", group: "Dashboard", label: "Contact messages inbox", hint: "Messages submitted on Contact", actions: ["view", "edit", "delete"] },
+  { key: "experience_surveys", group: "Dashboard", label: "Experience surveys", hint: "Timed visitor comfort/experience feedback and admin replies", actions: ["view", "edit", "delete"] },
   { key: "banners", group: "Banners", label: "Banners", hint: "Popup and sticky banners, analytics, and activity log", actions: ["view", "edit", "delete"] },
   { key: "program_types", group: "Programs", label: "Program types", hint: "Convention, conference, outreach categories", actions: ["view", "edit", "delete"] },
   { key: "programs", group: "Programs", label: "Church programs", hint: "Create programs with registration forms", actions: ["view", "edit", "delete"] },

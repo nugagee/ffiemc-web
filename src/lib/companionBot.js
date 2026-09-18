@@ -1,75 +1,70 @@
-const SYSTEM_PROMPT = `You are Fire Buddy, the helpful admin assistant for Fire-Fire International Evangelical Church (ffiem.org).
-You help church admins write and edit website content, blog posts, announcements, Daily Manna / Bible study drafts, Sunday sermon blurbs, emails, WhatsApp notices, and admin workflow tips.
-Be clear, warm, and practical. Prefer concise drafts the admin can paste into the CMS.
-Do not invent private member data. If unsure, say so and suggest checking the admin portal.
-When writing content, match a reverent church tone without being stiff.
-Always introduce yourself as Fire Buddy when greeting.`;
+import { getAdminToken } from "./api";
 
-function getOpenAiKey() {
-  return String(process.env.REACT_APP_OPENAI_API_KEY || "").trim();
+function getSupabaseUrl() {
+  return String(process.env.REACT_APP_SUPABASE_URL || "").trim().replace(/\/$/, "");
 }
 
-function getOpenAiModel() {
-  return String(process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini").trim() || "gpt-4o-mini";
+function getFireBuddyUrl() {
+  const explicit = String(process.env.REACT_APP_FIRE_BUDDY_URL || "").trim();
+  if (explicit) return explicit;
+  const base = getSupabaseUrl();
+  return base ? `${base}/functions/v1/fire-buddy` : "";
 }
 
 export function isCompanionConfigured() {
-  return Boolean(getOpenAiKey());
+  return Boolean(getFireBuddyUrl());
 }
 
 export function companionModelName() {
-  return getOpenAiModel();
+  return String(process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini").trim() || "gpt-4o-mini";
 }
 
 /**
- * Call OpenAI Chat Completions. Returns { content, prompt_tokens, completion_tokens, model }.
+ * Call Fire Buddy Edge Function (OpenAI key stays in Supabase secrets).
+ * Returns { content, prompt_tokens, completion_tokens, model }.
  */
 export async function runCompanionChat({ messages = [], signal } = {}) {
-  const key = getOpenAiKey();
-  if (!key) {
+  const url = getFireBuddyUrl();
+  if (!url) {
     const err = new Error(
-      "Fire Buddy is not configured. Add REACT_APP_OPENAI_API_KEY to your environment and rebuild."
+      "Fire Buddy is not configured. Set REACT_APP_SUPABASE_URL (and deploy the fire-buddy function)."
     );
     err.code = "NOT_CONFIGURED";
     throw err;
   }
 
-  const payload = {
-    model: getOpenAiModel(),
-    temperature: 0.7,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...messages
-        .filter((m) => m && (m.role === "user" || m.role === "assistant") && String(m.content || "").trim())
-        .map((m) => ({ role: m.role, content: String(m.content) })),
-    ],
-  };
+  const token = getAdminToken();
+  if (!token) {
+    const err = new Error("Please sign in again to use Fire Buddy.");
+    err.code = "UNAUTHORIZED";
+    throw err;
+  }
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const anon = String(process.env.REACT_APP_SUPABASE_ANON_KEY || "").trim();
+  const res = await fetch(url, {
     method: "POST",
     signal,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
+      Authorization: `Bearer ${token}`,
+      ...(anon ? { apikey: anon } : {}),
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ messages }),
   });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg = data?.error?.message || `OpenAI error (${res.status})`;
+    const msg = data?.error || data?.hint || `Fire Buddy error (${res.status})`;
     const err = new Error(msg);
-    err.code = "OPENAI_ERROR";
+    err.code = res.status === 503 ? "NOT_CONFIGURED" : "OPENAI_ERROR";
     throw err;
   }
 
-  const content = data?.choices?.[0]?.message?.content || "";
-  const usage = data?.usage || {};
   return {
-    content,
-    model: data?.model || getOpenAiModel(),
-    prompt_tokens: Number(usage.prompt_tokens) || 0,
-    completion_tokens: Number(usage.completion_tokens) || 0,
+    content: data?.content || "",
+    model: data?.model || companionModelName(),
+    prompt_tokens: Number(data?.prompt_tokens) || 0,
+    completion_tokens: Number(data?.completion_tokens) || 0,
   };
 }
 

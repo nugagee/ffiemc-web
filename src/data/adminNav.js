@@ -22,10 +22,11 @@ export const ADMIN_NAV = [
     id: "contacts",
     label: "Messages & email",
     icon: "Mail",
-    matchPrefix: ["/admin/contacts", "/admin/website"],
-    anyOf: [{ feature: "contacts" }, { feature: "contact.church" }],
+    matchPrefix: ["/admin/contacts", "/admin/website", "/admin/experience-surveys"],
+    anyOf: [{ feature: "contacts" }, { feature: "contact.church" }, { feature: "experience_surveys" }],
     children: [
       { id: "contacts-inbox", to: "/admin/contacts", label: "Inbox", icon: "Inbox", end: true, feature: "contacts" },
+      { id: "experience-surveys", to: "/admin/experience-surveys", label: "Experience surveys", icon: "MessageSquareHeart", end: true, feature: "experience_surveys" },
       { id: "contacts-email-settings", to: "/admin/website", label: "Email & church settings", icon: "Settings", end: true, feature: "contact.church", action: "edit" },
     ],
   },

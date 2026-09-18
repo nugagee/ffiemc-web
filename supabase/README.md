@@ -74,7 +74,7 @@ Then run `supabase/migrations/20260926_age_brackets_companion_bot.sql` to conver
 
 Then run `supabase/migrations/20260927_fire_buddy_permission.sql` so Fire Buddy appears in admin create/edit permissions and RPCs use the `fire_buddy` feature key.
 
-Set `REACT_APP_OPENAI_API_KEY` (and optionally `REACT_APP_OPENAI_MODEL`, default `gpt-4o-mini`) for Fire Buddy.
+For Fire Buddy OpenAI setup (API key in Edge secrets, not `REACT_APP_`), see `supabase/FIRE_BUDDY.md`.
 
 Then run `supabase/migrations/20260913_seed_convention_blog.sql` to seed the six convention blog posts (Failure, Time to Youth, Way/Truth/Life, All in All, Top 10, Stepping Out Again).
 

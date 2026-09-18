@@ -99,7 +99,7 @@ export default function CompanionBotPage() {
     const text = String(preset ?? input).trim();
     if (!text || sending) return;
     if (!configured) {
-      toast.error("Add REACT_APP_OPENAI_API_KEY to enable Fire Buddy");
+      toast.error("Fire Buddy needs REACT_APP_SUPABASE_URL and the fire-buddy Edge Function");
       return;
     }
 
@@ -212,10 +212,11 @@ export default function CompanionBotPage() {
         <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 flex gap-3">
           <AlertTriangle className="h-5 w-5 shrink-0" />
           <div>
-            <p className="font-semibold">API key required</p>
+            <p className="font-semibold">Fire Buddy setup needed</p>
             <p className="mt-1 text-amber-900/80">
-              Set <code className="text-xs bg-white/70 px-1 rounded">REACT_APP_OPENAI_API_KEY</code> in your env
-              {process.env.REACT_APP_OPENAI_MODEL ? ` (model: ${companionModelName()})` : " (optional: REACT_APP_OPENAI_MODEL)"} then restart the app.
+              Deploy the <code className="text-xs bg-white/70 px-1 rounded">fire-buddy</code> Edge Function and set
+              the <code className="text-xs bg-white/70 px-1 rounded">OPENAI_API_KEY</code> secret. See{" "}
+              <code className="text-xs bg-white/70 px-1 rounded">supabase/FIRE_BUDDY.md</code>.
             </p>
           </div>
         </div>

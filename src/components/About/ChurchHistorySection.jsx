@@ -47,7 +47,10 @@ export function ChurchHistorySection({
   if (!story.length && !timeline.length) return null;
 
   return (
-    <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 text-white relative overflow-hidden">
+    <section
+      id="history"
+      className="py-16 sm:py-24 bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 text-white relative overflow-hidden scroll-mt-24"
+    >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.22),transparent_42%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.12),transparent_40%)]" />
 

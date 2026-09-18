@@ -40,6 +40,7 @@ import AdminLayout from "../pages/admin/AdminLayout";
 import { AdminHome, RequirePermission } from "../components/RequirePermission";
 import VisitorsPage from "../pages/admin/VisitorsPage";
 import ContactsPage from "../pages/admin/ContactsPage";
+import ExperienceSurveysPage from "../pages/admin/ExperienceSurveysPage";
 import ComposeEmailPage from "../pages/admin/ComposeEmailPage";
 import WebsitePage from "../pages/admin/WebsitePage";
 import AdminsPage from "../pages/admin/AdminsPage";
@@ -85,6 +86,7 @@ import FacebookLiveAnalyticsPage from "../components/admin/FacebookLiveAnalytics
 import { BlogPreview } from "../pages/BlogPreview";
 import { NetworkStatus } from "../components/NetworkStatus";
 import { ContentPostAlert } from "../components/ContentPostAlert";
+import { ExperienceSurveyPrompt } from "../features/experienceSurvey/ExperienceSurveyPrompt";
 
 const PublicShell = () => {
   const location = useLocation();
@@ -99,6 +101,7 @@ const PublicShell = () => {
         <PopupPriorityProvider>
           <MonthWelcomePopup />
           <AnnouncementPopup />
+          <ExperienceSurveyPrompt />
         </PopupPriorityProvider>
       )}
       {!isAdminShell && <ContentPostAlert />}
@@ -174,6 +177,14 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="contacts">
                     <ContactsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="experience-surveys"
+                element={
+                  <RequirePermission feature="experience_surveys">
+                    <ExperienceSurveysPage />
                   </RequirePermission>
                 }
               />
