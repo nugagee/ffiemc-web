@@ -415,11 +415,30 @@ export const authApi = {
     setAdminToken(null);
   },
   visitStats: () => rpc("admin_visit_stats", { p_token: getAdminToken() }),
-  analyticsReport: (range = "week", topN = 10) =>
+  analyticsReport: (range = "week", topN = 10, from = null, to = null) =>
     rpc("admin_analytics_report", {
       p_token: getAdminToken(),
       p_range: range,
       p_top_n: topN,
+      p_from: from || null,
+      p_to: to || null,
+    }),
+  onlinePresence: (withinSeconds = 90) =>
+    rpc("admin_online_presence", {
+      p_token: getAdminToken(),
+      p_within_seconds: withinSeconds,
+    }),
+  presenceHeartbeat: (path = "") =>
+    rpc("admin_presence_heartbeat", {
+      p_token: getAdminToken(),
+      p_path: path || null,
+    }),
+  analyticsExportRows: (from = null, to = null, limit = 5000) =>
+    rpc("admin_analytics_export_rows", {
+      p_token: getAdminToken(),
+      p_from: from,
+      p_to: to,
+      p_limit: limit,
     }),
   visitorDetail: (visitorId, limit = 100) =>
     rpc("admin_visitor_detail", {

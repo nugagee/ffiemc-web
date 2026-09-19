@@ -3,7 +3,9 @@ import { useLocation } from "react-router-dom";
 import { authApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
-/** Logs admin navigation for the superadmin activity audit trail. */
+const HEARTBEAT_MS = 20000;
+
+/** Logs admin navigation and keeps an online-presence heartbeat. */
 export function AdminActivityTracker() {
   const { pathname } = useLocation();
   const { user } = useAuth();
@@ -19,9 +21,30 @@ export function AdminActivityTracker() {
       .logAdminActivity(pathname, "navigate", {
         title: typeof document !== "undefined" ? document.title : "",
       })
-      .catch(() => {
-        /* never block the UI */
-      });
+      .catch(() => {});
+
+    authApi.presenceHeartbeat(pathname).catch(() => {});
+  }, [pathname, user]);
+
+  useEffect(() => {
+    if (!user || user === false) return undefined;
+    if (!pathname.startsWith("/admin")) return undefined;
+
+    const beat = () => {
+      if (document.visibilityState === "hidden") return;
+      authApi.presenceHeartbeat(pathname).catch(() => {});
+    };
+
+    beat();
+    const id = window.setInterval(beat, HEARTBEAT_MS);
+    const onVis = () => {
+      if (document.visibilityState === "visible") beat();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [pathname, user]);
 
   return null;
