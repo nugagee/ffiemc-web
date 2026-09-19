@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import api, { authApi, formatApiError } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { useSettings } from "../../context/SettingsContext";
+import { useAdminCounts } from "../../context/AdminCountsContext";
 import {
   sendPastorAssignmentEmail,
   sendPrayerReplyEmail,
@@ -33,6 +34,7 @@ const statusTone = {
 export default function PrayerInboxPage() {
   const { can, user } = useAuth();
   const { settings } = useSettings();
+  const { refreshCounts } = useAdminCounts();
   const isPastor = user?.role === "pastor";
   const canEdit = can("prayer.inbox", "edit");
   const canDelete = can("prayer.inbox", "delete") && !isPastor;
@@ -86,6 +88,10 @@ export default function PrayerInboxPage() {
 
   useEffect(() => {
     load();
+    authApi
+      .markPrayerRequestsSeen()
+      .then(() => refreshCounts())
+      .catch(() => {});
   }, []);
 
   useEffect(() => {

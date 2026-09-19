@@ -131,7 +131,7 @@ Open `/login` and sign in. Dashboard routes:
 - `/admin/admins` — superadmin can create more admins, grant whole website pages, and pick which contents on each page they may edit/delete
 - Content: banners, blog, events, sermons, ministries, testimonies, prayer requests
 
-Contact form submissions are stored in the database. The visitor gets a confirmation email, and a copy is sent to **notification email** (default `adenugaolajideadewale@gmail.com`, editable under Website). The first FormSubmit email asks you to confirm that address.
+Contact form submissions are stored in the database. The visitor gets a confirmation email, and a copy is sent to **notification email** (editable under Website). Mail is delivered via Supabase Edge + Resend.
 
 Testimony flow:
 - Public form at `/share-testimony` saves as `pending` and emails the admin + submitter confirmation

@@ -735,6 +735,8 @@ export const authApi = {
     rpc("admin_mark_program_registrations_seen", { p_token: getAdminToken(), p_program_id: programId }),
   markVolunteerApplicationsSeen: () =>
     rpc("admin_mark_volunteer_applications_seen", { p_token: getAdminToken() }),
+  markPrayerRequestsSeen: () =>
+    rpc("admin_mark_prayer_requests_seen", { p_token: getAdminToken() }),
   markChurchMemberEmailed: (id) => rpc("mark_church_member_emailed", { p_id: id }),
   listChurchBranches: () => rpc("admin_list_church_branches", { p_token: getAdminToken() }),
   upsertChurchBranch: (id, data) => rpc("admin_upsert_church_branch", { p_token: getAdminToken(), p_id: id || null, p_data: data }),

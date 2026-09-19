@@ -1,6 +1,21 @@
 import { subjectFromSettings } from "./emailSubjects";
+import { SURVEY_FEATURES } from "../features/experienceSurvey/surveyHelpers";
 
 export const DEFAULT_ADMIN_EMAIL = "adenugaolajideadewale@gmail.com";
+const SITE_URL = "https://ffiem.org";
+const FROM_DISPLAY = "Fire-Fire International Evangelical Church";
+
+function readAdminToken() {
+  try {
+    return (
+      localStorage.getItem("ffiemc_admin_token") ||
+      sessionStorage.getItem("ffiemc_admin_token") ||
+      ""
+    );
+  } catch {
+    return "";
+  }
+}
 
 export function parseEmailList(...values) {
   const seen = new Set();
@@ -18,7 +33,6 @@ export function parseEmailList(...values) {
   return out;
 }
 
-/** Resolve primary + secondary admin notify addresses (FormSubmit recipients). */
 export function resolveAdminNotifyEmails({
   adminEmail,
   adminEmails,
@@ -30,7 +44,6 @@ export function resolveAdminNotifyEmails({
   return list;
 }
 
-/** Build notify list from site settings (Website → Contact). */
 export function adminEmailsFromSettings(settings = {}, extra = {}) {
   return resolveAdminNotifyEmails({
     adminEmail: settings?.notificationEmail || extra.adminEmail,
@@ -40,83 +53,122 @@ export function adminEmailsFromSettings(settings = {}, extra = {}) {
   });
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function plainToHtmlBlocks(text) {
+  return String(text || "")
+    .split(/\n{2,}/)
+    .map((block) => {
+      const lines = escapeHtml(block).replace(/\n/g, "<br/>");
+      return `<p style="margin:0 0 14px;line-height:1.55;color:#1f2937">${lines}</p>`;
+    })
+    .join("");
+}
+
+/** Shared branded HTML wrapper for all FFIEMC transactional mail. */
+export function brandedEmailHtml({ title, preheader = "", bodyText = "", bodyHtml = "" }) {
+  const content = bodyHtml || plainToHtmlBlocks(bodyText);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${escapeHtml(title)}</title></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Georgia,'Times New Roman',serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(preheader)}</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f4f6;padding:24px 12px">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #fee2e2">
+        <tr><td style="background:linear-gradient(135deg,#b91c1c,#ea580c);padding:22px 24px;color:#fff">
+          <p style="margin:0;font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.9">Fire-Fire International Evangelical Church</p>
+          <h1 style="margin:8px 0 0;font-size:22px;line-height:1.3">${escapeHtml(title)}</h1>
+        </td></tr>
+        <tr><td style="padding:24px">${content}</td></tr>
+        <tr><td style="padding:16px 24px 24px;border-top:1px solid #fee2e2;color:#6b7280;font-size:13px;line-height:1.5">
+          <p style="margin:0">Fire-Fire Area, Papa Agric, Off Olojuoro Olunde Road, Olomi, Ibadan, Nigeria · <a href="${SITE_URL}" style="color:#b91c1c">${SITE_URL.replace("https://", "")}</a></p>
+          <p style="margin:8px 0 0">Motto: Teach one by one another</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+function fieldsTable(rows = []) {
+  const filtered = rows.filter(([, v]) => v != null && String(v).trim() !== "");
+  if (!filtered.length) return "";
+  const cells = filtered
+    .map(
+      ([label, value]) =>
+        `<tr>
+          <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;color:#6b7280;width:38%;vertical-align:top">${escapeHtml(label)}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;color:#111827;vertical-align:top">${escapeHtml(value)}</td>
+        </tr>`
+    )
+    .join("");
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #fee2e2;border-radius:12px;overflow:hidden;margin:0 0 16px">${cells}</table>`;
+}
+
 /**
- * Post to FormSubmit AJAX.
- * Uses form-urlencoded first (simple CORS request — fewer "Failed to fetch" / preflight issues).
- * Falls back to JSON if needed.
- *
- * Important: the `to` address must already have activated FormSubmit (confirmation email).
- * Prefer posting to your primary admin inbox and delivering to users via `_autoresponse` / `_cc`.
+ * Send mail through Supabase Edge → Resend.
+ * No FormSubmit. Requires RESEND_API_KEY + FROM_EMAIL secrets and REACT_APP_USE_EDGE_EMAIL=true.
  */
-async function postFormSubmit(to, body) {
-  const endpoint = `https://formsubmit.co/ajax/${encodeURIComponent(String(to).trim())}`;
-  const payload = { _captcha: "false", ...body };
-
-  const attempt = async (headers, serialize) => {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: serialize(payload),
-    });
-    const errBody = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(errBody.message || `FormSubmit error (${response.status})`);
-    }
-    if (errBody.success === "false" || errBody.success === false) {
-      throw new Error(errBody.message || "FormSubmit rejected the request");
-    }
-    return errBody;
-  };
-
-  try {
-    // Prefer urlencoded — avoids CORS preflight that often causes "Failed to fetch"
-    const params = new URLSearchParams();
-    Object.entries(payload).forEach(([key, value]) => {
-      if (value == null) return;
-      params.append(key, typeof value === "string" ? value : String(value));
-    });
-    return await attempt(
-      { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
-      () => params
-    );
-  } catch (err) {
-    const msg = String(err?.message || err || "");
-    const isNetwork =
-      err instanceof TypeError ||
-      /failed to fetch|networkerror|load failed|cors/i.test(msg);
-
-    if (!isNetwork) throw err;
-
-    try {
-      return await attempt(
-        { Accept: "application/json", "Content-Type": "application/json" },
-        (data) => JSON.stringify(data)
-      );
-    } catch (err2) {
-      throw new Error(
-        "Could not reach FormSubmit (Failed to fetch). " +
-          "Check your connection, disable ad blockers for formsubmit.co, " +
-          "and ensure the admin notification inbox has activated FormSubmit. " +
-          "Details: " +
-          (err2?.message || msg)
-      );
-    }
+export async function sendViaSupabaseEmail({
+  purpose,
+  to,
+  subject,
+  text,
+  html,
+  replyTo,
+  notifyAdmins = false,
+  adminEmail,
+  secondaryEmails,
+  adminEmails,
+  confirm,
+}) {
+  const edgeUrl = process.env.REACT_APP_SUPABASE_URL;
+  const anonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+  if (!edgeUrl || !anonKey) {
+    throw new Error("Supabase email is not configured (missing REACT_APP_SUPABASE_URL / ANON_KEY)");
   }
+
+  const adminToken = readAdminToken();
+  const bearer = adminToken || anonKey;
+
+  const response = await fetch(`${edgeUrl}/functions/v1/send-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${bearer}`,
+      apikey: anonKey,
+    },
+    body: JSON.stringify({
+      purpose,
+      to,
+      subject,
+      text,
+      html,
+      replyTo,
+      notifyAdmins,
+      adminEmail,
+      secondaryEmails,
+      adminEmails,
+      confirm,
+    }),
+  });
+
+  const errBody = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(errBody.error || errBody.message || "Email send failed");
+  }
+  return errBody;
 }
 
-/** Post the same payload to each admin inbox; autoresponse only on the first. */
-async function notifyAdminInboxes(recipients, body, { autoresponse } = {}) {
-  const list = recipients?.length ? recipients : [DEFAULT_ADMIN_EMAIL];
-  let last;
-  for (let i = 0; i < list.length; i += 1) {
-    last = await postFormSubmit(list[i], {
-      ...body,
-      ...(i === 0 && autoresponse ? { _autoresponse: autoresponse } : {}),
-      coordinators_notified: list.join(", "),
-    });
-  }
-  return last;
-}
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function sendContactEmails({
   name,
@@ -129,36 +181,47 @@ export async function sendContactEmails({
   adminEmails,
   emailSubjects,
 }) {
-  const recipients = resolveAdminNotifyEmails({ adminEmail, secondaryEmails, adminEmails });
-  const mailSubject = subjectFromSettings(
-    { emailSubjects },
-    "contact",
-    { subject, fullName: name }
-  );
-  return notifyAdminInboxes(
-    recipients,
-    {
-      name,
-      email,
-      phone: phone || "",
-      subject,
-      message,
-      _subject: mailSubject,
-      _template: "table",
-      _captcha: "false",
-      _replyto: email || DEFAULT_ADMIN_EMAIL,
-    },
-    {
-      autoresponse:
-        `Hi ${name.split(" ")[0] || name},\n\n` +
-        `Thank you for contacting Fire-Fire International Evangelical Church. We've received your message and will get back to you soon.\n\n` +
-        `Your message:\n${message}\n\n` +
-        `— Fire-Fire International Evangelical Church`,
-    }
-  );
+  const mailSubject = subjectFromSettings({ emailSubjects }, "contact", { subject, fullName: name });
+  const adminText =
+    `New website contact message\n\n` +
+    `Name: ${name}\nEmail: ${email}\nPhone: ${phone || "—"}\nSubject: ${subject}\n\n${message}`;
+  const confirmText =
+    `Hi ${(name || "").split(" ")[0] || name},\n\n` +
+    `Thank you for contacting Fire-Fire International Evangelical Church. We've received your message and will get back to you soon.\n\n` +
+    `Your message:\n${message}\n\n— ${FROM_DISPLAY}`;
+
+  return sendViaSupabaseEmail({
+    purpose: "contact",
+    notifyAdmins: true,
+    adminEmail,
+    secondaryEmails,
+    adminEmails,
+    subject: mailSubject,
+    text: adminText,
+    html: brandedEmailHtml({
+      title: "New website enquiry",
+      preheader: subject,
+      bodyHtml:
+        fieldsTable([
+          ["Name", name],
+          ["Email", email],
+          ["Phone", phone],
+          ["Subject", subject],
+        ]) + plainToHtmlBlocks(message),
+    }),
+    replyTo: email || DEFAULT_ADMIN_EMAIL,
+    confirm: email
+      ? {
+          to: email,
+          subject: "We've received your message — FFIEMC",
+          text: confirmText,
+          html: brandedEmailHtml({ title: "Message received", bodyText: confirmText }),
+          replyTo: adminEmail || DEFAULT_ADMIN_EMAIL,
+        }
+      : undefined,
+  });
 }
 
-/** Notify admin of a new testimony submission and send submitter a confirmation. */
 export async function sendTestimonySubmissionEmails({
   name,
   email,
@@ -172,96 +235,127 @@ export async function sendTestimonySubmissionEmails({
   adminEmails,
   emailSubjects,
 }) {
-  const recipients = resolveAdminNotifyEmails({ adminEmail, secondaryEmails, adminEmails });
   const first = (name || "").split(" ")[0] || name;
-  const mailSubject = subjectFromSettings(
-    { emailSubjects },
-    "testimony",
-    { fullName: name, title }
-  );
-  return notifyAdminInboxes(
-    recipients,
-    {
-      name,
-      email,
-      phone: phone || "",
-      role: role || "",
-      member_since: dateJoined || "",
-      title: title || "",
-      testimony,
-      _subject: mailSubject,
-      _template: "table",
-      _captcha: "false",
-      _replyto: email || DEFAULT_ADMIN_EMAIL,
-    },
-    {
-      autoresponse:
-        `Hi ${first},\n\n` +
-        `Thank you for sharing your testimony with Fire-Fire International Evangelical Church.\n\n` +
-        `We've received your story and our team will review it before it appears on the website. ` +
-        `We'll email you again if it's published.\n\n` +
-        `— Fire-Fire International Evangelical Church`,
-    }
-  );
+  const mailSubject = subjectFromSettings({ emailSubjects }, "testimony", { fullName: name, title });
+  const adminText =
+    `New testimony submission\n\nName: ${name}\nEmail: ${email}\nPhone: ${phone || "—"}\n` +
+    `Role: ${role || "—"}\nMember since: ${dateJoined || "—"}\nTitle: ${title || "—"}\n\n${testimony}`;
+  const confirmText =
+    `Hi ${first},\n\nThank you for sharing your testimony with ${FROM_DISPLAY}.\n\n` +
+    `We've received your story and our team will review it before it appears on the website. ` +
+    `We'll email you again if it's published.\n\n— ${FROM_DISPLAY}`;
+
+  return sendViaSupabaseEmail({
+    purpose: "testimony_submit",
+    notifyAdmins: true,
+    adminEmail,
+    secondaryEmails,
+    adminEmails,
+    subject: mailSubject,
+    text: adminText,
+    html: brandedEmailHtml({
+      title: "New testimony submission",
+      bodyHtml:
+        fieldsTable([
+          ["Name", name],
+          ["Email", email],
+          ["Phone", phone],
+          ["Role", role],
+          ["Member since", dateJoined],
+          ["Title", title],
+        ]) + plainToHtmlBlocks(testimony),
+    }),
+    replyTo: email || DEFAULT_ADMIN_EMAIL,
+    confirm: email
+      ? {
+          to: email,
+          subject: "We've received your testimony — FFIEMC",
+          text: confirmText,
+          html: brandedEmailHtml({ title: "Testimony received", bodyText: confirmText }),
+        }
+      : undefined,
+  });
 }
 
-/** Optional email when a testimony is published (admin checkbox). */
 export async function sendTestimonyPublishedEmail({ name, email, adminEmail }) {
   if (!email) return null;
-  const to = adminEmail || "adenugaolajideadewale@gmail.com";
   const first = (name || "").split(" ")[0] || name || "Friend";
-  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      name,
-      email,
-      _subject: `Your testimony has been published — FFIEMC`,
-      _template: "table",
-      _captcha: "false",
-      // FormSubmit sends the autoresponse to the submitter's email field
-      _autoresponse:
-        `Hi ${first},\n\n` +
-        `Great news — your testimony has been published on the Fire-Fire International Evangelical Church website.\n\n` +
-        `Thank you for encouraging others with your story.\n\n` +
-        `You can read published testimonies at: https://firefireintl.org/testimonies\n\n` +
-        `— Fire-Fire International Evangelical Church`,
-      message: `Please notify ${name} (${email}) that their testimony is now live on the website.`,
-    }),
+  const text =
+    `Hi ${first},\n\nGreat news — your testimony has been published on the ${FROM_DISPLAY} website.\n\n` +
+    `Thank you for encouraging others with your story.\n\n` +
+    `Read testimonies: ${SITE_URL}/testimonies\n\n— ${FROM_DISPLAY}`;
+  return sendViaSupabaseEmail({
+    purpose: "testimony_published",
+    to: email,
+    subject: "Your testimony has been published — FFIEMC",
+    text,
+    html: brandedEmailHtml({ title: "Your testimony is live", bodyText: text }),
+    replyTo: adminEmail || DEFAULT_ADMIN_EMAIL,
   });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.message || "Could not send publish notification");
-  }
-
-  return response.json();
 }
 
-async function formSubmit(to, payload) {
-  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      _template: "table",
-      _captcha: "false",
-      ...payload,
-    }),
+export async function sendPrayerSubmissionEmails({
+  name,
+  email,
+  phone,
+  category,
+  request,
+  is_public,
+  adminEmail,
+  secondaryEmails,
+  adminEmails,
+  emailSubjects,
+}) {
+  const first = (name || "").split(" ")[0] || name;
+  const mailSubject = subjectFromSettings({ emailSubjects }, "prayer", {
+    fullName: name,
+    category: category || "Prayer request",
   });
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.message || "Could not send email");
-  }
-  return response.json();
+  const adminText =
+    `New prayer request\n\n` +
+    `Name: ${name}\nEmail: ${email}\nPhone: ${phone || "—"}\n` +
+    `Category: ${category || "—"}\nPublic: ${is_public ? "Yes" : "No"}\n\n${request}`;
+  const confirmText =
+    `Hi ${first},\n\n` +
+    `Thank you for sharing your prayer request with ${FROM_DISPLAY}. ` +
+    `Our prayer team has received it and will be lifting you up in prayer.\n\n` +
+    `Category: ${category || "Prayer request"}\n\n` +
+    `If you need to add anything, reply to this email or submit another request on our website.\n\n` +
+    `— ${FROM_DISPLAY}`;
+
+  return sendViaSupabaseEmail({
+    purpose: "prayer_submit",
+    notifyAdmins: true,
+    adminEmail,
+    secondaryEmails,
+    adminEmails,
+    subject: mailSubject,
+    text: adminText,
+    html: brandedEmailHtml({
+      title: "New prayer request",
+      preheader: category || "Prayer request",
+      bodyHtml:
+        fieldsTable([
+          ["Name", name],
+          ["Email", email],
+          ["Phone", phone],
+          ["Category", category],
+          ["Share publicly", is_public ? "Yes" : "No"],
+        ]) + plainToHtmlBlocks(request),
+    }),
+    replyTo: email || DEFAULT_ADMIN_EMAIL,
+    confirm: email
+      ? {
+          to: email,
+          subject: "We've received your prayer request — FFIEMC",
+          text: confirmText,
+          html: brandedEmailHtml({ title: "Prayer request received", bodyText: confirmText }),
+          replyTo: adminEmail || DEFAULT_ADMIN_EMAIL,
+        }
+      : undefined,
+  });
 }
 
-/** Email visitor when staff/pastor replies in the prayer chat. */
 export async function sendPrayerReplyEmail({
   visitorName,
   visitorEmail,
@@ -272,23 +366,22 @@ export async function sendPrayerReplyEmail({
 }) {
   if (!visitorEmail) return null;
   const first = (visitorName || "").split(" ")[0] || visitorName || "Friend";
-  return formSubmit(visitorEmail, {
-    name: senderName || "FFIEMC Prayer Team",
-    email: adminEmail || "adenugaolajideadewale@gmail.com",
-    category: category || "",
-    message: replyBody,
-    _subject: `Response to your prayer request — FFIEMC`,
-    _autoresponse:
-      `Hi ${first},\n\n` +
-      `${senderName || "Our prayer team"} replied to your prayer request` +
-      (category ? ` (${category})` : "") +
-      `:\n\n${replyBody}\n\n` +
-      `If you'd like to share more, reply to this email or submit another request on our website.\n\n` +
-      `— Fire-Fire International Evangelical Church`,
+  const text =
+    `Hi ${first},\n\n` +
+    `${senderName || "Our prayer team"} replied to your prayer request` +
+    (category ? ` (${category})` : "") +
+    `:\n\n${replyBody}\n\n` +
+    `If you'd like to share more, reply to this email or submit another request on our website.\n\n— ${FROM_DISPLAY}`;
+  return sendViaSupabaseEmail({
+    purpose: "prayer_reply",
+    to: visitorEmail,
+    subject: "Response to your prayer request — FFIEMC",
+    text,
+    html: brandedEmailHtml({ title: "Prayer team reply", bodyText: text }),
+    replyTo: adminEmail || DEFAULT_ADMIN_EMAIL,
   });
 }
 
-/** Notify pastor when a request is assigned to them. */
 export async function sendPastorAssignmentEmail({
   pastorName,
   pastorEmail,
@@ -299,22 +392,21 @@ export async function sendPastorAssignmentEmail({
 }) {
   if (!pastorEmail) return null;
   const first = (pastorName || "").split(" ")[0] || pastorName || "Pastor";
-  return formSubmit(pastorEmail, {
-    name: "FFIEMC Prayer Desk",
-    email: adminEmail || "adenugaolajideadewale@gmail.com",
-    visitor: visitorName || "",
-    category: category || "",
-    request: requestPreview || "",
-    _subject: `New prayer request assigned to you — FFIEMC`,
-    message:
-      `Hi ${first},\n\nA prayer request from ${visitorName || "a visitor"}` +
-      (category ? ` (${category})` : "") +
-      ` has been assigned to you.\n\nPreview:\n${requestPreview || ""}\n\n` +
-      `Please sign in to the admin platform to review and respond.`,
+  const text =
+    `Hi ${first},\n\nA prayer request from ${visitorName || "a visitor"}` +
+    (category ? ` (${category})` : "") +
+    ` has been assigned to you.\n\nPreview:\n${requestPreview || ""}\n\n` +
+    `Please sign in to the admin platform to review and respond.`;
+  return sendViaSupabaseEmail({
+    purpose: "pastor_assignment",
+    to: pastorEmail,
+    subject: "New prayer request assigned to you — FFIEMC",
+    text,
+    html: brandedEmailHtml({ title: "Prayer request assigned", bodyText: text }),
+    replyTo: adminEmail || DEFAULT_ADMIN_EMAIL,
   });
 }
 
-/** Send pastor login credentials after account creation. */
 export async function sendPastorCredentialsEmail({
   pastorName,
   pastorEmail,
@@ -325,22 +417,31 @@ export async function sendPastorCredentialsEmail({
 }) {
   if (!pastorEmail) return null;
   const first = (pastorName || "").split(" ")[0] || pastorName || "Pastor";
-  const url = loginUrl || `${typeof window !== "undefined" ? window.location.origin : ""}/login`;
-  return formSubmit(pastorEmail, {
-    name: "FFIEMC Admin",
-    email: adminEmail || "adenugaolajideadewale@gmail.com",
-    username,
-    temporary_password: password,
-    login_url: url,
-    _subject: `Your FFIEMC prayer pastor account`,
-    message:
-      `Hi ${first},\n\nAn account has been created for you on the Fire-Fire International Evangelical Church prayer desk.\n\n` +
-      `Login: ${url}\nUsername: ${username}\nTemporary password: ${password}\n\n` +
-      `Please sign in and change your password after your first login.`,
+  const url = loginUrl || `${typeof window !== "undefined" ? window.location.origin : SITE_URL}/login`;
+  const text =
+    `Hi ${first},\n\nAn account has been created for you on the ${FROM_DISPLAY} prayer desk.\n\n` +
+    `Login: ${url}\nUsername: ${username}\nTemporary password: ${password}\n\n` +
+    `Please sign in and change your password after your first login.`;
+  return sendViaSupabaseEmail({
+    purpose: "pastor_credentials",
+    to: pastorEmail,
+    subject: "Your FFIEMC prayer pastor account",
+    text,
+    html: brandedEmailHtml({
+      title: "Your pastor account",
+      bodyHtml:
+        plainToHtmlBlocks(`Hi ${first},\n\nAn account has been created for you on the prayer desk.`) +
+        fieldsTable([
+          ["Login", url],
+          ["Username", username],
+          ["Temporary password", password],
+        ]) +
+        plainToHtmlBlocks("Please sign in and change your password after your first login."),
+    }),
+    replyTo: adminEmail || DEFAULT_ADMIN_EMAIL,
   });
 }
 
-/** Program registration: notify event admin + confirmation to participant. */
 export async function sendProgramRegistrationEmails({
   programTitle,
   shortCode,
@@ -361,12 +462,6 @@ export async function sendProgramRegistrationEmails({
   fallbackAdminEmail,
   secondaryEmails,
 }) {
-  const recipients = resolveAdminNotifyEmails({
-    adminEmails,
-    adminEmail,
-    secondaryEmails,
-    fallbackAdminEmail,
-  });
   const greeting = firstName || (fullName || "").split(" ")[0] || "Friend";
   const eventLabel = shortCode ? `${shortCode} — ${programTitle}` : programTitle;
   const when = [startsAt, endsAt]
@@ -379,7 +474,7 @@ export async function sendProgramRegistrationEmails({
 
   const userCopy =
     `Dear ${nameTitle ? `${nameTitle} ` : ""}${greeting},\n\n` +
-    `Thank you for registering for ${eventLabel} at Fire-Fire International Evangelical Church.\n\n` +
+    `Thank you for registering for ${eventLabel} at ${FROM_DISPLAY}.\n\n` +
     `REGISTRATION CONFIRMATION\n` +
     `-------------------------\n` +
     `Reference: ${confirmationId || "pending"}\n` +
@@ -389,36 +484,48 @@ export async function sendProgramRegistrationEmails({
     `Branch: ${branchName || "—"}\n` +
     (venue ? `Venue: ${venue}\n` : "") +
     (when ? `Dates: ${when}\n` : "") +
-    `\nPlease keep this email as your record. We look forward to welcoming you.\n\n` +
-    `— Fire-Fire International Evangelical Church`;
+    `\nPlease keep this email as your record. We look forward to welcoming you.\n\n— ${FROM_DISPLAY}`;
 
-  const payload = {
-    _subject: `New ${shortCode || "program"} registration — ${fullName}`,
-    _template: "table",
-    _captcha: "false",
-    event: eventLabel,
-    confirmation_id: confirmationId || "",
-    title: nameTitle || "",
-    first_name: firstName || "",
-    last_name: lastName || "",
-    name: fullName,
-    email,
-    phone: phone || "",
-    church_branch: branchName || "",
-    venue: venue || "",
-    dates: when || "",
-    extra_details: extra || "—",
-    coordinators_notified: recipients.join(", "),
-  };
+  const adminText =
+    `New ${shortCode || "program"} registration\n\n` +
+    `Event: ${eventLabel}\nReference: ${confirmationId || "—"}\nName: ${fullName}\n` +
+    `Email: ${email}\nPhone: ${phone || "—"}\nBranch: ${branchName || "—"}\n` +
+    (venue ? `Venue: ${venue}\n` : "") +
+    (when ? `Dates: ${when}\n` : "") +
+    (extra ? `\nExtra:\n${extra}` : "");
 
-  let last;
-  for (let i = 0; i < recipients.length; i += 1) {
-    last = await postFormSubmit(recipients[i], {
-      ...payload,
-      ...(i === 0 ? { _autoresponse: userCopy } : {}),
-    });
-  }
-  return last;
+  return sendViaSupabaseEmail({
+    purpose: "program_registration",
+    notifyAdmins: true,
+    adminEmail: adminEmail || fallbackAdminEmail,
+    adminEmails,
+    secondaryEmails,
+    subject: `New ${shortCode || "program"} registration — ${fullName}`,
+    text: adminText,
+    html: brandedEmailHtml({
+      title: "New program registration",
+      bodyHtml: fieldsTable([
+        ["Event", eventLabel],
+        ["Reference", confirmationId],
+        ["Name", fullName],
+        ["Email", email],
+        ["Phone", phone],
+        ["Branch", branchName],
+        ["Venue", venue],
+        ["Dates", when],
+        ["Extra", extra],
+      ]),
+    }),
+    replyTo: email || DEFAULT_ADMIN_EMAIL,
+    confirm: email
+      ? {
+          to: email,
+          subject: `Registration confirmed — ${eventLabel}`,
+          text: userCopy,
+          html: brandedEmailHtml({ title: "Registration confirmed", bodyText: userCopy }),
+        }
+      : undefined,
+  });
 }
 
 const MEMBERSHIP_CONSENT_KEYS = new Set(["consent", "consent_at", "consent_text"]);
@@ -464,7 +571,6 @@ function dash(value) {
   return text || "";
 }
 
-/** Flatten a membership application for admin emails and confirmation copy. */
 export function membershipEmailFields(data = {}) {
   const formData = data.formData || data.form_data || {};
   const consent = data.consent === true || formData.consent === true || formData.consent === "true";
@@ -524,53 +630,53 @@ function firstNameFromMembership(data) {
   return full.split(" ")[0] || "Beloved";
 }
 
-/** Church membership: notify admin with full form + acknowledgement to applicant. */
 export async function sendChurchMembershipEmails(data = {}) {
-  const recipients = resolveAdminNotifyEmails({
-    adminEmail: data.adminEmail,
-    secondaryEmails: data.secondaryEmails,
-    adminEmails: data.adminEmails,
-    fallbackAdminEmail: data.fallbackAdminEmail,
-  });
   const fields = membershipEmailFields(data);
   const first = firstNameFromMembership(data);
   const fullName = fields.full_name || "Applicant";
-  const mailSubject = subjectFromSettings(
-    { emailSubjects: data.emailSubjects },
-    "membership",
-    { fullName }
-  );
+  const mailSubject = subjectFromSettings({ emailSubjects: data.emailSubjects }, "membership", { fullName });
 
   const applicantCopy = membershipPlainText(data, {
     heading: "APPLICATION RECEIVED",
     intro:
       `Dear ${first},\n\n` +
-      `Thank you for submitting your membership application to Fire-Fire International Evangelical Church.\n\n` +
+      `Thank you for submitting your membership application to ${FROM_DISPLAY}.\n\n` +
       `We have received your details. Your application is now pending review by our leadership team. ` +
       `This is not yet confirmation of membership. You will receive a separate confirmation email once your application is approved.`,
     closing:
-      `Please keep this email for your records.\n\n` +
-      `With love,\n` +
-      `The Leadership Team\n` +
-      `Fire-Fire International Evangelical Church`,
+      `Please keep this email for your records.\n\nWith love,\nThe Leadership Team\n${FROM_DISPLAY}`,
   });
 
-  return notifyAdminInboxes(
-    recipients,
-    {
-      ...fields,
-      name: fullName,
-      email: fields.email,
-      _subject: mailSubject,
-      _template: "table",
-      _captcha: "false",
-      _replyto: fields.email || DEFAULT_ADMIN_EMAIL,
-    },
-    { autoresponse: applicantCopy }
-  );
+  const adminText = membershipPlainText(data, {
+    heading: "NEW MEMBERSHIP APPLICATION",
+    intro: `A new membership application was submitted.`,
+    closing: `Review in admin → Church members / Approvals.`,
+  });
+
+  return sendViaSupabaseEmail({
+    purpose: "membership",
+    notifyAdmins: true,
+    adminEmail: data.adminEmail,
+    secondaryEmails: data.secondaryEmails,
+    adminEmails: data.adminEmails,
+    subject: mailSubject,
+    text: adminText,
+    html: brandedEmailHtml({
+      title: "New membership application",
+      bodyHtml: fieldsTable(MEMBERSHIP_FIELD_LABELS.map(([key, label]) => [label, fields[key]])),
+    }),
+    replyTo: fields.email || DEFAULT_ADMIN_EMAIL,
+    confirm: fields.email
+      ? {
+          to: fields.email,
+          subject: "We've received your membership application — FFIEMC",
+          text: applicantCopy,
+          html: brandedEmailHtml({ title: "Application received", bodyText: applicantCopy }),
+        }
+      : undefined,
+  });
 }
 
-/** Volunteer application: notify team + site admins, confirm to applicant. */
 export function buildVolunteerApplicantConfirmation({
   fullName,
   teamName,
@@ -581,7 +687,7 @@ export function buildVolunteerApplicantConfirmation({
   const team = teamName || "our volunteer team";
   return (
     `Dear ${first},\n\n` +
-    `Thank you for registering your interest in serving with the ${team} at Fire-Fire International Evangelical Church.\n\n` +
+    `Thank you for registering your interest in serving with the ${team} at ${FROM_DISPLAY}.\n\n` +
     `APPLICATION RECEIVED\n` +
     `--------------------\n` +
     `Name: ${fullName || "—"}\n` +
@@ -592,12 +698,8 @@ export function buildVolunteerApplicantConfirmation({
     `1. Our team will review your application carefully.\n` +
     `2. You may receive a follow-up email if we need more information.\n` +
     `3. Once a decision is made, we will contact you by email.\n\n` +
-    `Please keep this email for your records. We appreciate your willingness to serve and look forward to connecting with you.\n\n` +
-    `God bless you.\n\n` +
-    `With warm regards,\n` +
-    `The ${team}\n` +
-    `Fire-Fire International Evangelical Church\n` +
-    `https://ffiem.org`
+    `Please keep this email for your records. We appreciate your willingness to serve.\n\n` +
+    `God bless you.\n\nWith warm regards,\nThe ${team}\n${FROM_DISPLAY}\n${SITE_URL}`
   );
 }
 
@@ -618,55 +720,58 @@ export async function sendVolunteerApplicationEmails({
   fallbackAdminEmail,
   emailSubjects,
 }) {
-  const recipients = resolveAdminNotifyEmails({
-    adminEmails,
-    adminEmail,
-    secondaryEmails,
-    fallbackAdminEmail,
-  });
-
   const applicantCopy = buildVolunteerApplicantConfirmation({
     fullName,
     teamName,
     roleInterest,
     branchName,
   });
-
   const mailSubject = subjectFromSettings(
     { emailSubjects },
     "volunteer",
     { teamName, fullName, role: roleInterest }
   );
+  const adminText =
+    `New volunteer application\n\nName: ${fullName}\nEmail: ${email}\nPhone: ${phone || "—"}\n` +
+    `Team: ${teamName}\nRole: ${roleInterest || "—"}\nBranch: ${branchName || "—"}\n` +
+    `Skills: ${skills || "—"}\nExperience: ${experienceLevel || "—"}\n` +
+    `Availability: ${availability || "—"}\nNotes: ${notes || "—"}`;
 
-  return notifyAdminInboxes(
-    recipients,
-    {
-      name: fullName,
-      email,
-      phone: phone || "",
-      team: teamName,
-      role: roleInterest || "",
-      church_branch: branchName || "",
-      skills: skills || "",
-      experience_level: experienceLevel || "",
-      availability: availability || "",
-      notes: notes || "",
-      _subject: mailSubject,
-      _template: "table",
-      _captcha: "false",
-      _replyto: email || DEFAULT_ADMIN_EMAIL,
-    },
-    { autoresponse: applicantCopy }
-  );
+  return sendViaSupabaseEmail({
+    purpose: "volunteer",
+    notifyAdmins: true,
+    adminEmail: adminEmail || fallbackAdminEmail,
+    adminEmails,
+    secondaryEmails,
+    subject: mailSubject,
+    text: adminText,
+    html: brandedEmailHtml({
+      title: "New volunteer application",
+      bodyHtml: fieldsTable([
+        ["Name", fullName],
+        ["Email", email],
+        ["Phone", phone],
+        ["Team", teamName],
+        ["Role interest", roleInterest],
+        ["Branch", branchName],
+        ["Skills", skills],
+        ["Experience", experienceLevel],
+        ["Availability", availability],
+        ["Notes", notes],
+      ]),
+    }),
+    replyTo: email || DEFAULT_ADMIN_EMAIL,
+    confirm: email
+      ? {
+          to: email,
+          subject: `We've received your ${teamName || "volunteer"} application`,
+          text: applicantCopy,
+          html: brandedEmailHtml({ title: "Application received", bodyText: applicantCopy }),
+        }
+      : undefined,
+  });
 }
 
-/**
- * Admin follow-up to a volunteer applicant.
- * Posts to the activated admin inbox (FormSubmit destination), and delivers the
- * actual follow-up to the applicant via `_autoresponse` (FormSubmit sends that
- * to the form `email` field). Avoids posting directly to unactivated Gmail addresses,
- * which often fails with "Failed to fetch" / activation walls.
- */
 export async function sendVolunteerFollowUpEmail({
   toEmail,
   applicantName,
@@ -681,40 +786,21 @@ export async function sendVolunteerFollowUpEmail({
   if (!(body || "").trim()) throw new Error("Message body is required");
 
   const first = (applicantName || "").split(" ")[0] || applicantName || "Friend";
-  const fromName = adminName || `${teamName} · Fire-Fire International Evangelical Church`;
-  const adminInbox = (replyToEmail || DEFAULT_ADMIN_EMAIL).trim() || DEFAULT_ADMIN_EMAIL;
-  const mailSubject =
-    subject || `Follow-up on your ${teamName} volunteer application`;
-
+  const fromName = adminName || `${teamName} · ${FROM_DISPLAY}`;
+  const mailSubject = subject || `Follow-up on your ${teamName} volunteer application`;
   const applicantMessage =
-    `Dear ${first},\n\n` +
-    `${body.trim()}\n\n` +
-    `— ${fromName}\n` +
-    `Fire-Fire International Evangelical Church\n` +
-    `https://ffiem.org`;
+    `Dear ${first},\n\n${body.trim()}\n\n— ${fromName}\n${FROM_DISPLAY}\n${SITE_URL}`;
 
-  return postFormSubmit(adminInbox, {
-    name: fromName,
-    email: applicant,
-    applicant_name: applicantName || "",
-    team: teamName,
-    _subject: mailSubject,
-    _template: "box",
-    _captcha: "false",
-    _replyto: adminInbox,
-    _cc: applicant,
-    message:
-      `Follow-up email for volunteer applicant.\n` +
-      `To: ${applicant} (${applicantName || "—"})\n` +
-      `Team: ${teamName}\n\n` +
-      `--- Message delivered to applicant ---\n${applicantMessage}`,
-    _autoresponse: applicantMessage,
+  return sendViaSupabaseEmail({
+    purpose: "volunteer_followup",
+    to: applicant,
+    subject: mailSubject,
+    text: applicantMessage,
+    html: brandedEmailHtml({ title: mailSubject, bodyText: applicantMessage }),
+    replyTo: replyToEmail || DEFAULT_ADMIN_EMAIL,
   });
 }
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** Send a single member announcement email via FormSubmit. */
 export async function sendMemberAnnouncementEmail({
   toEmail,
   fullName,
@@ -722,46 +808,32 @@ export async function sendMemberAnnouncementEmail({
   title,
   body,
   programTitle = "",
-  fromName = "Fire-Fire International Evangelical Church",
+  fromName = FROM_DISPLAY,
   replyToEmail = DEFAULT_ADMIN_EMAIL,
 }) {
   if (!toEmail) throw new Error("Recipient email is required");
   const first = (fullName || "").split(" ")[0] || fullName || "Friend";
   const programLine = programTitle ? `\n\nProgram: ${programTitle}` : "";
-  const adminInbox = (replyToEmail || DEFAULT_ADMIN_EMAIL).trim();
-  const message =
-    `Hi ${first},\n\n${body}${programLine}\n\n` +
-    `— ${fromName}`;
-
-  return postFormSubmit(adminInbox, {
-    name: fromName,
-    email: toEmail,
-    _subject: subject || title || "Church announcement",
-    _template: "box",
-    _captcha: "false",
-    _replyto: adminInbox,
-    _cc: toEmail,
-    message: `Member announcement to ${toEmail}\n\n---\n${message}`,
-    _autoresponse: message,
+  const message = `Hi ${first},\n\n${body}${programLine}\n\n— ${fromName}`;
+  return sendViaSupabaseEmail({
+    purpose: "member_announcement",
+    to: toEmail,
+    subject: subject || title || "Church announcement",
+    text: message,
+    html: brandedEmailHtml({ title: subject || title || "Church announcement", bodyText: message }),
+    replyTo: replyToEmail || DEFAULT_ADMIN_EMAIL,
   });
 }
 
-/**
- * Send SMS via configured provider (Termii-compatible API).
- * Set REACT_APP_SMS_API_URL and REACT_APP_SMS_API_KEY in .env
- */
 export async function sendMemberAnnouncementSms({ toPhone, message }) {
   const apiUrl = process.env.REACT_APP_SMS_API_URL;
   const apiKey = process.env.REACT_APP_SMS_API_KEY;
   const senderId = process.env.REACT_APP_SMS_SENDER_ID || "FFIEMC";
-
   if (!apiUrl || !apiKey) {
     throw new Error("SMS is not configured. Add REACT_APP_SMS_API_URL and REACT_APP_SMS_API_KEY.");
   }
-
   const phone = String(toPhone || "").replace(/\s+/g, "");
   if (!phone) throw new Error("Recipient phone is required");
-
   const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
@@ -777,7 +849,6 @@ export async function sendMemberAnnouncementSms({ toPhone, message }) {
       channel: "generic",
     }),
   });
-
   if (!response.ok) {
     const errBody = await response.json().catch(() => ({}));
     throw new Error(errBody.message || errBody.error || "SMS delivery failed");
@@ -785,12 +856,7 @@ export async function sendMemberAnnouncementSms({ toPhone, message }) {
   return response.json();
 }
 
-/** Deliver a batch of member notification deliveries with rate limiting. */
-export async function deliverMemberNotifications({
-  notification,
-  deliveries,
-  onProgress,
-}) {
+export async function deliverMemberNotifications({ notification, deliveries, onProgress }) {
   const results = [];
   const title = notification?.title || "";
   const subject = notification?.subject || notification?.title || "";
@@ -799,13 +865,7 @@ export async function deliverMemberNotifications({
 
   for (let i = 0; i < deliveries.length; i += 1) {
     const row = deliveries[i];
-    const base = {
-      delivery_id: row.id,
-      channel: row.channel,
-      status: "failed",
-      error_message: "",
-    };
-
+    const base = { delivery_id: row.id, channel: row.channel, status: "failed", error_message: "" };
     try {
       if (row.channel === "email") {
         await sendMemberAnnouncementEmail({
@@ -827,51 +887,41 @@ export async function deliverMemberNotifications({
     } catch (err) {
       results.push({ ...base, error_message: err.message || "Delivery failed" });
     }
-
     if (onProgress) onProgress(i + 1, deliveries.length);
-    if (row.channel === "email") await delay(1200);
-    else await delay(400);
+    await delay(row.channel === "email" ? 400 : 400);
   }
-
   return results;
 }
 
-/** Structured congratulations after membership is approved. */
 export async function sendMembershipApprovedEmail(data = {}) {
   const email = data.email;
   if (!email) return null;
   const first = firstNameFromMembership(data);
-  const siteUrl = data.siteUrl || "https://firefireintl.org";
+  const siteUrl = data.siteUrl || SITE_URL;
   const payload = { ...data, status: "approved" };
-
   const message = membershipPlainText(payload, {
     heading: "MEMBERSHIP CONFIRMED",
     intro:
-      `Dear ${first},\n\n` +
-      `Congratulations!\n\n` +
-      `Your membership application with Fire-Fire International Evangelical Church has been reviewed and approved. ` +
+      `Dear ${first},\n\nCongratulations!\n\n` +
+      `Your membership application with ${FROM_DISPLAY} has been reviewed and approved. ` +
       `You are now a bonafide member of the FFIEMC family.`,
     closing:
-      `We are glad to walk with you in faith, fellowship, and service. Stay connected for Sunday services, programmes, and church meetings.\n\n` +
+      `We are glad to walk with you in faith, fellowship, and service.\n\n` +
       `Visit our website: ${siteUrl}\n` +
-      `If you have any questions, reply to this email or write to info@firefireintl.org.\n\n` +
-      `May the Lord bless you and keep you.\n\n` +
-      `With love,\n` +
-      `The Leadership Team\n` +
-      `Fire-Fire International Evangelical Church`,
+      `If you have any questions, reply to this email or write to contact@ffiem.org.\n\n` +
+      `May the Lord bless you and keep you.\n\nWith love,\nThe Leadership Team\n${FROM_DISPLAY}`,
   });
 
-  return formSubmit(email, {
-    name: "Fire-Fire International Evangelical Church",
-    email: "info@firefireintl.org",
-    _subject: `Welcome to the FFIEMC family — your membership is approved`,
-    _template: "box",
-    _replyto: "info@firefireintl.org",
-    message,
+  return sendViaSupabaseEmail({
+    purpose: "membership_approved",
+    to: email,
+    subject: "Welcome to the FFIEMC family — your membership is approved",
+    text: message,
+    html: brandedEmailHtml({ title: "Membership approved", bodyText: message }),
+    replyTo: "contact@ffiem.org",
   });
 }
 
-/** Church meeting invite with join + calendar links. */
 export async function sendMeetingInviteEmail({
   toEmail,
   fullName,
@@ -881,30 +931,35 @@ export async function sendMeetingInviteEmail({
   meetUrl,
   calendarUrl,
   pageUrl,
-  fromName = "Fire-Fire International Evangelical Church",
+  fromName = FROM_DISPLAY,
 }) {
   if (!toEmail) throw new Error("Recipient email is required");
   const first = (fullName || "").split(" ")[0] || fullName || "Beloved";
-  return formSubmit(toEmail, {
-    name: fromName,
-    email: "info@firefireintl.org",
-    _subject: `You're invited: ${title}`,
-    _template: "box",
-    _replyto: "info@firefireintl.org",
-    message:
-      `Dear ${first},\n\n` +
-      `You are invited to a church meeting.\n\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `${title}\n` +
-      `When: ${whenLabel}\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `${description ? `${description}\n\n` : ""}` +
-      `JOIN THE MEETING\n${meetUrl || pageUrl}\n\n` +
-      `ADD TO YOUR CALENDAR\n` +
-      `Google Calendar: ${calendarUrl}\n` +
-      (pageUrl ? `Apple / Outlook (open page, then Download .ics): ${pageUrl}\n\n` : "\n") +
-      `We look forward to seeing you.\n\n` +
-      `— ${fromName}`,
+  const text =
+    `Dear ${first},\n\nYou are invited to a church meeting.\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━\n${title}\nWhen: ${whenLabel}\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+    `${description ? `${description}\n\n` : ""}` +
+    `JOIN THE MEETING\n${meetUrl || pageUrl}\n\n` +
+    `ADD TO YOUR CALENDAR\nGoogle Calendar: ${calendarUrl}\n` +
+    (pageUrl ? `Apple / Outlook (open page, then Download .ics): ${pageUrl}\n\n` : "\n") +
+    `We look forward to seeing you.\n\n— ${fromName}`;
+
+  return sendViaSupabaseEmail({
+    purpose: "meeting_invite",
+    to: toEmail,
+    subject: `You're invited: ${title}`,
+    text,
+    html: brandedEmailHtml({
+      title: "Meeting invitation",
+      bodyHtml:
+        fieldsTable([
+          ["Meeting", title],
+          ["When", whenLabel],
+          ["Join", meetUrl || pageUrl],
+          ["Calendar", calendarUrl],
+        ]) + plainToHtmlBlocks(description || ""),
+    }),
+    replyTo: "contact@ffiem.org",
   });
 }
 
@@ -929,12 +984,11 @@ export async function deliverMeetingInvites({ meeting, invites, calendarUrl, pag
       results.push({ ...base, error_message: err.message || "Delivery failed" });
     }
     if (onProgress) onProgress(i + 1, invites.length);
-    await delay(1200);
+    await delay(400);
   }
   return results;
 }
 
-/** Notify superadmin / church notification inbox of a public media contribution. */
 export async function sendMediaContributionSubmissionEmail({
   fullName,
   amount,
@@ -948,9 +1002,8 @@ export async function sendMediaContributionSubmissionEmail({
   adminEmails,
   emailSubjects,
 }) {
-  const recipients = resolveAdminNotifyEmails({ adminEmail, secondaryEmails, adminEmails });
   const money = `₦${Number(amount || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://ffiem.org";
+  const origin = typeof window !== "undefined" ? window.location.origin : SITE_URL;
   const auditUrl = `${origin}/admin/utilities/media-contributions`;
   const reportUrl = monthSlug ? `${origin}/contribute/media/${monthSlug}/report` : "";
   const paidOn = paymentDate
@@ -960,44 +1013,149 @@ export async function sendMediaContributionSubmissionEmail({
         year: "numeric",
       })
     : "—";
-
   const mailSubject = subjectFromSettings(
     { emailSubjects },
     "mediaContribution",
     { fullName, amount: money, monthLabel }
   );
+  const text =
+    `A social media team member submitted a contribution.\n\n` +
+    `Name: ${fullName}\nAmount: ${money}\nPayment date: ${paidOn}\nMonth: ${monthLabel || "—"}\n` +
+    `Note: ${note || "—"}\nReceipt: ${receiptUrl || "Not attached"}\n` +
+    (reportUrl ? `Report: ${reportUrl}\n` : "") +
+    `Admin: ${auditUrl}\n`;
 
-  return notifyAdminInboxes(recipients, {
-    name: fullName,
-    amount: money,
-    month: monthLabel || "",
-    payment_date: paidOn,
-    note: note || "",
-    receipt_url: receiptUrl || "Not attached",
-    report_url: reportUrl || "",
-    admin_audit: auditUrl,
-    _subject: mailSubject,
-    _template: "table",
-    _captcha: "false",
-    _replyto: DEFAULT_ADMIN_EMAIL,
-    message:
-      `A social media team member submitted a contribution via the payment link.\n\n` +
-      `Name: ${fullName}\n` +
-      `Amount: ${money}\n` +
-      `Payment date: ${paidOn}\n` +
-      `Month: ${monthLabel || "—"}\n` +
-      `Note: ${note || "—"}\n` +
-      `Receipt: ${receiptUrl || "Not attached"}\n` +
-      (reportUrl ? `Report: ${reportUrl}\n` : "") +
-      `Admin: ${auditUrl}\n`,
+  return sendViaSupabaseEmail({
+    purpose: "media_contribution",
+    notifyAdmins: true,
+    adminEmail,
+    secondaryEmails,
+    adminEmails,
+    subject: mailSubject,
+    text,
+    html: brandedEmailHtml({
+      title: "Media contribution received",
+      bodyHtml: fieldsTable([
+        ["Name", fullName],
+        ["Amount", money],
+        ["Payment date", paidOn],
+        ["Month", monthLabel],
+        ["Note", note],
+        ["Receipt", receiptUrl || "Not attached"],
+        ["Report", reportUrl],
+        ["Admin", auditUrl],
+      ]),
+    }),
+    replyTo: DEFAULT_ADMIN_EMAIL,
   });
 }
 
-/**
- * Admin compose: send a free-form email to one or more recipients.
- * Uses FormSubmit per recipient (same stack as other FFIEMC alerts).
- * Prefer Supabase Edge + Resend when REACT_APP_USE_EDGE_EMAIL=true (see supabase/functions/send-email).
- */
+export async function sendExperienceSurveySubmissionEmail({
+  surveyId,
+  name = "",
+  email = "",
+  overallRating,
+  averageComfort = null,
+  comfortScores = {},
+  improvements = "",
+  wishedFeatures = "",
+  feedbackText = "",
+  path = "/",
+  audience = "visitor",
+  adminEmail,
+  secondaryEmails,
+  adminEmails,
+  emailSubjects,
+}) {
+  // Prefer dedicated edge path when surveyId is available (idempotent notify)
+  const edgeUrl = process.env.REACT_APP_SUPABASE_URL;
+  const anonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+  if (edgeUrl && anonKey && surveyId) {
+    try {
+      const response = await fetch(`${edgeUrl}/functions/v1/notify-experience-survey`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${anonKey}`,
+          apikey: anonKey,
+        },
+        body: JSON.stringify({
+          surveyId,
+          siteOrigin: typeof window !== "undefined" ? window.location.origin : SITE_URL,
+          adminEmail,
+          secondaryEmails,
+        }),
+      });
+      if (response.ok) return response.json();
+    } catch {
+      /* fall through to generic send */
+    }
+  }
+
+  const displayName = String(name || "").trim() || "Anonymous visitor";
+  const rating = `${Number(overallRating) || "—"}`;
+  const avg =
+    averageComfort != null && Number.isFinite(Number(averageComfort))
+      ? String(averageComfort)
+      : "—";
+  const inboxUrl = `${typeof window !== "undefined" ? window.location.origin : SITE_URL}/admin/experience-surveys`;
+  const mailSubject = subjectFromSettings(
+    { emailSubjects },
+    "experienceSurvey",
+    { fullName: displayName, rating, averageComfort: avg }
+  );
+
+  const comfortLines = (SURVEY_FEATURES || [])
+    .map((feature) => {
+      const score = comfortScores?.[feature.key];
+      return `- ${feature.label}: ${score ?? "—"}/5`;
+    })
+    .join("\n");
+  const comfortFieldRows = (SURVEY_FEATURES || []).map((feature) => [
+    feature.label,
+    `${comfortScores?.[feature.key] ?? "—"}/5`,
+  ]);
+
+  const text =
+    `A new website experience survey was submitted.\n\n` +
+    `── Step 1: About you ──\n` +
+    `Name: ${displayName}\nEmail: ${String(email || "").trim() || "Not provided"}\n` +
+    `Audience: ${audience || "visitor"}\nPage: ${path || "/"}\n\n` +
+    `── Step 2: Comfort with each area (1–5) ──\n${comfortLines || "(none)"}\n` +
+    `Average comfort: ${avg}/5\n\n` +
+    `── Step 3: Overall experience ──\nOverall rating: ${rating}/5\n\n` +
+    `── Step 4: What to improve ──\n${String(improvements || "").trim() || "(none)"}\n\n` +
+    `── Step 5: Features they would like ──\n${String(wishedFeatures || "").trim() || "(none)"}\n\n` +
+    `Review: ${inboxUrl}\n`;
+
+  return sendViaSupabaseEmail({
+    purpose: "experience_survey",
+    notifyAdmins: true,
+    adminEmail,
+    secondaryEmails,
+    adminEmails,
+    subject: mailSubject,
+    text,
+    html: brandedEmailHtml({
+      title: "New experience survey",
+      bodyHtml:
+        fieldsTable([
+          ["Name", displayName],
+          ["Email", email || "Not provided"],
+          ["Audience", audience],
+          ["Page", path],
+          ...comfortFieldRows,
+          ["Average comfort", `${avg}/5`],
+          ["Overall rating", `${rating}/5`],
+          ["Improvements", improvements || "(none)"],
+          ["Wished features", wishedFeatures || "(none)"],
+          ["Admin", inboxUrl],
+        ]) + plainToHtmlBlocks(feedbackText || ""),
+    }),
+    replyTo: String(email || "").trim() || DEFAULT_ADMIN_EMAIL,
+  });
+}
+
 export async function sendAdminComposedEmail({
   to,
   cc = "",
@@ -1011,51 +1169,16 @@ export async function sendAdminComposedEmail({
   if (!String(subject || "").trim()) throw new Error("Subject is required");
   if (!String(body || "").trim()) throw new Error("Message body is required");
 
-  const edgeUrl = process.env.REACT_APP_SUPABASE_URL;
-  const useEdge = String(process.env.REACT_APP_USE_EDGE_EMAIL || "").toLowerCase() === "true";
-
-  if (useEdge && edgeUrl) {
-    const { getAdminToken } = await import("./api");
-    const token = typeof getAdminToken === "function" ? getAdminToken() : "";
-    const response = await fetch(`${edgeUrl}/functions/v1/send-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token || process.env.REACT_APP_SUPABASE_ANON_KEY || ""}`,
-      },
-      body: JSON.stringify({
-        to: recipients,
-        subject: subject.trim(),
-        text: body.trim(),
-        fromName,
-        replyTo: replyToEmail,
-      }),
-    });
-    if (!response.ok) {
-      const errBody = await response.json().catch(() => ({}));
-      throw new Error(errBody.error || errBody.message || "Edge email send failed");
-    }
-    return response.json();
-  }
-
-  let last;
-  for (let i = 0; i < recipients.length; i += 1) {
-    const recipient = recipients[i];
-    // Post through activated admin inbox; deliver to recipient via autoresponse + CC
-    last = await postFormSubmit(replyToEmail || DEFAULT_ADMIN_EMAIL, {
-      name: fromName,
-      email: recipient,
-      _subject: subject.trim(),
-      _template: "box",
-      _captcha: "false",
-      _replyto: replyToEmail || DEFAULT_ADMIN_EMAIL,
-      _cc: recipient,
-      message:
-        `Admin composed email.\nTo: ${recipient}\n\n--- Message ---\n${body.trim()}`,
-      _autoresponse: body.trim(),
-    });
-  }
-  return last;
+  return sendViaSupabaseEmail({
+    purpose: "compose",
+    to: recipients,
+    subject: subject.trim(),
+    text: body.trim(),
+    html: brandedEmailHtml({
+      title: subject.trim(),
+      preheader: fromName,
+      bodyText: body.trim(),
+    }),
+    replyTo: replyToEmail,
+  });
 }
-
-

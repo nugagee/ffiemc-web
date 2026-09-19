@@ -9,6 +9,7 @@ import { ADMIN_NAV, withProgramRegistrationNav } from "../../data/adminNav";
 import { NestedNav } from "../../components/admin/NestedNav";
 import { AdminCountsProvider, useAdminCounts } from "../../context/AdminCountsContext";
 import { AdminActivityTracker } from "../../components/AdminActivityTracker";
+import { AdminNotificationBell } from "../../components/admin/AdminNotificationBell";
 import {
   Home,
   BookOpen,
@@ -262,21 +263,31 @@ function AdminLayoutInner() {
       </aside>
 
       <div className="flex-1 min-w-0 h-[100dvh] overflow-y-auto">
-        <header className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-3 py-2.5 bg-gray-950 text-white border-b border-white/10">
+        <header className="sticky top-0 z-30 flex items-center gap-3 px-3 py-2.5 bg-gray-950 text-white border-b border-white/10 md:bg-white md:text-gray-900 md:border-gray-200 md:px-5 md:py-3">
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            className="h-10 w-10 inline-flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/15"
+            className="md:hidden h-10 w-10 inline-flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/15"
             aria-label="Open menu"
           >
             <Menu size={20} />
           </button>
           <div className="min-w-0 flex-1 flex items-center gap-2">
-            <ChurchLogo src={settings.logo} className="h-8 w-8 rounded-full object-cover bg-white p-0.5 shrink-0" />
-            <div className="min-w-0">
+            <ChurchLogo src={settings.logo} className="md:hidden h-8 w-8 rounded-full object-cover bg-white p-0.5 shrink-0" />
+            <div className="min-w-0 md:hidden">
               <div className="font-semibold text-sm truncate">FFIEMC Admin</div>
               <div className="text-[10px] uppercase tracking-wider text-white/50 truncate">{user?.role}</div>
             </div>
+            <div className="hidden md:block min-w-0">
+              <div className="text-sm font-semibold text-gray-900 truncate">Admin workspace</div>
+              <div className="text-[11px] text-gray-500 truncate capitalize">{user?.role}</div>
+            </div>
+          </div>
+          <div className="md:hidden">
+            <AdminNotificationBell variant="dark" />
+          </div>
+          <div className="hidden md:block">
+            <AdminNotificationBell variant="light" />
           </div>
         </header>
 

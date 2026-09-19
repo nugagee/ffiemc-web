@@ -25,8 +25,8 @@ export const ADMIN_NAV = [
     matchPrefix: ["/admin/contacts", "/admin/website", "/admin/experience-surveys"],
     anyOf: [{ feature: "contacts" }, { feature: "contact.church" }, { feature: "experience_surveys" }],
     children: [
-      { id: "contacts-inbox", to: "/admin/contacts", label: "Inbox", icon: "Inbox", end: true, feature: "contacts" },
-      { id: "experience-surveys", to: "/admin/experience-surveys", label: "Experience surveys", icon: "MessageSquareHeart", end: true, feature: "experience_surveys" },
+      { id: "contacts-inbox", to: "/admin/contacts", label: "Inbox", icon: "Inbox", end: true, feature: "contacts", badgeKey: "contacts_new" },
+      { id: "experience-surveys", to: "/admin/experience-surveys", label: "Experience surveys", icon: "MessageSquareHeart", end: true, feature: "experience_surveys", badgeKey: "surveys_new" },
       { id: "contacts-email-settings", to: "/admin/website", label: "Email & church settings", icon: "Settings", end: true, feature: "contact.church", action: "edit" },
     ],
   },
@@ -64,7 +64,7 @@ export const ADMIN_NAV = [
     anyOf: [{ feature: "prayer.inbox" }, { feature: "prayer" }],
     pastor: true,
     children: [
-      { id: "prayer-inbox", to: "/admin/prayer", label: "Requests", icon: "HandHeart", end: true, feature: "prayer.inbox" },
+      { id: "prayer-inbox", to: "/admin/prayer", label: "Requests", icon: "HandHeart", end: true, feature: "prayer.inbox", badgeKey: "prayer_unseen" },
       { id: "prayer-pastors", to: "/admin/prayer/pastors", label: "Pastors", icon: "Users", end: true, feature: "prayer.pastors", action: "edit", hideForPastor: true },
       { id: "prayer-page", to: "/admin/pages/prayer", label: "Page content", icon: "FileText", end: true, feature: "prayer", hideForPastor: true },
     ],
@@ -122,7 +122,7 @@ export const ADMIN_NAV = [
         anyOf: [{ feature: "church_members" }, { feature: "form_dropdowns" }],
         children: [
           { id: "reg-members-pending", to: "/admin/registrations/members/pending", label: "Pending", icon: "Clock", end: true, feature: "church_members", badgeKey: "members_pending" },
-          { id: "reg-members-approved", to: "/admin/registrations/members/approved", label: "Approved", icon: "CheckCircle2", end: true, feature: "church_members", badgeKey: "members_approved" },
+          { id: "reg-members-approved", to: "/admin/registrations/members/approved", label: "Approved", icon: "CheckCircle2", end: true, feature: "church_members" },
           { id: "reg-members-list", to: "/admin/registrations/members", label: "All members", icon: "Users", end: true, feature: "church_members" },
           { id: "reg-form-options", to: "/admin/registrations/form-options", label: "Form dropdowns", icon: "List", end: true, anyOf: [{ feature: "form_dropdowns" }, { feature: "church_members" }] },
         ],

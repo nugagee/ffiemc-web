@@ -100,7 +100,7 @@ export function VolunteerApplicationMessages({ application, canEdit }) {
     } catch (err) {
       toast.error(
         formatApiError(err.message) ||
-          "Could not send / save message. If you see Failed to fetch, disable ad blockers and confirm FormSubmit is activated for your primary admin email."
+          "Could not send / save message. Check your connection and that Resend / Supabase email is configured."
       );
     } finally {
       setSending(false);

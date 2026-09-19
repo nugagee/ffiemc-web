@@ -1,10 +1,12 @@
-/** Default FormSubmit / outbound email subject templates. Use {placeholders}. */
+/** Default outbound email subject templates (Resend / Edge). Use {placeholders}. */
 export const DEFAULT_EMAIL_SUBJECTS = {
   contact: "New FFIEMC website enquiry: {subject}",
   volunteer: "New volunteer application — {teamName} — {fullName}",
   testimony: "New testimony submission from {fullName}",
+  prayer: "New prayer request — {category} — {fullName}",
   membership: "New church membership registration — {fullName}",
   mediaContribution: "Media contribution received — {fullName} ({amount})",
+  experienceSurvey: "New website experience survey — {rating}/5 — {fullName}",
   compose: "{subject}",
 };
 
@@ -25,6 +27,11 @@ export const EMAIL_SUBJECT_FIELDS = [
     hint: "Placeholders: {fullName}, {title}",
   },
   {
+    key: "prayer",
+    label: "Prayer request",
+    hint: "Placeholders: {fullName}, {category}",
+  },
+  {
     key: "membership",
     label: "Church membership",
     hint: "Placeholders: {fullName}",
@@ -33,6 +40,11 @@ export const EMAIL_SUBJECT_FIELDS = [
     key: "mediaContribution",
     label: "Media contribution",
     hint: "Placeholders: {fullName}, {amount}, {monthLabel}",
+  },
+  {
+    key: "experienceSurvey",
+    label: "Experience survey",
+    hint: "Placeholders: {fullName}, {rating}, {averageComfort}",
   },
 ];
 

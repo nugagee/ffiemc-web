@@ -87,6 +87,8 @@ import { BlogPreview } from "../pages/BlogPreview";
 import { NetworkStatus } from "../components/NetworkStatus";
 import { ContentPostAlert } from "../components/ContentPostAlert";
 import { ExperienceSurveyPrompt } from "../features/experienceSurvey/ExperienceSurveyPrompt";
+import { ScrollToTop } from "../components/ScrollToTop";
+import { ScrollToTopButton } from "../components/ScrollToTopButton";
 
 const PublicShell = () => {
   const location = useLocation();
@@ -95,6 +97,7 @@ const PublicShell = () => {
 
   return (
     <div className={`${isAdminShell ? "h-screen overflow-hidden" : "min-h-screen w-full max-w-full overflow-x-hidden"} flex flex-col bg-white`}>
+      <ScrollToTop />
       {!isAdminShell && <VisitorTracker />}
       {!isAdminShell && <StickyEventBanner />}
       {!isAdminShell && (
@@ -110,6 +113,7 @@ const PublicShell = () => {
         <Outlet />
       </main>
       {!isAdminShell && <Footer />}
+      {!isAdminShell && <ScrollToTopButton />}
       <Toaster richColors position="top-right" />
       <NetworkStatus />
     </div>

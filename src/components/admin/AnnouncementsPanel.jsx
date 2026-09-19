@@ -17,10 +17,11 @@ import {
 } from "../ui/dialog";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import ImageUrlField from "./ImageUrlField";
+import BannerImagesField from "./BannerImagesField";
 import { PageToolbar } from "./PageToolbar";
 import { MonthWelcomeBannerPanel } from "./MonthWelcomeBannerPanel";
 import { FacebookLivePanel } from "./FacebookLivePanel";
+import { announcementImageList } from "../../lib/announcementImage";
 
 function toLocalInput(value) {
   if (!value) return "";
@@ -55,6 +56,9 @@ const emptyForm = () => ({
   title: "",
   body: "",
   image: "",
+  images: [],
+  image_shuffle: "weekly",
+  sticky_always: false,
   link_url: "",
   link_text: "Learn more",
   starts_at: toLocalInput(new Date().toISOString()),
@@ -89,6 +93,7 @@ const placementLabel = {
 
 const repeatLabel = {
   none: "One-time window",
+  daily: "Daily",
   weekly: "Weekly",
   monthly: "Monthly",
   yearly: "Yearly",
@@ -115,12 +120,34 @@ function BannerFields({ form, setForm, idPrefix }) {
         />
       </div>
       {usesPopup && (
-        <ImageUrlField
-          id={`${idPrefix}-image`}
-          label="Popup image / flyer"
-          value={form.image}
-          onChange={(v) => setForm({ ...form, image: v })}
-        />
+        <>
+          <BannerImagesField
+            idPrefix={idPrefix}
+            images={form.images || []}
+            onChange={(next) =>
+              setForm({
+                ...form,
+                images: next,
+                image: (next.find((u) => String(u || "").trim()) || "").trim(),
+              })
+            }
+          />
+          <div className="space-y-2">
+            <Label>Image shuffle</Label>
+            <select
+              className={selectClass}
+              value={form.image_shuffle || "weekly"}
+              onChange={(e) => setForm({ ...form, image_shuffle: e.target.value })}
+            >
+              <option value="weekly">Rotate weekly (ISO week)</option>
+              <option value="session">Rotate per browser session</option>
+              <option value="none">Always show first image</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              With 2+ flyers, weekly mode shows a different image each week. Add more images anytime.
+            </p>
+          </div>
+        </>
       )}
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -154,6 +181,7 @@ function BannerFields({ form, setForm, idPrefix }) {
             onChange={(e) => setForm({ ...form, repeat_interval: e.target.value })}
           >
             <option value="none">One-time (between start and end)</option>
+            <option value="daily">Daily (same time window every day)</option>
             <option value="weekly">Weekly (same weekday as start)</option>
             <option value="monthly">Monthly (same date each month)</option>
             <option value="yearly">Yearly (same month and day)</option>
@@ -272,6 +300,20 @@ function BannerFields({ form, setForm, idPrefix }) {
             onCheckedChange={(v) => setForm({ ...form, is_active: Boolean(v) })}
           />
         </div>
+        {usesSticky && (
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Sticky every day</p>
+              <p className="text-xs text-gray-500">
+                Keep the marquee visible daily while the popup still follows the weekly/daily schedule
+              </p>
+            </div>
+            <Switch
+              checked={Boolean(form.sticky_always)}
+              onCheckedChange={(v) => setForm({ ...form, sticky_always: Boolean(v) })}
+            />
+          </div>
+        )}
         {usesPopup && (
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -291,10 +333,15 @@ function BannerFields({ form, setForm, idPrefix }) {
 
 function payloadFromForm(form) {
   const popupMode = form.popup_mode || (form.show_once ? "once" : "every_visit");
+  const images = (form.images || []).map((u) => String(u || "").trim()).filter(Boolean);
+  const image = images[0] || String(form.image || "").trim();
   return {
     title: form.title,
     body: form.body,
-    image: form.image,
+    image,
+    images,
+    image_shuffle: form.image_shuffle || "weekly",
+    sticky_always: Boolean(form.sticky_always),
     link_url: form.link_url,
     link_text: form.link_text,
     starts_at: fromLocalInput(form.starts_at) || new Date().toISOString(),
@@ -364,12 +411,16 @@ export function AnnouncementsPanel() {
   };
 
   const openEdit = (item) => {
+    const images = announcementImageList(item);
     setEditing(item);
     setDrafts([
       {
         title: item.title || "",
         body: item.body || "",
-        image: item.image || "",
+        image: images[0] || item.image || "",
+        images,
+        image_shuffle: item.image_shuffle || "weekly",
+        sticky_always: Boolean(item.sticky_always),
         link_url: item.link_url || "",
         link_text: item.link_text || "Learn more",
         starts_at: toLocalInput(item.starts_at),
@@ -446,7 +497,7 @@ export function AnnouncementsPanel() {
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Banners</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Popup flyers and a sticky marquee above the navbar. Set location, schedule, and weekly / monthly / yearly repeat. Create several at once with different intervals.
+              Popup flyers and a sticky marquee above the navbar. Schedule weekly popups (e.g. Saturday evening / Monday), keep sticky visible every day, and upload multiple flyers to shuffle each week.
             </p>
           </div>
         )}
@@ -466,11 +517,13 @@ export function AnnouncementsPanel() {
         <div className="space-y-3">
           {items.map((item) => {
             const status = statusOf(item);
+            const thumbs = announcementImageList(item);
+            const thumb = thumbs[0] || item.image;
             return (
               <Card key={item.id} className="p-4 flex flex-wrap items-start gap-4">
-                {item.image ? (
+                {thumb ? (
                   <img
-                    src={item.image}
+                    src={thumb}
                     alt=""
                     className="w-20 h-20 rounded-lg object-cover shrink-0"
                   />
@@ -484,6 +537,10 @@ export function AnnouncementsPanel() {
                     <Badge variant="outline">{placementLabel[item.placement] || "Popup"}</Badge>
                     {item.repeat_interval && item.repeat_interval !== "none" && (
                       <Badge variant="secondary">{repeatLabel[item.repeat_interval]}</Badge>
+                    )}
+                    {item.sticky_always && <Badge variant="secondary">Sticky daily</Badge>}
+                    {thumbs.length > 1 && (
+                      <Badge variant="outline">{thumbs.length} flyers · {item.image_shuffle || "weekly"}</Badge>
                     )}
                     <Badge variant="outline">
                       {item.display_scope === "site" ? "Site-wide" : "Homepage"}

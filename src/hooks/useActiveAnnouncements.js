@@ -2,9 +2,18 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { getSupabase, isSupabaseConfigured } from "../lib/supabase";
 
+/** Re-check schedules so Saturday 18:00 / Monday windows open without a full page refresh. */
+const REFRESH_MS = 60_000;
+
 export function useActiveAnnouncements(placement) {
   const location = useLocation();
   const [items, setItems] = useState([]);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((n) => n + 1), REFRESH_MS);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !getSupabase()) return;
@@ -44,7 +53,7 @@ export function useActiveAnnouncements(placement) {
     return () => {
       cancelled = true;
     };
-  }, [location.pathname, placement]);
+  }, [location.pathname, placement, tick]);
 
   return items;
 }

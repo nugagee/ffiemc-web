@@ -86,7 +86,7 @@ export default function ComposeEmailPage() {
         <h1 className="text-3xl font-bold mt-2">Compose</h1>
         <p className="text-sm text-gray-500 mt-2 max-w-2xl">
           Send a new email from the admin platform. Recipients get the message via your configured email delivery
-          (FormSubmit today; Resend/Supabase Edge can be enabled later).
+          Emails are sent through Supabase Edge + Resend using your verified domain.
         </p>
       </div>
 
@@ -181,7 +181,7 @@ export default function ComposeEmailPage() {
               </Button>
               <p className="text-[10px] text-gray-400 flex items-center gap-1">
                 <Paperclip className="h-3 w-3" />
-                Attachments via FormSubmit not supported yet
+                Attachments are not supported in compose yet
               </p>
             </div>
           </form>

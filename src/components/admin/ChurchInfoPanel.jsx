@@ -169,7 +169,7 @@ export const ChurchInfoPanel = () => {
         </CardHeader>
         <CardContent className="grid gap-4">
           <p className="text-xs text-gray-500">
-            Customize the subject line FormSubmit / outbound mail uses for each alert type.
+            Customize the subject line used for each outbound alert (sent via Supabase / Resend).
             Use placeholders like {'{fullName}'} — they are filled automatically.
           </p>
           {EMAIL_SUBJECT_FIELDS.map((field) => (

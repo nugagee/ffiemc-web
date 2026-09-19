@@ -37,7 +37,7 @@ export const Ministries = () => {
 
       <BibleSchoolSection />
 
-      <section className="py-16 bg-gray-50 border-t border-gray-100" id="departments">
+      <section className="py-16 bg-gray-50 border-t border-gray-100 scroll-mt-24" id="departments">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 space-y-3">
             <Badge className="bg-red-100 text-red-700 hover:bg-red-100">{departmentsCopy.badge}</Badge>

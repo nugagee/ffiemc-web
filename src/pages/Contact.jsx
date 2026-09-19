@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -380,19 +381,23 @@ export const Contact = () => {
               Our pastoral team is available 24/7 for crisis support and prayer.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
+              <Button
+                asChild
+                size="lg"
                 className="bg-white text-red-600 hover:bg-gray-100 px-8 py-6 text-lg font-semibold"
               >
-                <Phone className="h-5 w-5 mr-2" />
-                Emergency Line
+                <a href={`tel:${String(settings.phone || '+2348162674805').replace(/\s+/g, '')}`}>
+                  <Phone className="h-5 w-5 mr-2" />
+                  Emergency Line
+                </a>
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                asChild
+                variant="outline"
                 size="lg"
                 className="border-2 border-white text-white hover:bg-white hover:text-red-600 px-8 py-6 text-lg font-semibold"
               >
-                Request Prayer
+                <Link to="/prayer-request">Request Prayer</Link>
               </Button>
             </div>
           </div>

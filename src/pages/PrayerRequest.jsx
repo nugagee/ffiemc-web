@@ -13,6 +13,7 @@ import { Heart, Send } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
 import { BranchSelect } from '../components/programs/BranchSelect';
+import { sendPrayerSubmissionEmails } from '../lib/email';
 
 export const PrayerRequest = () => {
   const { settings } = useSettings();
@@ -32,6 +33,16 @@ export const PrayerRequest = () => {
     setSubmitting(true);
     try {
       await api.post('/prayer-requests', form);
+      try {
+        await sendPrayerSubmissionEmails({
+          ...form,
+          adminEmail: settings.notificationEmail || 'adenugaolajideadewale@gmail.com',
+          secondaryEmails: settings.secondaryNotificationEmails,
+          emailSubjects: settings.emailSubjects,
+        });
+      } catch (emailErr) {
+        console.warn('Prayer email failed:', emailErr.message);
+      }
       toast.success("Your prayer request has been received. Our team will be praying for you.");
       setForm({ name: '', email: '', phone: '', category: defaultCategory, request: '', is_public: false, branch_id: '' });
     } catch (err) {

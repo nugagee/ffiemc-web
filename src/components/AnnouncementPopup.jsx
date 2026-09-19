@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useActiveAnnouncements } from "../hooks/useActiveAnnouncements";
 import { usePopupPriority } from "../context/PopupPriorityContext";
 import { trackBannerEvent } from "../lib/bannerTrack";
+import { pickAnnouncementImage } from "../lib/announcementImage";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -56,6 +57,7 @@ export function AnnouncementPopup() {
   const [betweenPopupsMs, setBetweenPopupsMs] = useState(null);
 
   const item = eligible.find((row) => !closedVisit[row.id]) || null;
+  const displayImage = useMemo(() => (item ? pickAnnouncementImage(item) : ""), [item]);
 
   // Fresh homepage visit: reset visit dismissals and wait for delay before first popup.
   useEffect(() => {
@@ -83,7 +85,7 @@ export function AnnouncementPopup() {
 
   useEffect(() => {
     setOrientation("unknown");
-  }, [item?.id, item?.image]);
+  }, [item?.id, displayImage]);
 
   useEffect(() => {
     if (dialogOpen && item) trackBannerEvent(item.id, "view");
@@ -131,7 +133,7 @@ export function AnnouncementPopup() {
       ? "max-w-3xl"
       : orientation === "portrait"
         ? "max-w-md sm:max-w-lg"
-        : item.image
+        : displayImage
           ? "max-w-xl"
           : "max-w-lg";
 
@@ -145,10 +147,10 @@ export function AnnouncementPopup() {
       <DialogContent
         className={`p-0 overflow-hidden gap-0 rounded-2xl [&>button]:right-3 [&>button]:top-3 [&>button]:z-20 max-h-[min(78dvh,100%)] sm:max-h-[min(88dvh,100%)] flex flex-col ${dialogWidth}`}
       >
-        {item.image ? (
+        {displayImage ? (
           <div className="w-full bg-neutral-950 shrink-0 flex items-center justify-center">
             <img
-              src={item.image}
+              src={displayImage}
               alt=""
               onLoad={(e) => {
                 const img = e.currentTarget;

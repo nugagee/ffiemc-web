@@ -166,10 +166,11 @@ code {
 .ffiemc-marquee-track {
   display: flex;
   width: max-content;
-  animation: ffiemc-marquee-ltr 28s linear infinite;
+  animation: ffiemc-marquee-rtl 28s linear infinite;
 }
 
-.ffiemc-sticky-banner:hover .ffiemc-marquee-track {
+.ffiemc-sticky-banner:hover .ffiemc-marquee-track,
+.ffiemc-marquee-track:hover {
   animation-play-state: paused;
 }
 
@@ -184,12 +185,12 @@ code {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
-@keyframes ffiemc-marquee-ltr {
+@keyframes ffiemc-marquee-rtl {
   from {
-    transform: translateX(-50%);
+    transform: translateX(0);
   }
   to {
-    transform: translateX(0);
+    transform: translateX(-50%);
   }
 }
 
@@ -215,10 +216,59 @@ code {
   }
 }
 
+@keyframes admin-bell-buzz {
+  0%,
+  100% {
+    transform: rotate(0deg) translateX(0);
+  }
+  15% {
+    transform: rotate(-14deg) translateX(-1px);
+  }
+  30% {
+    transform: rotate(12deg) translateX(1px);
+  }
+  45% {
+    transform: rotate(-10deg) translateX(-1px);
+  }
+  60% {
+    transform: rotate(8deg) translateX(1px);
+  }
+  75% {
+    transform: rotate(-4deg);
+  }
+}
+
+@keyframes admin-bell-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(248, 113, 113, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(248, 113, 113, 0);
+  }
+}
+
+.admin-bell-buzz {
+  animation: admin-bell-buzz 0.55s ease-in-out infinite;
+}
+
+.admin-bell-pulse {
+  animation: admin-bell-buzz 0.55s ease-in-out infinite, admin-bell-pulse-ring 1.4s ease-out infinite;
+}
+
+.admin-bell-icon-shake {
+  transform-origin: top center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ffiemc-marquee-track,
   .ffiemc-sticky-shimmer,
-  .ffiemc-live-dot {
+  .ffiemc-live-dot,
+  .admin-bell-buzz,
+  .admin-bell-pulse,
+  .admin-bell-icon-shake {
     animation: none;
   }
 }
