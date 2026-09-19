@@ -156,7 +156,7 @@ export const Navbar = () => {
                 <Link to="/prayer-request">Prayer Request</Link>
               </Button>
               <Button asChild className="bg-red-600 hover:bg-red-700 text-white">
-                <Link to="/donate">Give</Link>
+                <Link to="/donate">Accounts</Link>
               </Button>
             </div>
 
@@ -260,7 +260,7 @@ export const Navbar = () => {
                   </Button>
                   <Button asChild className="w-full h-11 bg-red-600 hover:bg-red-700 text-white">
                     <Link to="/donate" onClick={() => setIsOpen(false)}>
-                      Give
+                    Accounts
                     </Link>
                   </Button>
                 </div>

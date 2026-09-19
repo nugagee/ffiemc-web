@@ -79,9 +79,9 @@ const Navbar = () => {
               );
             })}
           </ul>
-          <a href="#give" className="navbar__cta">
+          <Link to="/donate" className="navbar__cta">
             Give
-          </a>
+          </Link>
         </nav>
 
         {/* Mobile Menu Toggle */}
@@ -141,13 +141,13 @@ const Navbar = () => {
                 </motion.li>
               ))}
             </ul>
-            <a
-              href="#give"
+            <Link
+              to="/donate"
               onClick={() => setMenuOpen(false)}
               className="navbar__mobile-cta"
             >
               Give
-            </a>
+            </Link>
           </motion.nav>
         )}
       </AnimatePresence>
