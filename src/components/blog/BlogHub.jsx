@@ -166,6 +166,8 @@ export function ChurchResourceCards({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {items.map((item) => {
           const hasBody = Boolean(String(item.content || item.excerpt || "").trim());
+          const hasPdf = /\.pdf($|\?|#)/i.test(String(item.attachment_url || ""));
+          const canPreview = hasBody || hasPdf;
           return (
             <Card key={item.id} className="overflow-hidden border-0 shadow-lg">
               <div className="h-1.5 bg-gradient-to-r from-red-600 to-amber-500" />
@@ -182,25 +184,31 @@ export function ChurchResourceCards({
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div
-                  className="prose prose-sm max-w-none text-gray-700 line-clamp-6"
-                  dangerouslySetInnerHTML={{ __html: item.content || "" }}
-                />
+                {hasPdf ? (
+                  <p className="text-sm text-gray-600">
+                    Written study PDF available — preview online or download to keep a copy.
+                  </p>
+                ) : (
+                  <div
+                    className="prose prose-sm max-w-none text-gray-700 line-clamp-6"
+                    dangerouslySetInnerHTML={{ __html: item.content || "" }}
+                  />
+                )}
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
                     size="sm"
                     className="bg-red-600 hover:bg-red-700"
-                    disabled={!hasBody}
+                    disabled={!canPreview}
                     onClick={() => setPreview(item)}
                   >
-                    <Eye className="h-4 w-4 mr-2" /> Preview
+                    <Eye className="h-4 w-4 mr-2" /> {hasPdf ? "Preview PDF" : "Preview"}
                   </Button>
                   <ResourceDownloadMenu resource={item} />
                   {item.attachment_url ? (
                     <Button asChild size="sm" variant="outline">
-                      <a href={item.attachment_url} target="_blank" rel="noreferrer">
-                        <Download className="h-4 w-4 mr-2" /> Original file
+                      <a href={item.attachment_url} download={hasPdf || undefined} target="_blank" rel="noreferrer">
+                        <Download className="h-4 w-4 mr-2" /> {hasPdf ? "Download PDF" : "Original file"}
                       </a>
                     </Button>
                   ) : null}

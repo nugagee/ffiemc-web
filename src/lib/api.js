@@ -1064,6 +1064,37 @@ export const authApi = {
     if (!data?.publicUrl) throw new Error("Could not get image URL");
     return { url: data.publicUrl, path };
   },
+  /** PDF / Word / text documents for Bible Study & church resource attachments. */
+  uploadDocument: async (file) => {
+    assertConfigured();
+    const name = String(file.name || "document");
+    const ext = name.split(".").pop()?.toLowerCase() || "pdf";
+    const allowed = ["pdf", "doc", "docx", "txt", "md", "html", "htm"];
+    if (!allowed.includes(ext)) {
+      throw new Error("Upload a PDF, Word, or text document.");
+    }
+    const mime =
+      file.type ||
+      (ext === "pdf"
+        ? "application/pdf"
+        : ext === "doc"
+          ? "application/msword"
+          : ext === "docx"
+            ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            : ext === "html" || ext === "htm"
+              ? "text/html"
+              : "text/plain");
+    const path = `documents/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error } = await getSupabase().storage.from("media").upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: mime,
+    });
+    if (error) throw new Error(error.message);
+    const { data } = getSupabase().storage.from("media").getPublicUrl(path);
+    if (!data?.publicUrl) throw new Error("Could not get document URL");
+    return { url: data.publicUrl, path, name };
+  },
 };
 
 function extractContentImages(html) {

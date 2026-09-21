@@ -8,6 +8,7 @@ import { readTextFile } from "../../../lib/resourceDocument";
 import { churchResourceFormat, isMediaResourceKind } from "../../../lib/mediaEmbeds";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import ImageUrlField from "../../../components/admin/ImageUrlField";
+import DocumentUrlField from "../../../components/admin/DocumentUrlField";
 import { PageToolbar } from "../../../components/admin/PageToolbar";
 import { useConfirmDialog } from "../../../components/admin/ConfirmDialog";
 import { Button } from "../../../components/ui/button";
@@ -29,7 +30,7 @@ const KIND_META = {
     title: "Monday Bible Study",
     dateField: "week_of",
     dateLabel: "Week of (Monday)",
-    hint: "Choose Videos for sermon recordings, or Written for the study notes document. Both publish under Monday Bible Study — not Sunday sermons.",
+    hint: "Choose Videos for sermon recordings, or Written for the study notes PDF. Upload the PDF for members to preview and download on the website.",
     supportsFormat: true,
     publicPath: "/sermons?tab=bible-study",
     tabHint: "Monday Bible Study",
@@ -515,9 +516,9 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
                   value={form.thumbnail_url}
                   onChange={(thumbnail_url) => setForm({ ...form, thumbnail_url })}
                 />
-                <ImageUrlField
+                <DocumentUrlField
                   id="resource-attachment"
-                  label="Downloadable file URL (optional PDF/audio file)"
+                  label="Downloadable document (optional PDF)"
                   value={form.attachment_url}
                   onChange={(attachment_url) => setForm({ ...form, attachment_url })}
                 />
@@ -533,16 +534,20 @@ export default function ChurchResourcesPage({ kind = "bible_study" }) {
               </>
             ) : (
               <>
-                <div className="space-y-2">
-                  <Label>Content</Label>
-                  <RichTextEditor value={form.content} onChange={(content) => setForm({ ...form, content })} />
-                </div>
-                <ImageUrlField
-                  id="resource-attachment"
-                  label="Attachment file URL (optional PDF/Word for download)"
+                <DocumentUrlField
+                  id="resource-pdf"
+                  label="Written study PDF (recommended)"
                   value={form.attachment_url}
                   onChange={(attachment_url) => setForm({ ...form, attachment_url })}
+                  hint="Upload the Monday Bible Study PDF so members can preview and download it on the website."
                 />
+                <div className="space-y-2">
+                  <Label>On-site notes (optional)</Label>
+                  <RichTextEditor value={form.content} onChange={(content) => setForm({ ...form, content })} />
+                  <p className="text-xs text-gray-500">
+                    Optional HTML summary. If you upload a PDF, members can preview that file directly.
+                  </p>
+                </div>
               </>
             )}
 
