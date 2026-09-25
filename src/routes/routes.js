@@ -52,6 +52,7 @@ import BlogAnalyticsPage from "../pages/admin/blog/BlogAnalyticsPage";
 import BlogCommentsPage from "../pages/admin/blog/BlogCommentsPage";
 import ChurchResourcesPage from "../pages/admin/blog/ChurchResourcesPage";
 import ChristianNewsAdminPage from "../pages/admin/blog/ChristianNewsAdminPage";
+import DailyGrowthAdminPage from "../pages/admin/blog/DailyGrowthAdminPage";
 import SpecialProgramsPage from "../pages/admin/blog/SpecialProgramsPage";
 import SpecialProgramItemsPage from "../pages/admin/blog/SpecialProgramItemsPage";
 import PrayerInboxPage from "../pages/admin/PrayerInboxPage";
@@ -124,7 +125,7 @@ const AllPages = () => (
   <Router>
     <AuthProvider>
       <SettingsProvider>
-        <Routes>
+    <Routes>
           <Route element={<PublicShell />}>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
@@ -138,7 +139,7 @@ const AllPages = () => (
             <Route path="/blog/preview" element={<BlogPreview />} />
             <Route path="/blog/:id" element={<BlogPost />} />
             <Route path="/contact" element={<Contact />} />
-            <Route
+      <Route
               path="/contact-us"
               element={<Navigate to="/contact" replace />}
             />
@@ -161,11 +162,11 @@ const AllPages = () => (
             <Route path="/login" element={<Login />} />
             <Route
               path="/admin"
-              element={
-                <ProtectedRoute>
+        element={
+          <ProtectedRoute>
                   <AdminLayout />
-                </ProtectedRoute>
-              }
+          </ProtectedRoute>
+        }
             >
               <Route index element={<AdminHome />} />
               <Route
@@ -240,6 +241,14 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="blog.posts" action="edit">
                     <ChristianNewsAdminPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="blog/daily-growth"
+                element={
+                  <RequirePermission feature="blog.posts" action="edit">
+                    <DailyGrowthAdminPage />
                   </RequirePermission>
                 }
               />
@@ -572,7 +581,7 @@ const AllPages = () => (
             </Route>
             <Route path="*" element={<NotFound />} />
           </Route>
-        </Routes>
+    </Routes>
       </SettingsProvider>
     </AuthProvider>
   </Router>

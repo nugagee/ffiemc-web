@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useCollection } from '../hooks/useCollection';
 import { useChurchResources } from '../hooks/useChurchResources';
 import { useNewsArticles } from '../hooks/useNewsArticles';
+import { useDailyGrowth } from '../hooks/useDailyGrowth';
 import { blogPosts as mockBlog } from '../mock';
 import { mergeBlogPosts } from '../lib/blog';
 import { CONVENTION_BLOG_POSTS } from '../data/conventionContent';
@@ -16,6 +17,7 @@ import {
   ChurchResourceCards,
 } from '../components/blog/BlogHub';
 import { NewsArticleCards } from '../components/blog/NewsArticleCards';
+import { DailyGrowthCards } from '../components/blog/DailyGrowthCards';
 
 const fmtDate = (d) => {
   try {
@@ -29,7 +31,7 @@ function mergePosts(apiPosts) {
   return mergeBlogPosts(apiPosts, CONVENTION_BLOG_POSTS);
 }
 
-const VALID_TABS = new Set(['articles', 'christian-news', 'daily-manna']);
+const VALID_TABS = new Set(['articles', 'christian-news', 'daily-manna', 'daily-growth']);
 const MOVED_TO_SERMONS = new Set(['sunday-sermon', 'choir', 'bible-study']);
 
 function initialTab(location) {
@@ -69,9 +71,14 @@ export const Blog = () => {
   const [tab, setTab] = useState(() => initialTab(location));
   const [category, setCategory] = useState('All');
   const [newsCategory, setNewsCategory] = useState('christian');
+  const [growthFilter, setGrowthFilter] = useState('all');
   const { items: newsItems, loading: newsLoading } = useNewsArticles(
     null,
     tab === 'christian-news'
+  );
+  const { items: growthItems, loading: growthLoading } = useDailyGrowth(
+    null,
+    tab === 'daily-growth'
   );
 
   useEffect(() => {
@@ -126,7 +133,13 @@ export const Blog = () => {
   }, [posts, category]);
 
   const sectionLoading =
-    tab === 'articles' ? loading : tab === 'christian-news' ? newsLoading : mannaLoading;
+    tab === 'articles'
+      ? loading
+      : tab === 'christian-news'
+        ? newsLoading
+        : tab === 'daily-growth'
+          ? growthLoading
+          : mannaLoading;
 
   return (
     <div className="min-h-screen" data-testid="blog-page">
@@ -138,7 +151,7 @@ export const Blog = () => {
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
             {hero.intro ||
-              'Articles, Christian & education news, and Daily Manna from Fire-Fire International Evangelical Church. For Sunday sermons, choir, and Bible study, visit Sermons.'}
+              'Articles, Christian & education news, Daily Manna, and Daily Growth (traits, prophecies, facts, and riddles) from Fire-Fire International Evangelical Church. For Sunday sermons, choir, and Bible study, visit Sermons.'}
           </p>
           <div className="mt-8">
             <BlogHubTabs active={tab} onChange={onTabChange} />
@@ -170,6 +183,21 @@ export const Blog = () => {
                 items={newsItems}
                 filter={newsCategory}
                 onFilterChange={setNewsCategory}
+              />
+            </>
+          ) : tab === 'daily-growth' ? (
+            <>
+              <div className="mb-6 text-center max-w-2xl mx-auto">
+                <p className="text-sm text-gray-500">
+                  Fresh character traits, prophecies, amazing Bible facts, and riddles — published
+                  daily to strengthen your walk with God. Filter by type and reveal riddle answers
+                  when you are ready.
+                </p>
+              </div>
+              <DailyGrowthCards
+                items={growthItems}
+                filter={growthFilter}
+                onFilterChange={setGrowthFilter}
               />
             </>
           ) : (

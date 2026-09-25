@@ -8,8 +8,8 @@ const FROM_DISPLAY = "Fire-Fire International Evangelical Church";
 function readAdminToken() {
   try {
     return (
-      localStorage.getItem("ffiemc_admin_token") ||
-      sessionStorage.getItem("ffiemc_admin_token") ||
+      localStorage.getItem("FFIEM_admin_token") ||
+      sessionStorage.getItem("FFIEM_admin_token") ||
       ""
     );
   } catch {
@@ -71,7 +71,7 @@ function plainToHtmlBlocks(text) {
     .join("");
 }
 
-/** Shared branded HTML wrapper for all FFIEMC transactional mail. */
+/** Shared branded HTML wrapper for all FFIEM transactional mail. */
 export function brandedEmailHtml({ title, preheader = "", bodyText = "", bodyHtml = "" }) {
   const content = bodyHtml || plainToHtmlBlocks(bodyText);
   return `<!DOCTYPE html>
@@ -213,7 +213,7 @@ export async function sendContactEmails({
     confirm: email
       ? {
           to: email,
-          subject: "We've received your message — FFIEMC",
+          subject: "We've received your message — FFIEM",
           text: confirmText,
           html: brandedEmailHtml({ title: "Message received", bodyText: confirmText }),
           replyTo: adminEmail || DEFAULT_ADMIN_EMAIL,
@@ -269,7 +269,7 @@ export async function sendTestimonySubmissionEmails({
     confirm: email
       ? {
           to: email,
-          subject: "We've received your testimony — FFIEMC",
+          subject: "We've received your testimony — FFIEM",
           text: confirmText,
           html: brandedEmailHtml({ title: "Testimony received", bodyText: confirmText }),
         }
@@ -287,7 +287,7 @@ export async function sendTestimonyPublishedEmail({ name, email, adminEmail }) {
   return sendViaSupabaseEmail({
     purpose: "testimony_published",
     to: email,
-    subject: "Your testimony has been published — FFIEMC",
+    subject: "Your testimony has been published — FFIEM",
     text,
     html: brandedEmailHtml({ title: "Your testimony is live", bodyText: text }),
     replyTo: adminEmail || DEFAULT_ADMIN_EMAIL,
@@ -295,8 +295,8 @@ export async function sendTestimonyPublishedEmail({ name, email, adminEmail }) {
 }
 
 export async function sendPrayerSubmissionEmails({
-  name,
-  email,
+      name,
+      email,
   phone,
   category,
   request,
@@ -347,7 +347,7 @@ export async function sendPrayerSubmissionEmails({
     confirm: email
       ? {
           to: email,
-          subject: "We've received your prayer request — FFIEMC",
+          subject: "We've received your prayer request — FFIEM",
           text: confirmText,
           html: brandedEmailHtml({ title: "Prayer request received", bodyText: confirmText }),
           replyTo: adminEmail || DEFAULT_ADMIN_EMAIL,
@@ -375,7 +375,7 @@ export async function sendPrayerReplyEmail({
   return sendViaSupabaseEmail({
     purpose: "prayer_reply",
     to: visitorEmail,
-    subject: "Response to your prayer request — FFIEMC",
+    subject: "Response to your prayer request — FFIEM",
     text,
     html: brandedEmailHtml({ title: "Prayer team reply", bodyText: text }),
     replyTo: adminEmail || DEFAULT_ADMIN_EMAIL,
@@ -400,7 +400,7 @@ export async function sendPastorAssignmentEmail({
   return sendViaSupabaseEmail({
     purpose: "pastor_assignment",
     to: pastorEmail,
-    subject: "New prayer request assigned to you — FFIEMC",
+    subject: "New prayer request assigned to you — FFIEM",
     text,
     html: brandedEmailHtml({ title: "Prayer request assigned", bodyText: text }),
     replyTo: adminEmail || DEFAULT_ADMIN_EMAIL,
@@ -425,7 +425,7 @@ export async function sendPastorCredentialsEmail({
   return sendViaSupabaseEmail({
     purpose: "pastor_credentials",
     to: pastorEmail,
-    subject: "Your FFIEMC prayer pastor account",
+    subject: "Your FFIEM prayer pastor account",
     text,
     html: brandedEmailHtml({
       title: "Your pastor account",
@@ -669,7 +669,7 @@ export async function sendChurchMembershipEmails(data = {}) {
     confirm: fields.email
       ? {
           to: fields.email,
-          subject: "We've received your membership application — FFIEMC",
+          subject: "We've received your membership application — FFIEM",
           text: applicantCopy,
           html: brandedEmailHtml({ title: "Application received", bodyText: applicantCopy }),
         }
@@ -804,7 +804,7 @@ export async function sendVolunteerFollowUpEmail({
 export async function sendMemberAnnouncementEmail({
   toEmail,
   fullName,
-  subject,
+      subject,
   title,
   body,
   programTitle = "",
@@ -828,7 +828,7 @@ export async function sendMemberAnnouncementEmail({
 export async function sendMemberAnnouncementSms({ toPhone, message }) {
   const apiUrl = process.env.REACT_APP_SMS_API_URL;
   const apiKey = process.env.REACT_APP_SMS_API_KEY;
-  const senderId = process.env.REACT_APP_SMS_SENDER_ID || "FFIEMC";
+  const senderId = process.env.REACT_APP_SMS_SENDER_ID || "FFIEM";
   if (!apiUrl || !apiKey) {
     throw new Error("SMS is not configured. Add REACT_APP_SMS_API_URL and REACT_APP_SMS_API_KEY.");
   }
@@ -904,7 +904,7 @@ export async function sendMembershipApprovedEmail(data = {}) {
     intro:
       `Dear ${first},\n\nCongratulations!\n\n` +
       `Your membership application with ${FROM_DISPLAY} has been reviewed and approved. ` +
-      `You are now a bonafide member of the FFIEMC family.`,
+      `You are now a bonafide member of the FFIEM family.`,
     closing:
       `We are glad to walk with you in faith, fellowship, and service.\n\n` +
       `Visit our website: ${siteUrl}\n` +
@@ -915,7 +915,7 @@ export async function sendMembershipApprovedEmail(data = {}) {
   return sendViaSupabaseEmail({
     purpose: "membership_approved",
     to: email,
-    subject: "Welcome to the FFIEMC family — your membership is approved",
+    subject: "Welcome to the FFIEM family — your membership is approved",
     text: message,
     html: brandedEmailHtml({ title: "Membership approved", bodyText: message }),
     replyTo: "contact@ffiem.org",
@@ -1161,7 +1161,7 @@ export async function sendAdminComposedEmail({
   cc = "",
   subject,
   body,
-  fromName = "FFIEMC Admin",
+  fromName = "FFIEM Admin",
   replyToEmail = DEFAULT_ADMIN_EMAIL,
 }) {
   const recipients = parseEmailList(to, cc);

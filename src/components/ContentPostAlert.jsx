@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, Bell, BookOpen, Church, Mic2, Newspaper, Sun, X } from "lucide-react";
+import { ArrowRight, Bell, BookOpen, Church, Mic2, Newspaper, Sparkles, Sun, X } from "lucide-react";
 import { useContentAlerts } from "../hooks/useContentAlerts";
 import { dismissContentAlert, filterUndismissedAlerts } from "../lib/contentAlerts";
 import { Button } from "./ui/button";
@@ -17,6 +17,7 @@ const KIND_ICON = {
   choir_ministration: Mic2,
   bible_study: BookOpen,
   daily_manna: Sun,
+  daily_growth: Sparkles,
 };
 
 /**

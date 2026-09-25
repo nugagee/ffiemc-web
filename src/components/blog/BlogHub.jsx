@@ -27,6 +27,7 @@ export function BlogHubTabs({ active, onChange, tabs }) {
     { id: "articles", label: "Articles", icon: FileText },
     { id: "christian-news", label: "Christian News", icon: Newspaper },
     { id: "daily-manna", label: "Daily Manna", icon: Sun },
+    { id: "daily-growth", label: "Daily Growth", icon: Sparkles },
   ];
   return (
     <div className="flex flex-wrap justify-center gap-2">

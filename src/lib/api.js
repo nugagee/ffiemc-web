@@ -581,6 +581,61 @@ export const authApi = {
       p_id: id,
       p_hidden: Boolean(hidden),
     }),
+  listDailyGrowth: (category = null, status = null) =>
+    rpc("admin_list_daily_growth", {
+      p_token: getAdminToken(),
+      p_category: category || null,
+      p_status: status || null,
+    }),
+  upsertDailyGrowth: (id, data) =>
+    rpc("admin_upsert_daily_growth", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data,
+    }),
+  deleteDailyGrowth: (id) =>
+    rpc("admin_delete_daily_growth", { p_token: getAdminToken(), p_id: id }),
+  getDailyGrowthSettings: () =>
+    rpc("admin_get_daily_growth_settings", { p_token: getAdminToken() }),
+  updateDailyGrowthSettings: (data) =>
+    rpc("admin_update_daily_growth_settings", {
+      p_token: getAdminToken(),
+      p_data: data,
+    }),
+  listDailyGrowthRuns: (limit = 14) =>
+    rpc("admin_list_daily_growth_runs", {
+      p_token: getAdminToken(),
+      p_limit: limit,
+    }),
+  triggerDailyGrowthSpool: async ({ force = true, skipEmail = false, emailOnly = false } = {}) => {
+    const supabaseUrl = String(process.env.REACT_APP_SUPABASE_URL || "").replace(/\/$/, "");
+    const base =
+      process.env.REACT_APP_GROWTH_SPOOL_URL ||
+      (supabaseUrl ? `${supabaseUrl}/functions/v1/spool-daily-growth` : "");
+    const secret =
+      process.env.REACT_APP_GROWTH_CRON_SECRET || process.env.REACT_APP_NEWS_CRON_SECRET || "";
+    if (!base) {
+      throw new Error("Set REACT_APP_SUPABASE_URL or REACT_APP_GROWTH_SPOOL_URL for Daily Growth spool");
+    }
+    const params = new URLSearchParams();
+    if (secret) params.set("secret", secret);
+    if (force) params.set("force", "1");
+    if (skipEmail) params.set("skip_email", "1");
+    if (emailOnly) params.set("email_only", "1");
+    const url = `${base}${params.toString() ? `?${params}` : ""}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(secret ? { "x-cron-secret": secret } : {}),
+      },
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || body.message || `Spool failed (${res.status})`);
+    return body;
+  },
+  publicListDailyGrowth: (category = null) =>
+    rpc("public_list_daily_growth", { p_category: category || null }),
   upsertChurchResource: (id, data) =>
     rpc("admin_upsert_church_resource", {
       p_token: getAdminToken(),
