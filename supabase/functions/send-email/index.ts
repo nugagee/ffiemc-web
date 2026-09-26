@@ -50,18 +50,26 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    const anonKey = String(Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("ANON_KEY") || "").trim();
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    if (!token) return json({ error: "Unauthorized" }, 401);
+    const apiKeyHeader = String(req.headers.get("apikey") || "").trim();
+    if (!token && !apiKeyHeader) return json({ error: "Unauthorized" }, 401);
 
-    const { data: sessionRow } = await supabase
-      .from("admin_sessions")
-      .select("admin_id, expires_at, admins(id, email, full_name, is_active)")
-      .eq("token", token)
-      .maybeSingle();
+    // Read body early so public purposes can authenticate via anon apikey
+    // even when Authorization carries a stale admin_sessions token.
+    const body = await req.json().catch(() => ({}));
+    const purposeHint = String(body.purpose || "").trim().toLowerCase();
+
+    const { data: sessionRow } = token
+      ? await supabase
+          .from("admin_sessions")
+          .select("admin_id, expires_at, admins(id, email, full_name, is_active)")
+          .eq("token", token)
+          .maybeSingle()
+      : { data: null };
 
     const adminActive = sessionRow?.admins?.is_active !== false;
     const sessionOk =
@@ -70,13 +78,21 @@ Deno.serve(async (req) => {
       (!sessionRow.expires_at || new Date(sessionRow.expires_at) > new Date());
 
     let allowed = sessionOk;
-    const isAnon = Boolean(anonKey) && token === anonKey;
+    const bearerIsAnon = Boolean(anonKey) && (token === anonKey || apiKeyHeader === anonKey);
+    const jwtRole = jwtRoleOf(token) || jwtRoleOf(apiKeyHeader);
+    const looksLikeAnon = bearerIsAnon || jwtRole === "anon";
 
-    if (!allowed && isAnon) {
-      allowed = true; // purpose checked below
+    if (!allowed && looksLikeAnon) {
+      allowed = true;
     }
 
-    if (!allowed) {
+    // Public transactional mail: accept project anon JWT (Authorization or apikey)
+    // even if SUPABASE_ANON_KEY env is missing/mismatched in the function runtime.
+    if (!allowed && PUBLIC_PURPOSES.has(purposeHint) && (jwtRole === "anon" || jwtRole === "authenticated")) {
+      allowed = true;
+    }
+
+    if (!allowed && token) {
       const anonClient = createClient(supabaseUrl, anonKey || serviceKey, {
         global: { headers: { Authorization: `Bearer ${token}` } },
       });
@@ -86,7 +102,6 @@ Deno.serve(async (req) => {
 
     if (!allowed) return json({ error: "Unauthorized" }, 401);
 
-    const body = await req.json().catch(() => ({}));
     const purpose = String(body.purpose || (sessionOk ? "compose" : "")).trim().toLowerCase();
 
     if (!sessionOk && !PUBLIC_PURPOSES.has(purpose)) {
@@ -143,6 +158,18 @@ Deno.serve(async (req) => {
     return json({ error: err?.message || "Send failed" }, 500);
   }
 });
+
+function jwtRoleOf(token = "") {
+  try {
+    const parts = String(token || "").split(".");
+    if (parts.length < 2) return "";
+    const json = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+    const payload = JSON.parse(json);
+    return String(payload.role || "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
 
 async function loadAdminEmails(supabase: ReturnType<typeof createClient>, body: Record<string, unknown>) {
   const fromBody = parseEmails(body.adminEmail, body.secondaryEmails, body.adminEmails);

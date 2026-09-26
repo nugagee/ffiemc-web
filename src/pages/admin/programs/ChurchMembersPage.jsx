@@ -28,7 +28,7 @@ import { RecordViewDialog } from "../../../components/admin/RecordViewDialog";
 import { useConfirmDialog } from "../../../components/admin/ConfirmDialog";
 import { PersonNameFields } from "../../../components/forms/PersonNameFields";
 import { personFromRow, withPersonPayload } from "../../../lib/personName";
-import { Plus } from "lucide-react";
+import { Plus, Mail } from "lucide-react";
 
 const emptyForm = {
   name_title: "", first_name: "", last_name: "", email: "", phone: "", gender: "", date_of_birth: "",
@@ -102,6 +102,7 @@ export default function ChurchMembersPage() {
   const [editRow, setEditRow] = useState(null);
   const [viewRow, setViewRow] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [resendingEmail, setResendingEmail] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = async () => {
@@ -300,6 +301,26 @@ export default function ChurchMembersPage() {
       await load();
     } catch (err) {
       toast.error(err.message);
+    }
+  };
+
+  const resendConfirmationEmail = async (row) => {
+    if (!row?.email) {
+      toast.error("This member has no email address on file.");
+      return;
+    }
+    if (!["approved", "active"].includes(String(row.status || ""))) {
+      toast.error("Only approved or active members can receive the confirmation email.");
+      return;
+    }
+    setResendingEmail(true);
+    try {
+      await sendMembershipApprovedEmail(memberEmailData(row, roles, { status: row.status || "approved" }));
+      toast.success("Confirmation email sent.");
+    } catch (err) {
+      toast.error(err.message || "Could not send confirmation email");
+    } finally {
+      setResendingEmail(false);
     }
   };
 
@@ -519,15 +540,29 @@ export default function ChurchMembersPage() {
           { label: "Extra form data", value: viewRow.form_data },
           { label: "Registered", value: formatDate(viewRow.created_at) },
         ] : []}
-        footer={viewRow && canEdit ? (
-          <div className="flex justify-end gap-2">
+        footer={viewRow ? (
+          <div className="flex flex-wrap justify-end gap-2">
             <Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>
-            {viewRow.status === "pending" ? (
+            {canEdit && viewRow.status === "pending" ? (
               <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => approveMember(viewRow)}>
                 Approve & email
               </Button>
             ) : null}
-            <Button className="bg-red-600 hover:bg-red-700" onClick={() => { startEdit(viewRow); setViewRow(null); }}>Edit</Button>
+            {String(viewRow.email || "").trim() && String(viewRow.status || "").toLowerCase() !== "pending" ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                disabled={resendingEmail || !canEdit}
+                onClick={() => resendConfirmationEmail(viewRow)}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                {resendingEmail ? "Sending…" : "Resend confirmation email"}
+              </Button>
+            ) : null}
+            {canEdit ? (
+              <Button className="bg-red-600 hover:bg-red-700" onClick={() => { startEdit(viewRow); setViewRow(null); }}>Edit</Button>
+            ) : null}
           </div>
         ) : undefined}
       />

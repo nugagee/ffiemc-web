@@ -38,15 +38,23 @@ curl -X POST "https://YOUR_PROJECT.supabase.co/functions/v1/spool-daily-growth?s
 
 ## Schedule
 
-Supabase Dashboard → **Edge Functions** → `spool-daily-growth` → **Schedules**
+Preferred (automatic via database when `pg_cron` + `pg_net` are available):
 
-Recommended cron (6:00 Africa/Lagos):
+Jobs created by migration `20261028_schedule_edge_crons.sql`:
 
-```
-0 5 * * *
-```
+| Job | Schedule | Action |
+|-----|----------|--------|
+| `ffiemc-spool-daily-growth` | `0 5 * * *` UTC (~6:00 Lagos) | Invoke `spool-daily-growth` |
+| `ffiemc-fetch-christian-news` | `0 */6 * * *` | Invoke `fetch-christian-news` |
 
-UTC 05:00 ≈ Lagos 06:00 (WAT, UTC+1). Adjust if DST/policy changes.
+Config row: `public.edge_cron_config` (`project_url`, secrets). No public RLS access.
+
+You can also schedule in Supabase Dashboard → **Edge Functions** → function → **Schedules**.
+
+Manual catch-up from admin:
+
+- Blog → Daily Growth → **Run spool now** / **Send digest**
+- Blog → Christian News → **Fetch now**
 
 ## Frontend env (admin “Run now”)
 

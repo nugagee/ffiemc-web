@@ -8,6 +8,9 @@ const FROM_DISPLAY = "Fire-Fire International Evangelical Church";
 function readAdminToken() {
   try {
     return (
+      localStorage.getItem("ffiemc_admin_token") ||
+      sessionStorage.getItem("ffiemc_admin_token") ||
+      // legacy key (older builds)
       localStorage.getItem("FFIEM_admin_token") ||
       sessionStorage.getItem("FFIEM_admin_token") ||
       ""
@@ -116,6 +119,9 @@ function fieldsTable(rows = []) {
 /**
  * Send mail through Supabase Edge → Resend.
  * No FormSubmit. Requires RESEND_API_KEY + FROM_EMAIL secrets and REACT_APP_USE_EDGE_EMAIL=true.
+ *
+ * Prefer admin session token; if the session is stale/invalid and the purpose is public,
+ * automatically retry with the anon key so approval emails still go out.
  */
 export async function sendViaSupabaseEmail({
   purpose,
@@ -137,35 +143,69 @@ export async function sendViaSupabaseEmail({
   }
 
   const adminToken = readAdminToken();
-  const bearer = adminToken || anonKey;
+  // Prefer anon for known public purposes so stale admin_sessions tokens never block delivery.
+  const publicPurposes = new Set([
+    "contact",
+    "testimony_submit",
+    "testimony_published",
+    "prayer_submit",
+    "prayer_reply",
+    "pastor_assignment",
+    "pastor_credentials",
+    "program_registration",
+    "membership",
+    "membership_approved",
+    "volunteer",
+    "volunteer_followup",
+    "member_announcement",
+    "meeting_invite",
+    "media_contribution",
+    "experience_survey",
+  ]);
+  const preferAnon = Boolean(purpose && publicPurposes.has(String(purpose).toLowerCase()));
+  const primaryBearer = preferAnon ? anonKey : adminToken || anonKey;
+  const payload = {
+    purpose,
+    to,
+    subject,
+    text,
+    html,
+    replyTo,
+    notifyAdmins,
+    adminEmail,
+    secondaryEmails,
+    adminEmails,
+    confirm,
+  };
 
-  const response = await fetch(`${edgeUrl}/functions/v1/send-email`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${bearer}`,
-      apikey: anonKey,
-    },
-    body: JSON.stringify({
-      purpose,
-      to,
-      subject,
-      text,
-      html,
-      replyTo,
-      notifyAdmins,
-      adminEmail,
-      secondaryEmails,
-      adminEmails,
-      confirm,
-    }),
-  });
+  const post = async (bearer) => {
+    const response = await fetch(`${edgeUrl}/functions/v1/send-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${bearer}`,
+        apikey: anonKey,
+      },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json().catch(() => ({}));
+    return { response, body };
+  };
 
-  const errBody = await response.json().catch(() => ({}));
+  let { response, body } = await post(primaryBearer);
+
+  // Retry: if preferred bearer failed, try the other one.
   if (!response.ok) {
-    throw new Error(errBody.error || errBody.message || "Email send failed");
+    const fallback = primaryBearer === anonKey ? adminToken : anonKey;
+    if (fallback && fallback !== primaryBearer) {
+      ({ response, body } = await post(fallback));
+    }
   }
-  return errBody;
+
+  if (!response.ok) {
+    throw new Error(body.error || body.message || "Email send failed");
+  }
+  return body;
 }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
