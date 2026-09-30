@@ -34,13 +34,13 @@ export function BlogPostArticle({ post, preview = false }) {
         </div>
       )}
       {post.image && (
-        <div className="relative h-[50vh] overflow-hidden">
-          <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+        <div className="relative h-[210px] overflow-hidden md:h-[50vh]">
+          <img src={post.image} alt={post.title} className="h-full w-full object-cover object-center" />
           <div className="absolute inset-0 bg-black/50" />
           <div className="absolute inset-0 flex items-end">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 w-full text-white">
-              <Badge className="bg-red-600 text-white mb-4">{post.category || "General"}</Badge>
-              <h1 className="text-3xl md:text-5xl font-bold">{post.title || "Untitled post"}</h1>
+            <div className="mx-auto w-full max-w-4xl px-4 pb-6 text-white sm:px-6 md:pb-10 lg:px-8">
+              <Badge className="mb-2 bg-red-600 text-white md:mb-4">{post.category || "General"}</Badge>
+              <h1 className="text-3xl font-bold md:text-5xl">{post.title || "Untitled post"}</h1>
             </div>
           </div>
         </div>
