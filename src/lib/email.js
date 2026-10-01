@@ -1,5 +1,10 @@
 import { subjectFromSettings } from "./emailSubjects";
 import { SURVEY_FEATURES } from "../features/experienceSurvey/surveyHelpers";
+import {
+  announcementMediaFromRow,
+  buildMemberAnnouncementContent,
+  memberAnnouncementSmsText,
+} from "./announcementEmail";
 
 export const DEFAULT_ADMIN_EMAIL = "adenugaolajideadewale@gmail.com";
 const SITE_URL = "https://ffiem.org";
@@ -844,23 +849,36 @@ export async function sendVolunteerFollowUpEmail({
 export async function sendMemberAnnouncementEmail({
   toEmail,
   fullName,
-      subject,
+  subject,
   title,
   body,
   programTitle = "",
   fromName = FROM_DISPLAY,
   replyToEmail = DEFAULT_ADMIN_EMAIL,
+  headerImageUrl = "",
+  images = [],
+  buttonUrl = "",
+  buttonLabel = "",
 }) {
   if (!toEmail) throw new Error("Recipient email is required");
-  const first = (fullName || "").split(" ")[0] || fullName || "Friend";
-  const programLine = programTitle ? `\n\nProgram: ${programTitle}` : "";
-  const message = `Hi ${first},\n\n${body}${programLine}\n\n— ${fromName}`;
+  const mail = buildMemberAnnouncementContent({
+    fullName,
+    subject,
+    title,
+    body,
+    programTitle,
+    fromName,
+    headerImageUrl,
+    images,
+    buttonUrl,
+    buttonLabel,
+  });
   return sendViaSupabaseEmail({
     purpose: "member_announcement",
     to: toEmail,
-    subject: subject || title || "Church announcement",
-    text: message,
-    html: brandedEmailHtml({ title: subject || title || "Church announcement", bodyText: message }),
+    subject: mail.subject,
+    text: mail.text,
+    html: mail.html,
     replyTo: replyToEmail || DEFAULT_ADMIN_EMAIL,
   });
 }
@@ -902,6 +920,7 @@ export async function deliverMemberNotifications({ notification, deliveries, onP
   const subject = notification?.subject || notification?.title || "";
   const body = notification?.body || "";
   const programTitle = notification?.program_title || "";
+  const media = announcementMediaFromRow(notification);
 
   for (let i = 0; i < deliveries.length; i += 1) {
     const row = deliveries[i];
@@ -915,10 +934,18 @@ export async function deliverMemberNotifications({ notification, deliveries, onP
           title,
           body,
           programTitle,
+          headerImageUrl: media.headerImageUrl,
+          images: media.images,
+          buttonUrl: media.buttonUrl,
+          buttonLabel: media.buttonLabel,
         });
         results.push({ ...base, status: "sent" });
       } else if (row.channel === "sms") {
-        const smsText = `${title}\n\n${body}`.slice(0, 480);
+        const smsText = memberAnnouncementSmsText({
+          title,
+          body,
+          buttonUrl: media.buttonUrl,
+        });
         await sendMemberAnnouncementSms({ toPhone: row.phone, message: smsText });
         results.push({ ...base, status: "sent" });
       } else {
