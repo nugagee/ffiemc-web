@@ -18,9 +18,15 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
-import { Megaphone, Pencil, Plus, Send, Trash2, Users } from "lucide-react";
+import { Eye, ImageIcon, Megaphone, Pencil, Plus, Send, Trash2, Users } from "lucide-react";
 import { PageToolbar } from "../../../components/admin/PageToolbar";
 import { RoleMultiSelect } from "../../../components/forms/RoleMultiSelect";
+import AnnouncementMediaFields from "../../../components/admin/AnnouncementMediaFields";
+import {
+  announcementHasImages,
+  announcementMediaFromRow,
+  buildMemberAnnouncementContent,
+} from "../../../lib/announcementEmail";
 
 const emptyForm = (categoryId = "") => ({
   title: "",
@@ -31,6 +37,10 @@ const emptyForm = (categoryId = "") => ({
   role_ids: [],
   branch_id: "",
   ministry: "",
+  header_image_url: "",
+  images: [],
+  button_label: "",
+  button_url: "",
   send_email: true,
   send_sms: false,
 });
@@ -63,6 +73,7 @@ export default function MemberNotificationsPage() {
   const [previewing, setPreviewing] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState(null);
+  const [emailPreview, setEmailPreview] = useState(null);
 
   const defaultCategoryId = useMemo(
     () =>
@@ -130,6 +141,7 @@ export default function MemberNotificationsPage() {
       return;
     }
     const filters = row.audience_filters || {};
+    const media = announcementMediaFromRow(row);
     setEditing(row);
     setForm({
       title: row.title || "",
@@ -140,6 +152,10 @@ export default function MemberNotificationsPage() {
       role_ids: filters.role_ids || [],
       branch_id: (filters.branch_ids && filters.branch_ids[0]) || "",
       ministry: filters.ministry || "",
+      header_image_url: media.headerImageUrl,
+      images: media.images,
+      button_label: media.buttonLabel,
+      button_url: media.buttonUrl,
       send_email: row.send_email !== false,
       send_sms: Boolean(row.send_sms),
     });
@@ -192,6 +208,10 @@ export default function MemberNotificationsPage() {
         category_id: form.category_id || null,
         program_id: form.program_id || null,
         audience_filters: audienceFilters,
+        header_image_url: form.header_image_url || "",
+        images: form.images || [],
+        button_label: form.button_label || "",
+        button_url: form.button_url || "",
         send_email: form.send_email,
         send_sms: form.send_sms,
         status: "draft",
@@ -262,6 +282,23 @@ export default function MemberNotificationsPage() {
 
   const smsConfigured = Boolean(process.env.REACT_APP_SMS_API_URL && process.env.REACT_APP_SMS_API_KEY);
 
+  const openEmailPreview = () => {
+    const programTitle = programs.find((p) => p.id === form.program_id)?.title || "";
+    setEmailPreview(
+      buildMemberAnnouncementContent({
+        fullName: "Member",
+        subject: form.subject || form.title,
+        title: form.title,
+        body: form.body,
+        programTitle,
+        headerImageUrl: form.header_image_url,
+        images: form.images,
+        buttonUrl: form.button_url,
+        buttonLabel: form.button_label,
+      })
+    );
+  };
+
   return (
     <div className="max-w-6xl">
       <PageToolbar
@@ -274,7 +311,7 @@ export default function MemberNotificationsPage() {
               Member announcements
             </h1>
             <p className="text-sm text-gray-500 mt-1 max-w-2xl">
-              Create and publish church program announcements to registered members by category — via email or SMS.
+              Create and publish church program announcements to registered members by category — via email (with optional images) or SMS.
               Public sign-ups start as <span className="font-medium text-gray-700">pending</span>; choose
               {" "}<span className="font-medium text-gray-700">All registered members</span> or
               {" "}<span className="font-medium text-gray-700">Pending members</span> to include them
@@ -308,6 +345,12 @@ export default function MemberNotificationsPage() {
                   </Badge>
                   {row.send_email && <Badge variant="outline">Email</Badge>}
                   {row.send_sms && <Badge variant="outline">SMS</Badge>}
+                  {announcementHasImages(row) && (
+                    <Badge variant="outline" className="gap-1">
+                      <ImageIcon className="h-3 w-3" />
+                      Images
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm text-gray-600 mt-1 line-clamp-2">{row.body}</p>
                 <p className="text-xs text-gray-400 mt-2">
@@ -485,6 +528,22 @@ export default function MemberNotificationsPage() {
               ) : null}
             </div>
 
+            <AnnouncementMediaFields
+              headerImageUrl={form.header_image_url}
+              images={form.images}
+              buttonLabel={form.button_label}
+              buttonUrl={form.button_url}
+              onChange={(next) =>
+                setForm({
+                  ...form,
+                  header_image_url: next.headerImageUrl,
+                  images: next.images,
+                  button_label: next.buttonLabel,
+                  button_url: next.buttonUrl,
+                })
+              }
+            />
+
             <div className="rounded-lg border border-gray-100 p-4 space-y-3">
               <p className="text-sm font-medium">Delivery channels</p>
               <div className="flex items-center justify-between gap-3">
@@ -515,7 +574,12 @@ export default function MemberNotificationsPage() {
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button type="button" variant="outline" onClick={openEmailPreview} disabled={!form.body.trim()}>
+              <Eye className="h-4 w-4 mr-2" />
+              Preview email
+            </Button>
+            <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
@@ -533,6 +597,35 @@ export default function MemberNotificationsPage() {
                 </Button>
               </>
             )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(emailPreview)} onOpenChange={(next) => { if (!next) setEmailPreview(null); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Email preview</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-500">
+            This is the message members receive. Images load from their public addresses, the same way Gmail, Outlook, and Apple Mail load them. The greeting uses “Member” here; each recipient sees their own first name.
+          </p>
+          {emailPreview ? (
+            <>
+              <iframe
+                title="Announcement email preview"
+                sandbox=""
+                srcDoc={emailPreview.html}
+                className="w-full h-[520px] rounded-md border bg-white"
+              />
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Plain-text version</p>
+                <pre className="whitespace-pre-wrap text-xs text-gray-700 bg-gray-50 border rounded-md p-3 max-h-48 overflow-auto">{emailPreview.text}</pre>
+              </div>
+            </>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmailPreview(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
