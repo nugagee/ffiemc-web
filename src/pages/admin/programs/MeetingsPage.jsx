@@ -21,6 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { TablePagination, usePagedRows } from "../../../components/admin/TablePagination";
 import { PageToolbar } from "../../../components/admin/PageToolbar";
 import { RoleMultiSelect } from "../../../components/forms/RoleMultiSelect";
+import { TeamMultiSelect } from "../../../components/forms/TeamMultiSelect";
+import { AUDIENCE_TEAMS, buildAudienceFilters } from "../../../data/audienceCatalog";
 import {
   buildIcs,
   defaultMeetUrl,
@@ -53,6 +55,7 @@ const emptyForm = (categoryId = "") => {
     category_id: categoryId,
     role_ids: [],
     branch_id: "",
+    teams: [],
     ministry: "",
   };
 };
@@ -104,13 +107,15 @@ export default function MeetingsPage() {
   );
   const paged = usePagedRows(rows);
 
-  const audienceFilters = useMemo(() => {
-    const filters = {};
-    if (form.role_ids?.length) filters.role_ids = form.role_ids;
-    if (form.branch_id) filters.branch_ids = [form.branch_id];
-    if (form.ministry.trim()) filters.ministry = form.ministry.trim();
-    return filters;
-  }, [form.role_ids, form.branch_id, form.ministry]);
+  const audienceFilters = useMemo(
+    () => buildAudienceFilters({
+      roleIds: form.role_ids,
+      branchId: form.branch_id,
+      teams: form.teams,
+      ministry: form.ministry,
+    }),
+    [form.role_ids, form.branch_id, form.teams, form.ministry]
+  );
 
   const load = async () => {
     const [meetings, cats, roleRows, branchRows] = await Promise.all([
@@ -151,7 +156,12 @@ export default function MeetingsPage() {
       category_id: row.category_id || "",
       role_ids: row.audience_filters?.role_ids || [],
       branch_id: (row.audience_filters?.branch_ids && row.audience_filters.branch_ids[0]) || "",
-      ministry: row.audience_filters?.ministry || "",
+      teams: Array.isArray(row.audience_filters?.teams) && row.audience_filters.teams.length
+        ? row.audience_filters.teams
+        : (AUDIENCE_TEAMS.includes(row.audience_filters?.ministry) ? [row.audience_filters.ministry] : []),
+      ministry: row.audience_filters?.ministry && !AUDIENCE_TEAMS.includes(row.audience_filters.ministry)
+        ? row.audience_filters.ministry
+        : "",
     });
     setPreviewCount(null);
     setOpen(true);
@@ -294,6 +304,7 @@ export default function MeetingsPage() {
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
                     {row.category_name || "Custom audience"}
+                    {row.audience_filters?.teams?.length ? ` · ${row.audience_filters.teams.join(", ")}` : ""}
                     {row.invites_sent_at ? ` · Invites sent (${row.invites_sent || row.recipient_count || 0})` : " · Invites not sent"}
                   </p>
                   {row.meet_url ? (
@@ -431,7 +442,12 @@ export default function MeetingsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Input placeholder="Filter by ministry (optional)" value={form.ministry} onChange={(e) => setForm({ ...form, ministry: e.target.value })} />
+              <TeamMultiSelect
+                value={form.teams}
+                onChange={(teams) => setForm({ ...form, teams, ministry: "" })}
+                label="Narrow by team"
+                hint="Optional. Pick Choir, Ushers, or any other team so the invite only goes to that subcategory."
+              />
               <Button type="button" variant="outline" size="sm" onClick={previewRecipients}>Preview recipient count</Button>
               {previewCount !== null ? <p className="text-sm text-gray-600">{previewCount} recipient(s)</p> : null}
             </div>

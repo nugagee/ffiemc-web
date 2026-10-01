@@ -29,12 +29,18 @@ import { useConfirmDialog } from "../../../components/admin/ConfirmDialog";
 import { PersonNameFields } from "../../../components/forms/PersonNameFields";
 import { personFromRow, withPersonPayload } from "../../../lib/personName";
 import { Plus, Mail } from "lucide-react";
+import { CategoryMultiSelect, TeamMultiSelect } from "../../../components/forms/TeamMultiSelect";
+import { categoryIds, categoryLabel, teamsFromRow } from "../../../data/audienceCatalog";
 
 const emptyForm = {
   name_title: "", first_name: "", last_name: "", email: "", phone: "", gender: "", date_of_birth: "",
   address: "", city: "", state: "", country: DEFAULT_COUNTRY,
   role_ids: [], branch_id: "", ministry: "", baptism_status: "", marital_status: "",
   occupation: "", emergency_contact_name: "", emergency_contact_phone: "", notes: "", status: "pending", form_data: {},
+  registration_categories: [], audience_teams: [],
+  worker_code: "", participant_code: "", worker_position: "", availability: "",
+  meeting_sept_4: "", meeting_sept_5: "", absence_reason: "", convention_group: "",
+  age_range: "", whatsapp: "", attended_before: "", expectations: "", medical_need: "",
 };
 
 function formatDate(v) {
@@ -98,6 +104,8 @@ export default function ChurchMembersPage() {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [branchFilter, setBranchFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [teamFilter, setTeamFilter] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
   const [viewRow, setViewRow] = useState(null);
@@ -120,10 +128,18 @@ export default function ChurchMembersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleFilter, branchFilter, statusGroup]);
 
-  const filtered = useMemo(
-    () => filterRows(rows, query, ["full_name", "email", "phone", "role_name", "role_names", "branch_name", "city", "state", "status", "ministry"]),
-    [rows, query]
-  );
+  const filtered = useMemo(() => {
+    const searched = filterRows(rows, query, [
+      "full_name", "email", "phone", "role_name", "role_names", "branch_name", "city", "state", "status",
+      "ministry", "worker_code", "participant_code", "convention_group", "worker_position",
+      "audience_teams", "registration_categories", "whatsapp",
+    ]);
+    return searched.filter((row) => {
+      if (categoryFilter && !categoryIds(row).includes(categoryFilter)) return false;
+      if (teamFilter && !teamsFromRow(row).includes(teamFilter)) return false;
+      return true;
+    });
+  }, [rows, query, categoryFilter, teamFilter]);
   const paged = usePagedRows(filtered);
 
   const exportCsv = () => {
@@ -139,7 +155,15 @@ export default function ChurchMembersPage() {
       { key: "gender", label: "Gender" },
       { key: "city", label: "City" },
       { key: "state", label: "State" },
-      { key: "ministry", label: "Ministry" },
+      { key: "ministry", label: "Teams" },
+      { key: "registration_categories", label: "Categories", value: (row) => categoryLabel(categoryIds(row)) },
+      { key: "convention_group", label: "Group" },
+      { key: "worker_position", label: "Position" },
+      { key: "worker_code", label: "Worker ID" },
+      { key: "participant_code", label: "Participant ID" },
+      { key: "availability", label: "Availability" },
+      { key: "age_range", label: "Age range" },
+      { key: "whatsapp", label: "WhatsApp" },
       { key: "status", label: "Status" },
       { key: "created_at", label: "Registered" },
     ]);
@@ -152,9 +176,13 @@ export default function ChurchMembersPage() {
       return;
     }
     const person = withPersonPayload(form);
+    const audienceTeams = form.audience_teams || [];
     const payload = {
       ...form,
       ...person,
+      ministry: audienceTeams.length ? audienceTeams.join(", ") : form.ministry,
+      audience_teams: audienceTeams,
+      registration_categories: form.registration_categories || [],
       role_id: form.role_ids[0],
       role_names: memberRoleLabel({ role_ids: form.role_ids }, roles),
     };
@@ -209,7 +237,24 @@ export default function ChurchMembersPage() {
         p_role_id: form.role_ids[0],
         p_role_ids: form.role_ids,
         p_branch_id: form.branch_id,
-        p_ministry: form.ministry,
+        p_ministry: form.audience_teams?.length ? form.audience_teams.join(", ") : form.ministry,
+        p_registration_categories: form.registration_categories || [],
+        p_audience_teams: form.audience_teams || [],
+        p_convention: {
+          worker_code: form.worker_code || "",
+          participant_code: form.participant_code || "",
+          worker_position: form.worker_position || "",
+          availability: form.availability || "",
+          meeting_sept_4: form.meeting_sept_4 || "",
+          meeting_sept_5: form.meeting_sept_5 || "",
+          absence_reason: form.absence_reason || "",
+          convention_group: form.convention_group || "",
+          age_range: form.age_range || "",
+          whatsapp: form.whatsapp || "",
+          attended_before: form.attended_before || "",
+          expectations: form.expectations || "",
+          medical_need: form.medical_need || "",
+        },
         p_baptism_status: form.baptism_status,
         p_marital_status: form.marital_status,
         p_occupation: form.occupation,
@@ -254,6 +299,21 @@ export default function ChurchMembersPage() {
       emergency_contact_phone: row.emergency_contact_phone || "",
       notes: row.notes || "", status: row.status || "pending",
       form_data: row.form_data || {},
+      registration_categories: categoryIds(row),
+      audience_teams: teamsFromRow(row),
+      worker_code: row.worker_code || "",
+      participant_code: row.participant_code || "",
+      worker_position: row.worker_position || "",
+      availability: row.availability || "",
+      meeting_sept_4: row.meeting_sept_4 || "",
+      meeting_sept_5: row.meeting_sept_5 || "",
+      absence_reason: row.absence_reason || "",
+      convention_group: row.convention_group || "",
+      age_range: row.age_range || "",
+      whatsapp: row.whatsapp || "",
+      attended_before: row.attended_before || "",
+      expectations: row.expectations || "",
+      medical_need: row.medical_need || "",
     });
     setFormOpen(true);
   };
@@ -333,7 +393,7 @@ export default function ChurchMembersPage() {
       <p className="text-gray-500 mt-2 text-sm">
         {statusGroup === "pending"
           ? "New /join-church applications wait here. Use Approve to confirm a member and send their confirmation email."
-          : "Bonafide member registry — searchable, exportable, ready for notifications."}
+          : "Bonafide member registry. Filter by workers, participants, and teams such as Choir or Ushers, then use the same categories for announcements."}
       </p>
 
       <PageToolbar
@@ -378,6 +438,29 @@ export default function ChurchMembersPage() {
         <div className="space-y-1 w-64">
           <BranchSelect value={branchFilter} onChange={setBranchFilter} required={false} label="Filter by branch" />
         </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Category</Label>
+          <Select value={categoryFilter || "all"} onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              <SelectItem value="worker">Workers</SelectItem>
+              <SelectItem value="participant">Participants</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Team</Label>
+          <Select value={teamFilter || "all"} onValueChange={(v) => setTeamFilter(v === "all" ? "" : v)}>
+            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All teams</SelectItem>
+              {Array.from(new Set([...rows.flatMap((row) => teamsFromRow(row)), "Choir", "Ushers"])).sort().map((team) => (
+                <SelectItem key={team} value={team}>{team}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="mt-6">
@@ -405,7 +488,24 @@ export default function ChurchMembersPage() {
           <ManagedSelect catalogs={catalogs} fieldKey="gender" label="Gender" value={form.gender} onChange={(v) => setForm({ ...form, gender: v })} />
           <ManagedSelect catalogs={catalogs} fieldKey="state" label="State" value={form.state} onChange={(v) => setForm({ ...form, state: v })} />
           <ManagedSelect catalogs={catalogs} fieldKey="country" label="Country" value={form.country} onChange={(v) => setForm({ ...form, country: v })} />
-          <ManagedSelect catalogs={catalogs} fieldKey="ministry" label="Ministry / department" value={form.ministry} onChange={(v) => setForm({ ...form, ministry: v })} />
+          <div className="md:col-span-2">
+            <CategoryMultiSelect
+              value={form.registration_categories}
+              onChange={(registration_categories) => setForm({ ...form, registration_categories })}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <TeamMultiSelect
+              value={form.audience_teams}
+              onChange={(audience_teams) => setForm({
+                ...form,
+                audience_teams,
+                ministry: audience_teams.join(", "),
+              })}
+              label="Teams / departments"
+              hint="A person can be in more than one team. Choir, Ushers, and the other teams are the subcategories used when you filter announcements."
+            />
+          </div>
           <ManagedSelect catalogs={catalogs} fieldKey="occupation" label="Occupation" value={form.occupation} onChange={(v) => setForm({ ...form, occupation: v })} />
           <ManagedSelect catalogs={catalogs} fieldKey="baptism_status" label="Baptism status" value={form.baptism_status} onChange={(v) => setForm({ ...form, baptism_status: v })} />
           <ManagedSelect catalogs={catalogs} fieldKey="marital_status" label="Marital status" value={form.marital_status} onChange={(v) => setForm({ ...form, marital_status: v })} />
@@ -440,6 +540,42 @@ export default function ChurchMembersPage() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label>Worker ID</Label>
+            <Input value={form.worker_code} onChange={(e) => setForm({ ...form, worker_code: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Participant ID</Label>
+            <Input value={form.participant_code} onChange={(e) => setForm({ ...form, participant_code: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Position</Label>
+            <Input value={form.worker_position} onChange={(e) => setForm({ ...form, worker_position: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Convention group</Label>
+            <Input value={form.convention_group} onChange={(e) => setForm({ ...form, convention_group: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Availability</Label>
+            <Input value={form.availability} onChange={(e) => setForm({ ...form, availability: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Age range</Label>
+            <Input value={form.age_range} onChange={(e) => setForm({ ...form, age_range: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>WhatsApp</Label>
+            <Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Meeting 4 Sept</Label>
+            <Input value={form.meeting_sept_4} onChange={(e) => setForm({ ...form, meeting_sept_4: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Meeting 5 Sept</Label>
+            <Input value={form.meeting_sept_5} onChange={(e) => setForm({ ...form, meeting_sept_5: e.target.value })} />
+          </div>
           <div className="md:col-span-2 space-y-2">
             <Label>Notes</Label>
             <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
@@ -456,6 +592,8 @@ export default function ChurchMembersPage() {
           <thead className="text-left text-[11px] uppercase tracking-widest text-gray-400 border-b bg-gray-50">
             <tr>
               <th className="px-4 py-3">Name</th>
+              <th className="px-4 py-3">Category</th>
+              <th className="px-4 py-3">Teams</th>
               <th className="px-4 py-3">Roles</th>
               <th className="px-4 py-3">Branch</th>
               <th className="px-4 py-3">Contact</th>
@@ -469,6 +607,8 @@ export default function ChurchMembersPage() {
             {paged.rows.map((row) => (
               <tr key={row.id} className="border-t border-gray-50 hover:bg-red-50/30">
                 <td className="px-4 py-3 font-medium">{row.full_name}</td>
+                <td className="px-4 py-3 text-gray-700">{categoryLabel(categoryIds(row)) || "—"}</td>
+                <td className="px-4 py-3 text-gray-700">{teamsFromRow(row).join(", ") || "—"}</td>
                 <td className="px-4 py-3">{memberRoleLabel(row, roles) || "—"}</td>
                 <td className="px-4 py-3 text-gray-600">{row.branch_name || "—"}</td>
                 <td className="px-4 py-3"><div>{row.email}</div><div className="text-xs text-gray-500">{row.phone}</div></td>
@@ -508,7 +648,7 @@ export default function ChurchMembersPage() {
                 </td>
               </tr>
             ))}
-            {paged.total === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-500">No members found.</td></tr>}
+            {paged.total === 0 && <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-500">No members found.</td></tr>}
           </tbody>
         </table>
         <TablePagination {...paged} onPageChange={paged.setPage} />
@@ -529,6 +669,21 @@ export default function ChurchMembersPage() {
           { label: "Country", value: viewRow.country },
           { label: "Roles", value: memberRoleLabel(viewRow, roles) },
           { label: "Branch", value: viewRow.branch_name },
+          { label: "Category", value: categoryLabel(categoryIds(viewRow)) },
+          { label: "Teams", value: teamsFromRow(viewRow).join(", ") },
+          { label: "Worker ID", value: viewRow.worker_code },
+          { label: "Participant ID", value: viewRow.participant_code },
+          { label: "Position", value: viewRow.worker_position },
+          { label: "Group", value: viewRow.convention_group },
+          { label: "Availability", value: viewRow.availability },
+          { label: "Meeting 4 Sept", value: viewRow.meeting_sept_4 },
+          { label: "Meeting 5 Sept", value: viewRow.meeting_sept_5 },
+          { label: "Absence reason", value: viewRow.absence_reason },
+          { label: "Age range", value: viewRow.age_range },
+          { label: "WhatsApp", value: viewRow.whatsapp },
+          { label: "Attended before", value: viewRow.attended_before },
+          { label: "Expectations", value: viewRow.expectations },
+          { label: "Medical / special need", value: viewRow.medical_need },
           { label: "Ministry", value: viewRow.ministry },
           { label: "Occupation", value: viewRow.occupation },
           { label: "Baptism", value: viewRow.baptism_status },

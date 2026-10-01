@@ -58,6 +58,9 @@ export const DEFAULT_FORM_DROPDOWNS = [
   },
   { id: "country", label: "Country", fieldKey: "country", locked: true, options: CORE_COUNTRIES },
   { id: "ministry", label: "Ministry / department", fieldKey: "ministry", locked: true, options: [
+    "Choir", "Ushers", "Prayer Team", "Media / Photography", "Medical Team", "Technical / Engineers",
+    "Welfare / Hospitality", "Protocol", "Feeding", "Interpretation", "Decoration", "Registration",
+    "Moderators", "Accommodation", "Logistics", "Transportation", "Sanitation", "Publicity",
     "Media", "Choir / Worship", "Ushering", "Youth", "Children", "Women", "Men", "Prayer", "Evangelism", "Welfare", "Other",
   ] },
 ];
