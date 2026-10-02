@@ -1,4 +1,6 @@
 -- Email quality, registration OTP, and the priority send list.
+-- Run after 20261029_convention_categories.sql. This file replaces member
+-- list/update/submit functions and keeps the convention category and team columns.
 -- Existing members stay in place and are left unverified (email_verified defaults to false).
 -- OTP codes are issued only by service_issue_email_otp (service role / email-otp edge function).
 
@@ -480,6 +482,11 @@ grant execute on function public.validate_public_email(text, boolean) to anon, a
 grant execute on function public.complete_email_otp(uuid, text) to anon, authenticated;
 
 -- Public registration cannot skip the code. Admins may save without one, and email is optional for them.
+drop function if exists public.submit_church_membership(
+  text, text, text, text, date, text, text, text, text, uuid,
+  text, text, text, text, text, text, text, jsonb, boolean, text, uuid, uuid[], text, text, text
+);
+
 create or replace function public.submit_church_membership(
   p_full_name text, p_email text, p_phone text,
   p_gender text default '', p_date_of_birth date default null,
@@ -491,7 +498,10 @@ create or replace function public.submit_church_membership(
   p_form_data jsonb default '{}'::jsonb, p_by_admin boolean default false,
   p_admin_token text default null, p_branch_id uuid default null,
   p_role_ids uuid[] default null,
-  p_name_title text default '', p_first_name text default '', p_last_name text default ''
+  p_name_title text default '', p_first_name text default '', p_last_name text default '',
+  p_registration_categories text[] default '{}',
+  p_audience_teams text[] default '{}',
+  p_convention jsonb default '{}'::jsonb
 )
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
@@ -536,18 +546,29 @@ begin
     role_id, ministry, baptism_status, marital_status, occupation,
     emergency_contact_name, emergency_contact_phone, notes, form_data, branch_id,
     registered_by_admin, admin_id, status,
-    email_verified, email_verified_at, email_priority, email_priority_source
+    email_verified, email_verified_at, email_priority, email_priority_source,
+    registration_categories, audience_teams, worker_code, participant_code, worker_position,
+    availability, meeting_sept_4, meeting_sept_5, absence_reason, convention_group,
+    age_range, whatsapp, attended_before, expectations, medical_need
   ) values (
     v_person.name_title, v_person.first_name, v_person.last_name, v_person.full_name,
     v_email, trim(p_phone), trim(coalesce(p_gender, '')),
     p_date_of_birth, trim(coalesce(p_address, '')), trim(coalesce(p_city, '')),
     trim(coalesce(p_state, '')), coalesce(nullif(trim(p_country), ''), 'Nigeria'),
-    v_ids[1], trim(coalesce(p_ministry, '')), trim(coalesce(p_baptism_status, '')),
+    v_ids[1], trim(coalesce(nullif(trim(coalesce(p_ministry, '')), ''), array_to_string(coalesce(p_audience_teams, '{}'), ', '), '')), trim(coalesce(p_baptism_status, '')),
     trim(coalesce(p_marital_status, '')), trim(coalesce(p_occupation, '')),
     trim(coalesce(p_emergency_contact_name, '')), trim(coalesce(p_emergency_contact_phone, '')),
     trim(coalesce(p_notes, '')), coalesce(p_form_data, '{}'::jsonb), p_branch_id,
     true, v_admin.id, 'approved',
-    false, null, true, 'registration'
+    false, null, true, 'registration',
+    coalesce(p_registration_categories, '{}'), coalesce(p_audience_teams, '{}'),
+    coalesce(p_convention->>'worker_code', ''), coalesce(p_convention->>'participant_code', ''),
+    coalesce(p_convention->>'worker_position', ''), coalesce(p_convention->>'availability', ''),
+    coalesce(p_convention->>'meeting_sept_4', ''), coalesce(p_convention->>'meeting_sept_5', ''),
+    coalesce(p_convention->>'absence_reason', ''), coalesce(p_convention->>'convention_group', ''),
+    coalesce(p_convention->>'age_range', ''), coalesce(p_convention->>'whatsapp', ''),
+    coalesce(p_convention->>'attended_before', ''), coalesce(p_convention->>'expectations', ''),
+    coalesce(p_convention->>'medical_need', '')
   ) returning id into v_id;
 
   v_role_name := public._set_member_roles(v_id, v_ids);
@@ -589,7 +610,24 @@ begin
         where mr.member_id = m.id
       ), case when m.role_id is not null then jsonb_build_array(m.role_id) else '[]'::jsonb end),
       'branch_id', m.branch_id, 'branch_name', b.name, 'branch_region', b.region,
-      'ministry', m.ministry, 'baptism_status', m.baptism_status,
+      'ministry', m.ministry,
+      'registration_categories', to_jsonb(coalesce(m.registration_categories, '{}')),
+      'audience_teams', to_jsonb(coalesce(m.audience_teams, '{}')),
+      'worker_code', m.worker_code,
+      'participant_code', m.participant_code,
+      'worker_position', m.worker_position,
+      'availability', m.availability,
+      'meeting_sept_4', m.meeting_sept_4,
+      'meeting_sept_5', m.meeting_sept_5,
+      'absence_reason', m.absence_reason,
+      'convention_group', m.convention_group,
+      'age_range', m.age_range,
+      'whatsapp', m.whatsapp,
+      'attended_before', m.attended_before,
+      'expectations', m.expectations,
+      'medical_need', m.medical_need,
+      'convention_submitted_at', m.convention_submitted_at,
+      'baptism_status', m.baptism_status,
       'marital_status', m.marital_status, 'occupation', m.occupation,
       'emergency_contact_name', m.emergency_contact_name,
       'emergency_contact_phone', m.emergency_contact_phone,
@@ -694,6 +732,21 @@ begin
     emergency_contact_phone = coalesce(p_data->>'emergency_contact_phone', emergency_contact_phone),
     notes = coalesce(p_data->>'notes', notes),
     form_data = coalesce(p_data->'form_data', form_data),
+    registration_categories = case when p_data ? 'registration_categories' then public._json_text_array(p_data->'registration_categories') else registration_categories end,
+    audience_teams = case when p_data ? 'audience_teams' then public._json_text_array(p_data->'audience_teams') else audience_teams end,
+    worker_code = case when p_data ? 'worker_code' then coalesce(p_data->>'worker_code', '') else worker_code end,
+    participant_code = case when p_data ? 'participant_code' then coalesce(p_data->>'participant_code', '') else participant_code end,
+    worker_position = case when p_data ? 'worker_position' then coalesce(p_data->>'worker_position', '') else worker_position end,
+    availability = case when p_data ? 'availability' then coalesce(p_data->>'availability', '') else availability end,
+    meeting_sept_4 = case when p_data ? 'meeting_sept_4' then coalesce(p_data->>'meeting_sept_4', '') else meeting_sept_4 end,
+    meeting_sept_5 = case when p_data ? 'meeting_sept_5' then coalesce(p_data->>'meeting_sept_5', '') else meeting_sept_5 end,
+    absence_reason = case when p_data ? 'absence_reason' then coalesce(p_data->>'absence_reason', '') else absence_reason end,
+    convention_group = case when p_data ? 'convention_group' then coalesce(p_data->>'convention_group', '') else convention_group end,
+    age_range = case when p_data ? 'age_range' then coalesce(p_data->>'age_range', '') else age_range end,
+    whatsapp = case when p_data ? 'whatsapp' then coalesce(p_data->>'whatsapp', '') else whatsapp end,
+    attended_before = case when p_data ? 'attended_before' then coalesce(p_data->>'attended_before', '') else attended_before end,
+    expectations = case when p_data ? 'expectations' then coalesce(p_data->>'expectations', '') else expectations end,
+    medical_need = case when p_data ? 'medical_need' then coalesce(p_data->>'medical_need', '') else medical_need end,
     status = coalesce(nullif(p_data->>'status', ''), status),
     updated_at = now()
   where id = p_id returning * into v_row;
@@ -814,6 +867,21 @@ begin
       emergency_contact_phone = coalesce(d->>'emergency_contact_phone', emergency_contact_phone),
       notes = coalesce(d->>'notes', notes),
       form_data = coalesce(d->'form_data', form_data),
+      registration_categories = case when d ? 'registration_categories' then public._json_text_array(d->'registration_categories') else registration_categories end,
+      audience_teams = case when d ? 'audience_teams' then public._json_text_array(d->'audience_teams') else audience_teams end,
+      worker_code = case when d ? 'worker_code' then coalesce(d->>'worker_code', '') else worker_code end,
+      participant_code = case when d ? 'participant_code' then coalesce(d->>'participant_code', '') else participant_code end,
+      worker_position = case when d ? 'worker_position' then coalesce(d->>'worker_position', '') else worker_position end,
+      availability = case when d ? 'availability' then coalesce(d->>'availability', '') else availability end,
+      meeting_sept_4 = case when d ? 'meeting_sept_4' then coalesce(d->>'meeting_sept_4', '') else meeting_sept_4 end,
+      meeting_sept_5 = case when d ? 'meeting_sept_5' then coalesce(d->>'meeting_sept_5', '') else meeting_sept_5 end,
+      absence_reason = case when d ? 'absence_reason' then coalesce(d->>'absence_reason', '') else absence_reason end,
+      convention_group = case when d ? 'convention_group' then coalesce(d->>'convention_group', '') else convention_group end,
+      age_range = case when d ? 'age_range' then coalesce(d->>'age_range', '') else age_range end,
+      whatsapp = case when d ? 'whatsapp' then coalesce(d->>'whatsapp', '') else whatsapp end,
+      attended_before = case when d ? 'attended_before' then coalesce(d->>'attended_before', '') else attended_before end,
+      expectations = case when d ? 'expectations' then coalesce(d->>'expectations', '') else expectations end,
+      medical_need = case when d ? 'medical_need' then coalesce(d->>'medical_need', '') else medical_need end,
       status = coalesce(nullif(d->>'status', ''), status),
       updated_at = now()
     where id = p_req.resource_id;
@@ -1340,7 +1408,7 @@ begin
 end;
 $$;
 
-grant execute on function public.submit_church_membership(text, text, text, text, date, text, text, text, text, uuid, text, text, text, text, text, text, text, jsonb, boolean, text, uuid, uuid[], text, text, text) to anon, authenticated;
+grant execute on function public.submit_church_membership(text, text, text, text, date, text, text, text, text, uuid, text, text, text, text, text, text, text, jsonb, boolean, text, uuid, uuid[], text, text, text, text[], text[], jsonb) to anon, authenticated;
 grant execute on function public.admin_list_church_members(text, uuid, uuid, text) to anon, authenticated;
 grant execute on function public.admin_update_church_member(text, uuid, jsonb) to anon, authenticated;
 grant execute on function public.admin_preview_notification_recipients(text, jsonb) to anon, authenticated;

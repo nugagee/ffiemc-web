@@ -21,7 +21,7 @@ export function previewSummary(preview, { sms = false } = {}) {
   if (!preview) return "";
   const max = preview.max_recipients ? ` Max ${preview.max_recipients} per send.` : "";
   const extra = preview.audience_count > preview.email_count
-    ? ` ${preview.audience_count} people match the audience. Priority members go first, then Member records fill the rest. One email is sent per household address.`
+    ? ` ${preview.audience_count} people match this category and team. Priority members in that audience go first, then Member records fill the rest. One email is sent per household address.`
     : " One email is sent per household address.";
   const smsNote = sms ? " SMS still goes to everyone in the audience who has a phone." : "";
   return `${preview.email_count} email recipient(s).${max}${extra}${smsNote}`;

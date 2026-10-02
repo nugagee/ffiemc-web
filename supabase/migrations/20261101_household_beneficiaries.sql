@@ -1,4 +1,7 @@
 -- Household / beneficiary links and duplicate-contact checks.
+-- Run after 20261029_convention_categories.sql and 20261031_email_validation_otp_priority.sql.
+-- Recipient selection keeps convention category/team filters, then applies the priority cap
+-- and one email per household address.
 -- Existing shared emails stay in place. A new save that copies someone else's
 -- email or phone is rejected unless the admin confirms a shared address or a household link.
 -- Verified primary emails are unique. Beneficiaries may share the primary address.
@@ -520,13 +523,16 @@ begin
     address, city, state, country, role_id, ministry, baptism_status, marital_status, occupation,
     emergency_contact_name, emergency_contact_phone, notes, form_data, branch_id,
     registered_by_admin, admin_id, status,
-    email_verified, email_verified_at, email_priority, email_priority_source, household_role
+    email_verified, email_verified_at, email_priority, email_priority_source, household_role,
+    registration_categories, audience_teams, worker_code, participant_code, worker_position,
+    availability, meeting_sept_4, meeting_sept_5, absence_reason, convention_group,
+    age_range, whatsapp, attended_before, expectations, medical_need
   ) values (
     v_person.name_title, v_person.first_name, v_person.last_name, v_person.full_name,
     v_email, btrim(coalesce(p_payload->>'phone', '')), btrim(coalesce(p_payload->>'gender', '')), v_dob,
     btrim(coalesce(p_payload->>'address', '')), btrim(coalesce(p_payload->>'city', '')),
     btrim(coalesce(p_payload->>'state', '')), coalesce(nullif(btrim(p_payload->>'country'), ''), 'Nigeria'),
-    v_ids[1], btrim(coalesce(p_payload->>'ministry', '')), btrim(coalesce(p_payload->>'baptism_status', '')),
+    v_ids[1], coalesce(nullif(btrim(p_payload->>'ministry'), ''), array_to_string(public._json_text_array(p_payload->'audience_teams'), ', ')), btrim(coalesce(p_payload->>'baptism_status', '')),
     btrim(coalesce(p_payload->>'marital_status', '')), btrim(coalesce(p_payload->>'occupation', '')),
     btrim(coalesce(p_payload->>'emergency_contact_name', '')),
     btrim(coalesce(p_payload->>'emergency_contact_phone', '')),
@@ -536,7 +542,22 @@ begin
     v_by_admin,
     case when v_by_admin then nullif(p_payload->>'admin_id', '')::uuid else null end,
     case when v_by_admin then 'approved' else 'pending' end,
-    false, null, true, 'registration', 'beneficiary'
+    false, null, true, 'registration', 'beneficiary',
+    public._json_text_array(p_payload->'registration_categories'),
+    public._json_text_array(p_payload->'audience_teams'),
+    coalesce(p_payload->>'worker_code', ''),
+    coalesce(p_payload->>'participant_code', ''),
+    coalesce(p_payload->>'worker_position', ''),
+    coalesce(p_payload->>'availability', ''),
+    coalesce(p_payload->>'meeting_sept_4', ''),
+    coalesce(p_payload->>'meeting_sept_5', ''),
+    coalesce(p_payload->>'absence_reason', ''),
+    coalesce(p_payload->>'convention_group', ''),
+    coalesce(p_payload->>'age_range', ''),
+    coalesce(p_payload->>'whatsapp', ''),
+    coalesce(p_payload->>'attended_before', ''),
+    coalesce(p_payload->>'expectations', ''),
+    coalesce(p_payload->>'medical_need', '')
   ) returning id into v_id;
 
   v_role_name := public._set_member_roles(v_id, v_ids);
@@ -802,13 +823,16 @@ begin
     address, city, state, country, role_id, ministry, baptism_status, marital_status, occupation,
     emergency_contact_name, emergency_contact_phone, notes, form_data, branch_id,
     registered_by_admin, admin_id, status,
-    email_verified, email_verified_at, email_priority, email_priority_source
+    email_verified, email_verified_at, email_priority, email_priority_source,
+    registration_categories, audience_teams, worker_code, participant_code, worker_position,
+    availability, meeting_sept_4, meeting_sept_5, absence_reason, convention_group,
+    age_range, whatsapp, attended_before, expectations, medical_need
   ) values (
     v_person.name_title, v_person.first_name, v_person.last_name, v_person.full_name,
     v_row.email, btrim(coalesce(v_payload->>'phone', '')), btrim(coalesce(v_payload->>'gender', '')), v_dob,
     btrim(coalesce(v_payload->>'address', '')), btrim(coalesce(v_payload->>'city', '')),
     btrim(coalesce(v_payload->>'state', '')), coalesce(nullif(btrim(v_payload->>'country'), ''), 'Nigeria'),
-    v_ids[1], btrim(coalesce(v_payload->>'ministry', '')), btrim(coalesce(v_payload->>'baptism_status', '')),
+    v_ids[1], coalesce(nullif(btrim(v_payload->>'ministry'), ''), array_to_string(public._json_text_array(v_payload->'audience_teams'), ', ')), btrim(coalesce(v_payload->>'baptism_status', '')),
     btrim(coalesce(v_payload->>'marital_status', '')), btrim(coalesce(v_payload->>'occupation', '')),
     btrim(coalesce(v_payload->>'emergency_contact_name', '')),
     btrim(coalesce(v_payload->>'emergency_contact_phone', '')),
@@ -818,7 +842,22 @@ begin
     v_by_admin,
     case when v_by_admin then nullif(v_payload->>'admin_id', '')::uuid else null end,
     case when v_by_admin then 'approved' else 'pending' end,
-    true, now(), true, 'registration'
+    true, now(), true, 'registration',
+    public._json_text_array(v_payload->'registration_categories'),
+    public._json_text_array(v_payload->'audience_teams'),
+    coalesce(v_payload->>'worker_code', ''),
+    coalesce(v_payload->>'participant_code', ''),
+    coalesce(v_payload->>'worker_position', ''),
+    coalesce(v_payload->>'availability', ''),
+    coalesce(v_payload->>'meeting_sept_4', ''),
+    coalesce(v_payload->>'meeting_sept_5', ''),
+    coalesce(v_payload->>'absence_reason', ''),
+    coalesce(v_payload->>'convention_group', ''),
+    coalesce(v_payload->>'age_range', ''),
+    coalesce(v_payload->>'whatsapp', ''),
+    coalesce(v_payload->>'attended_before', ''),
+    coalesce(v_payload->>'expectations', ''),
+    coalesce(v_payload->>'medical_need', '')
   ) returning id into v_id;
 
   v_role_name := public._set_member_roles(v_id, v_ids);
@@ -841,6 +880,9 @@ $$;
 
 grant execute on function public.validate_public_email(text, boolean) to anon, authenticated, service_role;
 
+-- Category and team filters live in _notification_recipients (20261029).
+-- This function applies the priority order, daily cap, and one-email-per-household
+-- rule to that already filtered audience.
 create or replace function public._bulk_email_recipients(p_filters jsonb)
 returns table (
   recipient_type text,
@@ -1004,7 +1046,24 @@ begin
         where mr.member_id = m.id
       ), case when m.role_id is not null then jsonb_build_array(m.role_id) else '[]'::jsonb end),
       'branch_id', m.branch_id, 'branch_name', b.name, 'branch_region', b.region,
-      'ministry', m.ministry, 'baptism_status', m.baptism_status,
+      'ministry', m.ministry,
+      'registration_categories', to_jsonb(coalesce(m.registration_categories, '{}')),
+      'audience_teams', to_jsonb(coalesce(m.audience_teams, '{}')),
+      'worker_code', m.worker_code,
+      'participant_code', m.participant_code,
+      'worker_position', m.worker_position,
+      'availability', m.availability,
+      'meeting_sept_4', m.meeting_sept_4,
+      'meeting_sept_5', m.meeting_sept_5,
+      'absence_reason', m.absence_reason,
+      'convention_group', m.convention_group,
+      'age_range', m.age_range,
+      'whatsapp', m.whatsapp,
+      'attended_before', m.attended_before,
+      'expectations', m.expectations,
+      'medical_need', m.medical_need,
+      'convention_submitted_at', m.convention_submitted_at,
+      'baptism_status', m.baptism_status,
       'marital_status', m.marital_status, 'occupation', m.occupation,
       'emergency_contact_name', m.emergency_contact_name,
       'emergency_contact_phone', m.emergency_contact_phone,
