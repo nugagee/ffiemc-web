@@ -838,26 +838,13 @@ export const authApi = {
   listChurchRoles: () => rpc("admin_list_church_roles", { p_token: getAdminToken() }),
   upsertChurchRole: (id, data) => rpc("admin_upsert_church_role", { p_token: getAdminToken(), p_id: id || null, p_data: data }),
   deleteChurchRole: (id) => rpc("admin_delete_church_role", { p_token: getAdminToken(), p_id: id }),
-  listChurchMembers: async (roleId = null, branchId = null, statusGroup = null) => {
-    try {
-      return await rpc("admin_list_church_members", {
-        p_token: getAdminToken(),
-        p_role_id: roleId || null,
-        p_branch_id: branchId || null,
-        p_status_group: statusGroup || null,
-      });
-    } catch {
-      const rows = await rpc("admin_list_church_members", {
-        p_token: getAdminToken(),
-        p_role_id: roleId || null,
-        p_branch_id: branchId || null,
-      });
-      const list = Array.isArray(rows) ? rows : [];
-      if (statusGroup === "pending") return list.filter((r) => r.status === "pending");
-      if (statusGroup === "approved") return list.filter((r) => r.status === "approved" || r.status === "active");
-      return list;
-    }
-  },
+  listChurchMembers: (roleId = null, branchId = null, statusGroup = null) =>
+    rpc("admin_list_church_members", {
+      p_token: getAdminToken(),
+      p_role_id: roleId || null,
+      p_branch_id: branchId || null,
+      p_status_group: statusGroup || "all",
+    }),
   updateChurchMember: (id, data) =>
     rpc("admin_update_church_member", { p_token: getAdminToken(), p_id: id, p_data: data }),
   deleteChurchMember: (id) => rpc("admin_delete_church_member", { p_token: getAdminToken(), p_id: id }),
@@ -912,6 +899,34 @@ export const authApi = {
       p_token: getAdminToken(),
       p_filters: filters || {},
     }),
+  listEmailPriority: () => rpc("admin_list_email_priority", { p_token: getAdminToken() }),
+  setMemberEmailPriority: (id, priority) =>
+    rpc("admin_set_member_email_priority", { p_token: getAdminToken(), p_id: id, p_priority: priority }),
+  resyncEmailPriority: () => rpc("admin_resync_email_priority", { p_token: getAdminToken() }),
+  getEmailSendSettings: () => rpc("admin_get_email_send_settings", { p_token: getAdminToken() }),
+  updateEmailSendSettings: (data) =>
+    rpc("admin_update_email_send_settings", { p_token: getAdminToken(), p_data: data || {} }),
+  previewEmailSend: () => rpc("admin_preview_email_send", { p_token: getAdminToken() }),
+  memberHousehold: (id) => rpc("admin_member_household", { p_token: getAdminToken(), p_id: id }),
+  setHouseholdLink: (primaryId, beneficiaryId, relationship, other = "", status = "approved", usePrimary = true) =>
+    rpc("admin_set_household_link", {
+      p_token: getAdminToken(),
+      p_primary: primaryId,
+      p_beneficiary: beneficiaryId,
+      p_relationship: relationship,
+      p_other: other,
+      p_status: status,
+      p_use_primary: usePrimary,
+    }),
+  reviewHouseholdLink: (id, decision) =>
+    rpc("admin_review_household_link", { p_token: getAdminToken(), p_id: id, p_decision: decision }),
+  removeHouseholdLink: (id) => rpc("admin_remove_household_link", { p_token: getAdminToken(), p_id: id }),
+  listPendingHouseholdLinks: () => rpc("admin_list_pending_household_links", { p_token: getAdminToken() }),
+  listContactDuplicates: () => rpc("admin_list_contact_duplicates", { p_token: getAdminToken() }),
+  mergeMembers: (primaryId, duplicateIds) =>
+    rpc("admin_merge_members", { p_token: getAdminToken(), p_primary: primaryId, p_duplicate_ids: duplicateIds }),
+  convertHousehold: (primaryId, links) =>
+    rpc("admin_convert_household", { p_token: getAdminToken(), p_primary: primaryId, p_links: links }),
   upsertMemberNotification: (id, data) =>
     rpc("admin_upsert_member_notification", {
       p_token: getAdminToken(),
@@ -1524,6 +1539,7 @@ export async function submitVolunteerApplication(slug, payload) {
     p_experience_level: payload.experience_level || "",
     p_availability: payload.availability || "",
     p_notes: payload.notes || "",
+    p_form_data: payload.form_data || {},
   });
 }
 

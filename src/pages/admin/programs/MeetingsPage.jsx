@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CalendarDays, Plus, Send, Trash2, Pencil, Video, Download } from "lucide-react";
 import { authApi, formatApiError } from "../../../lib/api";
+import { previewSummary, readRecipientPreview } from "../../../lib/recipientPreview";
 import { deliverMeetingInvites } from "../../../lib/email";
 import { useAuth } from "../../../context/AuthContext";
 import { Button } from "../../../components/ui/button";
@@ -100,6 +101,7 @@ export default function MeetingsPage() {
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [previewCount, setPreviewCount] = useState(null);
+  const [previewText, setPreviewText] = useState("");
 
   const defaultCategoryId = useMemo(
     () => categories.find((c) => c.slug === "all-members")?.id || categories[0]?.id || "",
@@ -186,8 +188,10 @@ export default function MeetingsPage() {
     const cat = categories.find((c) => c.id === form.category_id);
     if (cat?.filters) Object.assign(merged, cat.filters, audienceFilters);
     const list = await authApi.previewNotificationRecipients(merged);
-    setPreviewCount((list || []).length);
-    if (!list?.length) toast.warning("No recipients match this audience");
+    const preview = readRecipientPreview(list);
+    setPreviewCount(preview.email_count);
+    setPreviewText(previewSummary(preview));
+    if (!preview.email_count) toast.warning("No email recipients match this audience");
   };
 
   const save = async (sendInvites = false) => {
@@ -449,7 +453,7 @@ export default function MeetingsPage() {
                 hint="Optional. Pick Choir, Ushers, or any other team so the invite only goes to that subcategory."
               />
               <Button type="button" variant="outline" size="sm" onClick={previewRecipients}>Preview recipient count</Button>
-              {previewCount !== null ? <p className="text-sm text-gray-600">{previewCount} recipient(s)</p> : null}
+              {previewCount !== null ? <p className="text-sm text-gray-600">{previewText || `${previewCount} email recipient(s)`}</p> : null}
             </div>
           </div>
           <DialogFooter className="gap-2">

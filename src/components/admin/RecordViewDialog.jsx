@@ -15,7 +15,7 @@ function displayValue(value) {
   return String(value);
 }
 
-export function RecordViewDialog({ open, onOpenChange, title = "Record", fields = [], footer, contentClassName = "" }) {
+export function RecordViewDialog({ open, onOpenChange, title = "Record", fields = [], footer, children, contentClassName = "" }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -36,6 +36,7 @@ export function RecordViewDialog({ open, onOpenChange, title = "Record", fields 
               <dd className="mt-1 text-gray-800 whitespace-pre-wrap break-words">{displayValue(f.value)}</dd>
             </div>
           ))}
+          {children}
         </dl>
         <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3 sm:px-6">
           {footer || (

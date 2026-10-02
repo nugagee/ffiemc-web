@@ -26,6 +26,22 @@ export function RequirePermission({ feature, action = "view", children }) {
   return children;
 }
 
+export function RequireAnyPermission({ features = [], action = "view", children }) {
+  const { user, can } = useAuth();
+  if (user === null || user === false) return children;
+  if (features.some((feature) => can(feature, action))) return children;
+  const fallback = firstAllowedPath(user);
+  if (!fallback) {
+    return (
+      <div className="rounded-2xl bg-white border border-gray-100 p-8">
+        <h1 className="text-2xl font-bold">No access</h1>
+        <p className="text-sm text-gray-500 mt-2">This account cannot open the email priority list.</p>
+      </div>
+    );
+  }
+  return <Navigate to={fallback} replace />;
+}
+
 export function AdminHome() {
   const { user, can } = useAuth();
   if (user === null || user === false) return null;

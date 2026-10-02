@@ -14,6 +14,8 @@ import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
 import { BranchSelect } from '../components/programs/BranchSelect';
 import { sendPrayerSubmissionEmails } from '../lib/email';
+import { validateEmail, phoneError } from '../lib/emailValidation';
+import { focusFirstInvalid, hasFieldErrors, invalidInputClass } from '../lib/formErrors';
 
 export const PrayerRequest = () => {
   const { settings } = useSettings();
@@ -25,11 +27,26 @@ export const PrayerRequest = () => {
   const defaultCategory = categories[0] || 'Personal Prayer Request';
   const [form, setForm] = useState({ name: '', email: '', phone: '', category: defaultCategory, request: '', is_public: false, branch_id: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [suggestion, setSuggestion] = useState('');
 
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const submit = async (e) => {
     e.preventDefault();
+    const emailResult = validateEmail(form.email, { required: true });
+    const next = {};
+    if (!String(form.name || '').trim()) next.name = 'Enter your name';
+    if (!emailResult.ok) next.email = emailResult.message;
+    const phoneMsg = phoneError(form.phone, true);
+    if (phoneMsg) next.phone = phoneMsg;
+    if (!String(form.request || '').trim()) next.request = 'Enter your prayer request';
+    setErrors(next);
+    setSuggestion(emailResult.suggestion || '');
+    if (hasFieldErrors(next)) {
+      focusFirstInvalid(next);
+      return;
+    }
     setSubmitting(true);
     try {
       await api.post('/prayer-requests', form);
@@ -70,21 +87,29 @@ export const PrayerRequest = () => {
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <Card className="shadow-lg border-0">
             <CardContent className="p-8">
-              <form onSubmit={submit} className="space-y-6" data-testid="prayer-form">
+              <form onSubmit={submit} noValidate className="space-y-6" data-testid="prayer-form">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-field="name">
                     <Label htmlFor="name">Full Name *</Label>
-                    <Input id="name" name="name" value={form.name} onChange={change} required data-testid="prayer-name" className="focus:border-red-500" />
+                    <Input id="name" name="name" value={form.name} onChange={change} data-testid="prayer-name" aria-invalid={Boolean(errors.name)} className={invalidInputClass(Boolean(errors.name), "focus:border-red-500")} />
+                    {errors.name ? <p className="text-sm text-red-600" role="alert">{errors.name}</p> : null}
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-field="email">
                     <Label htmlFor="email">Email *</Label>
-                    <Input id="email" name="email" type="email" value={form.email} onChange={change} required data-testid="prayer-email" className="focus:border-red-500" />
+                    <Input id="email" name="email" type="email" value={form.email} onChange={change} data-testid="prayer-email" aria-invalid={Boolean(errors.email)} className={invalidInputClass(Boolean(errors.email), "focus:border-red-500")} />
+                    {suggestion ? (
+                      <button type="button" className="text-sm font-medium text-red-700 underline" onClick={() => { setForm({ ...form, email: suggestion }); setSuggestion(''); setErrors((prev) => ({ ...prev, email: '' })); }}>
+                        Did you mean {suggestion}?
+                      </button>
+                    ) : null}
+                    {errors.email ? <p className="text-sm text-red-600" role="alert">{errors.email}</p> : null}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-field="phone">
                     <Label htmlFor="phone">Phone *</Label>
-                    <Input id="phone" name="phone" type="tel" value={form.phone} onChange={change} required minLength={7} data-testid="prayer-phone" className="focus:border-red-500" />
+                    <Input id="phone" name="phone" type="tel" value={form.phone} onChange={change} data-testid="prayer-phone" aria-invalid={Boolean(errors.phone)} className={invalidInputClass(Boolean(errors.phone), "focus:border-red-500")} />
+                    {errors.phone ? <p className="text-sm text-red-600" role="alert">{errors.phone}</p> : null}
                   </div>
                   <div className="space-y-2">
                     <Label>Category</Label>
@@ -97,9 +122,10 @@ export const PrayerRequest = () => {
                   </div>
                 </div>
                 <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} required={false} label="Church branch (optional)" />
-                <div className="space-y-2">
+                <div className="space-y-2" data-field="request">
                   <Label htmlFor="request">Prayer Request *</Label>
-                  <Textarea id="request" name="request" rows={5} value={form.request} onChange={change} required data-testid="prayer-request" className="focus:border-red-500" />
+                  <Textarea id="request" name="request" rows={5} value={form.request} onChange={change} data-testid="prayer-request" aria-invalid={Boolean(errors.request)} className={invalidInputClass(Boolean(errors.request), "focus:border-red-500")} />
+                  {errors.request ? <p className="text-sm text-red-600" role="alert">{errors.request}</p> : null}
                 </div>
                 <div className="flex items-center gap-2">
                   <Checkbox id="is_public" checked={form.is_public} onCheckedChange={(v) => setForm({ ...form, is_public: Boolean(v) })} />

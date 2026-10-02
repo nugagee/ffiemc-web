@@ -136,9 +136,9 @@ export default function VolunteersPage({ view = "applications" }) {
       </div>
 
       {editRow && (
-        <form onSubmit={save} className="mb-6 rounded-2xl border bg-white p-5 grid md:grid-cols-2 gap-4">
+        <form onSubmit={save} noValidate className="mb-6 rounded-2xl border bg-white p-5 grid md:grid-cols-2 gap-4">
           <div className="md:col-span-2 grid md:grid-cols-3 gap-4">
-            <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} />
+            <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} requireTitle={false} requireLast={false} />
           </div>
           <div className="space-y-2"><Label>Email</Label><Input value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
           <div className="space-y-2"><Label>Phone</Label><Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>

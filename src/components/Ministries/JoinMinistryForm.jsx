@@ -1,5 +1,6 @@
 import React from "react";
 import { Form, Input, Button } from "antd";
+import { validateEmail } from "../../lib/emailValidation";
 
 const JoinMinistryForm = () => {
   const onFinish = (values) => {
@@ -14,7 +15,20 @@ const JoinMinistryForm = () => {
           <Input />
         </Form.Item>
 
-        <Form.Item name="email" label="Email" required>
+        <Form.Item
+          name="email"
+          label="Email"
+          rules={[
+            {
+              validator: (_, value) => {
+                const result = validateEmail(value, { required: true });
+                if (result.ok) return Promise.resolve();
+                const hint = result.suggestion ? `${result.message} (${result.suggestion})` : result.message;
+                return Promise.reject(new Error(hint));
+              },
+            },
+          ]}
+        >
           <Input />
         </Form.Item>
 

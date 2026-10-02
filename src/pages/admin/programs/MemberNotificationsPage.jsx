@@ -23,6 +23,13 @@ import { PageToolbar } from "../../../components/admin/PageToolbar";
 import { RoleMultiSelect } from "../../../components/forms/RoleMultiSelect";
 import { TeamMultiSelect } from "../../../components/forms/TeamMultiSelect";
 import { AUDIENCE_TEAMS, buildAudienceFilters } from "../../../data/audienceCatalog";
+import AnnouncementMediaFields from "../../../components/admin/AnnouncementMediaFields";
+import {
+  announcementHasImages,
+  announcementMediaFromRow,
+  buildMemberAnnouncementContent,
+} from "../../../lib/announcementEmail";
+import { previewSummary, readRecipientPreview } from "../../../lib/recipientPreview";
 
 const emptyForm = (categoryId = "") => ({
   title: "",
@@ -67,6 +74,7 @@ export default function MemberNotificationsPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [previewCount, setPreviewCount] = useState(null);
+  const [previewText, setPreviewText] = useState("");
   const [previewing, setPreviewing] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState(null);
@@ -154,6 +162,10 @@ export default function MemberNotificationsPage() {
         ? filters.teams
         : (AUDIENCE_TEAMS.includes(filters.ministry) ? [filters.ministry] : []),
       ministry: filters.ministry && !AUDIENCE_TEAMS.includes(filters.ministry) ? filters.ministry : "",
+      header_image_url: media.headerImageUrl,
+      images: media.images,
+      button_label: media.buttonLabel,
+      button_url: media.buttonUrl,
       send_email: row.send_email !== false,
       send_sms: Boolean(row.send_sms),
     });
@@ -174,8 +186,10 @@ export default function MemberNotificationsPage() {
         if (cat?.filters) Object.assign(merged, cat.filters, audienceFilters);
       }
       const list = await authApi.previewNotificationRecipients(merged);
-      setPreviewCount((list || []).length);
-      if (!list?.length) toast.warning("No recipients match this audience");
+      const preview = readRecipientPreview(list);
+      setPreviewCount(preview.email_count);
+      setPreviewText(previewSummary(preview, { sms: form.send_sms }));
+      if (!preview.email_count && !form.send_sms) toast.warning("No email recipients match this audience");
     } catch (err) {
       toast.error(formatApiError(err.message) || "Preview failed");
     } finally {
@@ -521,7 +535,7 @@ export default function MemberNotificationsPage() {
                 {previewing ? "Checking…" : "Preview recipient count"}
               </Button>
               {previewCount !== null ? (
-                <p className="text-sm text-gray-600">{previewCount} recipient(s) match</p>
+                <p className="text-sm text-gray-600">{previewText || `${previewCount} email recipient(s)`}</p>
               ) : null}
             </div>
 

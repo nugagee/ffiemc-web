@@ -15,6 +15,8 @@ import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
 import { BranchSelect } from '../components/programs/BranchSelect';
 import GoogleMap from '../components/GoogleMap/GoogleMap';
+import { validateEmail } from '../lib/emailValidation';
+import { focusFirstInvalid, hasFieldErrors, invalidInputClass } from '../lib/formErrors';
 
 export const Contact = () => {
   const { settings } = useSettings();
@@ -31,9 +33,23 @@ export const Contact = () => {
     branch_id: '',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [suggestion, setSuggestion] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const emailResult = validateEmail(formData.email, { required: true });
+    const next = {};
+    if (!String(formData.name || '').trim()) next.name = 'Enter your name';
+    if (!emailResult.ok) next.email = emailResult.message;
+    if (!String(formData.subject || '').trim()) next.subject = 'Enter a subject';
+    if (!String(formData.message || '').trim()) next.message = 'Enter your message';
+    setErrors(next);
+    setSuggestion(emailResult.suggestion || '');
+    if (hasFieldErrors(next)) {
+      focusFirstInvalid(next);
+      return;
+    }
     setSubmitting(true);
     try {
       const { data } = await api.post('/contact', formData);
@@ -162,9 +178,9 @@ export const Contact = () => {
               </h2>
               <Card className="shadow-lg border-0">
                 <CardContent className="p-6">
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form onSubmit={handleSubmit} noValidate className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
+                      <div className="space-y-2" data-field="name">
                         <Label htmlFor="name">Full Name</Label>
                         <Input
                           id="name"
@@ -174,23 +190,30 @@ export const Contact = () => {
                           placeholder="Your full name"
                           value={formData.name}
                           onChange={handleChange}
-                          required
-                          className="border-gray-300 focus:border-red-500"
+                          aria-invalid={Boolean(errors.name)}
+                          className={invalidInputClass(Boolean(errors.name), "border-gray-300 focus:border-red-500")}
                         />
+                        {errors.name ? <p className="text-sm text-red-600" role="alert">{errors.name}</p> : null}
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2" data-field="email">
                         <Label htmlFor="email">Email Address</Label>
                         <Input
                           id="email"
                           name="email"
                           type="email"
                           data-testid="contact-email"
-                          placeholder="your.email@example.com"
+                          placeholder="you@gmail.com"
                           value={formData.email}
                           onChange={handleChange}
-                          required
-                          className="border-gray-300 focus:border-red-500"
+                          aria-invalid={Boolean(errors.email)}
+                          className={invalidInputClass(Boolean(errors.email), "border-gray-300 focus:border-red-500")}
                         />
+                        {suggestion ? (
+                          <button type="button" className="text-sm font-medium text-red-700 underline" onClick={() => { setFormData({ ...formData, email: suggestion }); setSuggestion(''); setErrors((prev) => ({ ...prev, email: '' })); }}>
+                            Did you mean {suggestion}?
+                          </button>
+                        ) : null}
+                        {errors.email ? <p className="text-sm text-red-600" role="alert">{errors.email}</p> : null}
                       </div>
                     </div>
 
@@ -207,7 +230,7 @@ export const Contact = () => {
                           className="border-gray-300 focus:border-red-500"
                         />
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2" data-field="subject">
                         <Label htmlFor="subject">Subject</Label>
                         <Input
                           id="subject"
@@ -217,9 +240,10 @@ export const Contact = () => {
                           placeholder="Message subject"
                           value={formData.subject}
                           onChange={handleChange}
-                          required
-                          className="border-gray-300 focus:border-red-500"
+                          aria-invalid={Boolean(errors.subject)}
+                          className={invalidInputClass(Boolean(errors.subject), "border-gray-300 focus:border-red-500")}
                         />
+                        {errors.subject ? <p className="text-sm text-red-600" role="alert">{errors.subject}</p> : null}
                       </div>
                     </div>
 
@@ -230,7 +254,7 @@ export const Contact = () => {
                       label="Church branch (optional)"
                     />
 
-                    <div className="space-y-2">
+                    <div className="space-y-2" data-field="message">
                       <Label htmlFor="message">Message</Label>
                       <Textarea
                         id="message"
@@ -239,10 +263,11 @@ export const Contact = () => {
                         placeholder="Tell us how we can help you..."
                         value={formData.message}
                         onChange={handleChange}
-                        required
                         rows={5}
-                        className="border-gray-300 focus:border-red-500 resize-none"
+                        aria-invalid={Boolean(errors.message)}
+                        className={invalidInputClass(Boolean(errors.message), "border-gray-300 focus:border-red-500 resize-none")}
                       />
+                      {errors.message ? <p className="text-sm text-red-600" role="alert">{errors.message}</p> : null}
                     </div>
 
                     <Button 

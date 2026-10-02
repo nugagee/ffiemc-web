@@ -11,11 +11,13 @@ import { mergeProgramPage, THEME_CLASSES } from "../components/programs/pageCont
 import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
 import { PersonNameFields } from "../components/forms/PersonNameFields";
 import { PhoneField } from "../components/forms/PhoneField";
+import { EmailField } from "../components/forms/EmailField";
 import { withPersonPayload } from "../lib/personName";
+import { registrationFieldErrors, validateEmail } from "../lib/emailValidation";
+import { focusFirstInvalid, hasFieldErrors } from "../lib/formErrors";
+import { useRegistrationDuplicate } from "../components/forms/useRegistrationDuplicate";
 
 function fieldLabel(fields, name, fallback) {
   const found = (fields || []).find((f) => f.name === name);
@@ -34,6 +36,8 @@ export function ProgramRegisterPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [suggestion, setSuggestion] = useState("");
   const [form, setForm] = useState({ name_title: "", first_name: "", last_name: "", email: "", phone: "", branch_id: "", extras: {} });
 
   useEffect(() => {
@@ -51,17 +55,46 @@ export function ProgramRegisterPage() {
       .catch((e) => setError(e.message || "Program not found"));
   }, [slug]);
 
+  const duplicateGate = useRegistrationDuplicate({
+    email: form.email,
+    phone: form.phone,
+    context: "program",
+    onClearContact: () => setForm((prev) => ({ ...prev, email: "", phone: "" })),
+  });
+
   const submit = async (e) => {
     e.preventDefault();
     const page = mergeProgramPage(program.pageContent || program.page_content, program);
-    if (page.requireBranch && !form.branch_id) {
-      toast.error("Please select your church branch");
+    const emailRequired = fieldRequired(program.formFields, "email");
+    const phoneRequired = fieldRequired(program.formFields, "phone");
+    const { errors: next, suggestion: nextSuggestion } = registrationFieldErrors(form, {
+      requireTitle: true,
+      requireEmail: emailRequired,
+      requirePhone: phoneRequired,
+      requireBranch: Boolean(page.requireBranch),
+    });
+    (program.formFields || []).forEach((field) => {
+      if (["full_name", "first_name", "last_name", "name_title", "title", "email", "phone", "church", "home_church"].includes(field.name)) return;
+      const value = form.extras?.[field.name];
+      if (field.required && (value == null || String(value).trim() === "")) {
+        next[field.name] = `Enter ${field.label || field.name}`;
+      } else if (field.type === "email" && String(value || "").trim()) {
+        const checked = validateEmail(value, { required: true });
+        if (!checked.ok) next[field.name] = checked.suggestion ? `${checked.message} (${checked.suggestion})` : checked.message;
+      }
+    });
+    setSuggestion(nextSuggestion);
+    setErrors(next);
+    if (hasFieldErrors(next)) {
+      focusFirstInvalid(next);
       return;
     }
+    const gate = await duplicateGate.prepare();
+    if (gate.blocked) return;
     setSubmitting(true);
     try {
       const person = withPersonPayload(form);
-      const form_data = buildFormData(program.formFields, form.extras);
+      const form_data = { ...buildFormData(program.formFields, form.extras), ...(gate.formData || {}) };
       const result = await submitProgramRegistration(slug, {
         ...person,
         email: form.email,
@@ -195,31 +228,46 @@ export function ProgramRegisterPage() {
             {closedBody ? <p className="text-gray-600 whitespace-pre-wrap">{closedBody}</p> : null}
           </div>
         ) : (
-          <form onSubmit={submit} className="space-y-5">
+          <form onSubmit={submit} noValidate className="space-y-5">
             {page.formHeading ? <h2 className="text-xl font-bold text-gray-900">{page.formHeading}</h2> : null}
             {page.formIntro ? <p className="text-sm text-gray-600 whitespace-pre-wrap">{page.formIntro}</p> : null}
             <div className="grid md:grid-cols-2 gap-4">
-              <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} />
-              <div className="space-y-2">
-                <Label>{fieldLabel(program.formFields, "email", "Email")}{fieldRequired(program.formFields, "email") ? " *" : ""}</Label>
-                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required={fieldRequired(program.formFields, "email")} className="focus:border-red-500" />
-              </div>
+              <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} errors={errors} />
+              <EmailField
+                id="program-email"
+                label={fieldLabel(program.formFields, "email", "Email")}
+                required={fieldRequired(program.formFields, "email")}
+                value={form.email}
+                onChange={(email) => setForm({ ...form, email })}
+                onBlur={duplicateGate.schedule}
+                error={errors.email}
+                suggestion={suggestion}
+                onUseSuggestion={(next) => {
+                  setForm({ ...form, email: next });
+                  setSuggestion("");
+                  setErrors((prev) => ({ ...prev, email: "" }));
+                }}
+              />
               <PhoneField
                 id="program-phone"
                 label={fieldLabel(program.formFields, "phone", "Phone")}
                 value={form.phone}
                 onChange={(v) => setForm({ ...form, phone: v })}
+                onBlur={duplicateGate.schedule}
                 required={fieldRequired(program.formFields, "phone")}
+                error={errors.phone}
               />
             </div>
+            {duplicateGate.panel}
             {page.requireBranch ? (
-              <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} required />
+              <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} required error={errors.branch_id} />
             ) : (
-              <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} />
+              <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} required={false} error={errors.branch_id} />
             )}
             <DynamicFormFields
               fields={program.formFields}
               values={form.extras}
+              errors={errors}
               onChange={(name, val) => setForm({ ...form, extras: { ...form.extras, [name]: val } })}
             />
             <Button type="submit" disabled={submitting} className="w-full bg-red-600 hover:bg-red-700">

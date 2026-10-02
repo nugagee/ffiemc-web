@@ -37,7 +37,7 @@ import { PopupPriorityProvider } from "../context/PopupPriorityContext";
 import { StickyEventBanner } from "../components/StickyEventBanner";
 import { Login } from "../pages/Login";
 import AdminLayout from "../pages/admin/AdminLayout";
-import { AdminHome, RequirePermission } from "../components/RequirePermission";
+import { AdminHome, RequireAnyPermission, RequirePermission } from "../components/RequirePermission";
 import VisitorsPage from "../pages/admin/VisitorsPage";
 import ContactsPage from "../pages/admin/ContactsPage";
 import ExperienceSurveysPage from "../pages/admin/ExperienceSurveysPage";
@@ -65,8 +65,11 @@ import ChurchRolesPage from "../pages/admin/programs/ChurchRolesPage";
 import ChurchMembersPage from "../pages/admin/programs/ChurchMembersPage";
 import ChurchBranchesPage from "../pages/admin/programs/ChurchBranchesPage";
 import MemberNotificationsPage from "../pages/admin/programs/MemberNotificationsPage";
+import EmailPriorityPage from "../pages/admin/programs/EmailPriorityPage";
+import HouseholdDuplicatesPage from "../pages/admin/programs/HouseholdDuplicatesPage";
 import { ProgramRegisterPage } from "../pages/ProgramRegisterPage";
 import { ChurchMembershipPage } from "../pages/ChurchMembershipPage";
+import { VerifyEmailPage } from "../pages/VerifyEmailPage";
 import { VolunteerRegisterPage } from "../pages/VolunteerRegisterPage";
 import VolunteersPage from "../pages/admin/programs/VolunteersPage";
 import FormDropdownsPage from "../pages/admin/programs/FormDropdownsPage";
@@ -156,6 +159,7 @@ const AllPages = () => (
             <Route path="/share-testimony" element={<ShareTestimony />} />
             <Route path="/register/:slug" element={<ProgramRegisterPage />} />
             <Route path="/join-church" element={<ChurchMembershipPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/volunteer/:slug" element={<VolunteerRegisterPage />} />
             <Route path="/contribute/media/:slug" element={<MediaContributionSubmitPage />} />
             <Route path="/contribute/media/:slug/report" element={<MediaContributionReportPage />} />
@@ -402,6 +406,22 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="member_notifications">
                     <MemberNotificationsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="programs/email-priority"
+                element={
+                  <RequireAnyPermission features={["member_notifications", "church_members"]}>
+                    <EmailPriorityPage />
+                  </RequireAnyPermission>
+                }
+              />
+              <Route
+                path="registrations/duplicates"
+                element={
+                  <RequirePermission feature="church_members">
+                    <HouseholdDuplicatesPage />
                   </RequirePermission>
                 }
               />
