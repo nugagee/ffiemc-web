@@ -21,12 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Eye, ImageIcon, Megaphone, Pencil, Plus, Send, Trash2, Users } from "lucide-react";
 import { PageToolbar } from "../../../components/admin/PageToolbar";
 import { RoleMultiSelect } from "../../../components/forms/RoleMultiSelect";
-import AnnouncementMediaFields from "../../../components/admin/AnnouncementMediaFields";
-import {
-  announcementHasImages,
-  announcementMediaFromRow,
-  buildMemberAnnouncementContent,
-} from "../../../lib/announcementEmail";
+import { TeamMultiSelect } from "../../../components/forms/TeamMultiSelect";
+import { AUDIENCE_TEAMS, buildAudienceFilters } from "../../../data/audienceCatalog";
 
 const emptyForm = (categoryId = "") => ({
   title: "",
@@ -36,6 +32,7 @@ const emptyForm = (categoryId = "") => ({
   program_id: "",
   role_ids: [],
   branch_id: "",
+  teams: [],
   ministry: "",
   header_image_url: "",
   images: [],
@@ -91,16 +88,18 @@ export default function MemberNotificationsPage() {
   const needsProgram = selectedCategory?.slug === "program-registrants";
 
   const audienceFilters = useMemo(() => {
-    const filters = {};
-    if (form.role_ids?.length) filters.role_ids = form.role_ids;
-    if (form.branch_id) filters.branch_ids = [form.branch_id];
-    if (form.ministry.trim()) filters.ministry = form.ministry.trim();
+    const filters = buildAudienceFilters({
+      roleIds: form.role_ids,
+      branchId: form.branch_id,
+      teams: form.teams,
+      ministry: form.ministry,
+    });
     if (form.program_id) {
       filters.program_id = form.program_id;
       filters.source = "program_registrants";
     }
     return filters;
-  }, [form.role_ids, form.branch_id, form.ministry, form.program_id]);
+  }, [form.role_ids, form.branch_id, form.teams, form.ministry, form.program_id]);
 
   const load = async () => {
     setLoading(true);
@@ -151,11 +150,10 @@ export default function MemberNotificationsPage() {
       program_id: row.program_id || filters.program_id || "",
       role_ids: filters.role_ids || [],
       branch_id: (filters.branch_ids && filters.branch_ids[0]) || "",
-      ministry: filters.ministry || "",
-      header_image_url: media.headerImageUrl,
-      images: media.images,
-      button_label: media.buttonLabel,
-      button_url: media.buttonUrl,
+      teams: Array.isArray(filters.teams) && filters.teams.length
+        ? filters.teams
+        : (AUDIENCE_TEAMS.includes(filters.ministry) ? [filters.ministry] : []),
+      ministry: filters.ministry && !AUDIENCE_TEAMS.includes(filters.ministry) ? filters.ministry : "",
       send_email: row.send_email !== false,
       send_sms: Boolean(row.send_sms),
     });
@@ -164,7 +162,7 @@ export default function MemberNotificationsPage() {
   };
 
   const previewRecipients = async () => {
-    if (!form.category_id && !form.program_id && !form.role_ids?.length && !form.branch_id) {
+    if (!form.category_id && !form.program_id && !form.role_ids?.length && !form.branch_id && !form.teams?.length) {
       toast.error("Select an audience category or filters");
       return;
     }
@@ -355,6 +353,7 @@ export default function MemberNotificationsPage() {
                 <p className="text-sm text-gray-600 mt-1 line-clamp-2">{row.body}</p>
                 <p className="text-xs text-gray-400 mt-2">
                   {row.category_name ? `Category: ${row.category_name}` : "Custom audience"}
+                  {row.audience_filters?.teams?.length ? ` · Teams: ${row.audience_filters.teams.join(", ")}` : ""}
                   {row.program_title ? ` · Program: ${row.program_title}` : ""}
                   {row.status === "sent"
                     ? ` · Sent ${row.email_sent || 0} emails, ${row.sms_sent || 0} SMS`
@@ -511,14 +510,12 @@ export default function MemberNotificationsPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Filter by ministry (optional)</Label>
-                <Input
-                  placeholder="e.g. Youth, Choir"
-                  value={form.ministry}
-                  onChange={(e) => setForm({ ...form, ministry: e.target.value })}
-                />
-              </div>
+              <TeamMultiSelect
+                value={form.teams}
+                onChange={(teams) => setForm({ ...form, teams, ministry: "" })}
+                label="Narrow by team"
+                hint="Optional. Pick Choir, Ushers, or any other team to trim this announcement. Clear every box to reach the whole category."
+              />
 
               <Button type="button" variant="outline" size="sm" onClick={previewRecipients} disabled={previewing}>
                 {previewing ? "Checking…" : "Preview recipient count"}
