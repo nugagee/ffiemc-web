@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/button";
 import { authApi } from "../../lib/api";
 import { useSettings } from "../../context/SettingsContext";
 import { sendExperienceSurveySubmissionEmail } from "../../lib/email";
+import { validateEmail } from "../../lib/emailValidation";
 import {
   SURVEY_FEATURES,
   averageComfort,
@@ -99,6 +100,14 @@ export function ExperienceSurveyModal({ open, path = "/", onClose }) {
     if (!overallRating) {
       setError("Please choose an overall rating.");
       return;
+    }
+    if (String(email || "").trim()) {
+      const emailResult = validateEmail(email, { required: true });
+      if (!emailResult.ok) {
+        setError(emailResult.suggestion ? `${emailResult.message} Did you mean ${emailResult.suggestion}?` : emailResult.message);
+        setStep("details");
+        return;
+      }
     }
     setSubmitting(true);
     setError("");

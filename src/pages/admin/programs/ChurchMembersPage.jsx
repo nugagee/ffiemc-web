@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { authApi } from "../../../lib/api";
+import { authApi, formatApiError } from "../../../lib/api";
+import { registrationFieldErrors } from "../../../lib/emailValidation";
+import { focusFirstInvalid, hasFieldErrors } from "../../../lib/formErrors";
+import { requestEmailOtp } from "../../../lib/emailOtp";
 import { useAuth } from "../../../context/AuthContext";
 import { useSettings } from "../../../context/SettingsContext";
 import { useAdminCounts } from "../../../context/AdminCountsContext";
@@ -29,6 +32,10 @@ import { useConfirmDialog } from "../../../components/admin/ConfirmDialog";
 import { PersonNameFields } from "../../../components/forms/PersonNameFields";
 import { personFromRow, withPersonPayload } from "../../../lib/personName";
 import { Plus, Mail } from "lucide-react";
+import { Switch } from "../../../components/ui/switch";
+import { EmailField } from "../../../components/forms/EmailField";
+import { DuplicateMatchCard } from "../../../components/forms/DuplicateMatchCard";
+import { isDuplicateError, RELATIONSHIPS, useDuplicateWatch } from "../../../lib/duplicateCheck";
 import { CategoryMultiSelect, TeamMultiSelect } from "../../../components/forms/TeamMultiSelect";
 import { categoryIds, categoryLabel, teamsFromRow } from "../../../data/audienceCatalog";
 
@@ -37,6 +44,7 @@ const emptyForm = {
   address: "", city: "", state: "", country: DEFAULT_COUNTRY,
   role_ids: [], branch_id: "", ministry: "", baptism_status: "", marital_status: "",
   occupation: "", emergency_contact_name: "", emergency_contact_phone: "", notes: "", status: "pending", form_data: {},
+  email_priority: true,
   registration_categories: [], audience_teams: [],
   worker_code: "", participant_code: "", worker_position: "", availability: "",
   meeting_sept_4: "", meeting_sept_5: "", absence_reason: "", convention_group: "",
@@ -111,6 +119,19 @@ export default function ChurchMembersPage() {
   const [viewRow, setViewRow] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [resendingEmail, setResendingEmail] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [suggestion, setSuggestion] = useState("");
+  const [sendOtp, setSendOtp] = useState(false);
+  const [verifiedFilter, setVerifiedFilter] = useState("all");
+  const [householdFilter, setHouseholdFilter] = useState("all");
+  const [householdChoice, setHouseholdChoice] = useState("");
+  const [relationship, setRelationship] = useState("");
+  const [relationshipOther, setRelationshipOther] = useState("");
+  const [usePrimaryEmail, setUsePrimaryEmail] = useState(true);
+  const [duplicateError, setDuplicateError] = useState("");
+  const [household, setHousehold] = useState(null);
+  const [linkMemberId, setLinkMemberId] = useState("");
+  const [linkRelationship, setLinkRelationship] = useState("child");
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const load = async () => {
@@ -133,14 +154,42 @@ export default function ChurchMembersPage() {
       "full_name", "email", "phone", "role_name", "role_names", "branch_name", "city", "state", "status",
       "ministry", "worker_code", "participant_code", "convention_group", "worker_position",
       "audience_teams", "registration_categories", "whatsapp",
-    ]);
-    return searched.filter((row) => {
+    ]).filter((row) => {
       if (categoryFilter && !categoryIds(row).includes(categoryFilter)) return false;
       if (teamFilter && !teamsFromRow(row).includes(teamFilter)) return false;
+      if (verifiedFilter === "verified") return Boolean(row.email_verified);
+      if (verifiedFilter === "unverified") return Boolean(row.email) && !row.email_verified;
+      if (verifiedFilter === "none") return !String(row.email || "").trim();
       return true;
     });
-  }, [rows, query, categoryFilter, teamFilter]);
+    if (householdFilter === "beneficiary") return searched.filter((row) => row.household_role === "beneficiary" || row.household_of);
+    if (householdFilter === "primary") return searched.filter((row) => row.household_role !== "beneficiary" && !row.household_of);
+    if (householdFilter === "shared") {
+      const emails = new Map();
+      searched.forEach((row) => {
+        const key = String(row.email || "").trim().toLowerCase();
+        if (!key) return;
+        emails.set(key, (emails.get(key) || 0) + 1);
+      });
+      return searched.filter((row) => emails.get(String(row.email || "").trim().toLowerCase()) > 1);
+    }
+    return searched;
+  }, [rows, query, categoryFilter, teamFilter, verifiedFilter, householdFilter]);
   const paged = usePagedRows(filtered);
+  const duplicates = useDuplicateWatch({
+    email: form.email,
+    phone: form.phone,
+    excludeId: editRow?.id || null,
+    enabled: formOpen,
+  });
+
+  useEffect(() => {
+    if (!viewRow?.id) {
+      setHousehold(null);
+      return;
+    }
+    authApi.memberHousehold(viewRow.id).then(setHousehold).catch(() => setHousehold(null));
+  }, [viewRow]);
 
   const exportCsv = () => {
     exportToCsv(`church-members-${Date.now()}`, filtered, [
@@ -149,6 +198,8 @@ export default function ChurchMembersPage() {
       { key: "last_name", label: "Last name" },
       { key: "full_name", label: "Full name" },
       { key: "email", label: "Email" },
+      { key: "email_verified", label: "Email verified" },
+      { key: "email_priority", label: "Email priority" },
       { key: "phone", label: "Phone" },
       { key: "branch_name", label: "Branch" },
       { key: "role_name", label: "Roles" },
@@ -171,8 +222,33 @@ export default function ChurchMembersPage() {
 
   const save = async (e) => {
     e.preventDefault();
-    if (!form.role_ids.length) {
-      toast.error("Select at least one church role");
+    const sendingCode = !editRow && sendOtp;
+    const { errors: next, suggestion: nextSuggestion } = registrationFieldErrors(form, {
+      requireTitle: false,
+      requireLast: false,
+      requireEmail: sendingCode,
+      requirePhone: true,
+      requireBranch: false,
+      requireRoles: true,
+    });
+    setErrors(next);
+    setSuggestion(nextSuggestion);
+    if (hasFieldErrors(next)) {
+      focusFirstInvalid(next);
+      return;
+    }
+    const found = await duplicates.check();
+    const contactChanged = !editRow
+      || String(form.email || "").trim().toLowerCase() !== String(editRow.email || "").trim().toLowerCase()
+      || String(form.phone || "").replace(/\D/g, "") !== String(editRow.phone || "").replace(/\D/g, "");
+    if (found.length && contactChanged && !householdChoice) {
+      setDuplicateError("This email or phone is already used. Link a household or confirm the shared address. Nothing was saved.");
+      focusFirstInvalid({ duplicate: "Choose an option" });
+      return;
+    }
+    if (householdChoice === "beneficiary" && (!relationship || (relationship === "other" && !relationshipOther.trim()))) {
+      setDuplicateError("Choose how this person is related.");
+      focusFirstInvalid({ relationship: "Choose a relationship" });
       return;
     }
     const person = withPersonPayload(form);
@@ -180,12 +256,18 @@ export default function ChurchMembersPage() {
     const payload = {
       ...form,
       ...person,
+      form_data: {
+        ...(form.form_data || {}),
+        ...(householdChoice ? { household_action: householdChoice === "beneficiary" ? "beneficiary" : "share" } : {}),
+      },
+      email_priority: Boolean(form.email_priority),
       ministry: audienceTeams.length ? audienceTeams.join(", ") : form.ministry,
       audience_teams: audienceTeams,
       registration_categories: form.registration_categories || [],
       role_id: form.role_ids[0],
       role_names: memberRoleLabel({ role_ids: form.role_ids }, roles),
     };
+    try {
     if (editRow) {
       const result = await requestOrApply({
         isSuperadmin,
@@ -198,7 +280,16 @@ export default function ChurchMembersPage() {
         previous: editRow,
         apply: () => authApi.updateChurchMember(editRow.id, payload),
       });
+      if (!result.queued && householdChoice === "beneficiary" && found[0]) {
+        await authApi.setHouseholdLink(found[0].id, editRow.id, relationship, relationshipOther, "approved", usePrimaryEmail);
+      }
       if (!result.queued) {
+        const savedEmail = String((await authApi.listChurchMembers(null, null, statusGroup)).find((row) => row.id === editRow.id)?.email || "").trim().toLowerCase();
+        const wantedEmail = String(form.email || "").trim().toLowerCase();
+        if (wantedEmail && savedEmail !== wantedEmail) {
+          toast.error("The email was not saved. It is already in use, so the member was left unchanged.");
+          return;
+        }
         toast.success("Member updated");
         const becameApproved =
           (editRow.status === "pending" || editRow.status === "")
@@ -220,13 +311,89 @@ export default function ChurchMembersPage() {
           }
         }
       }
+    } else if (sendingCode && householdChoice === "beneficiary" && found[0]) {
+      await requestEmailOtp({
+        email: "recovery@ffiem.org",
+        purpose: "beneficiary_link",
+        asAdmin: true,
+        payload: {
+          ...person,
+          context: "membership",
+          primary_member_id: found[0].id,
+          relationship,
+          relationship_other: relationshipOther,
+          use_primary_email: usePrimaryEmail,
+          applicant_email: usePrimaryEmail ? "" : form.email,
+          phone: form.phone,
+          role_ids: form.role_ids,
+          branch_id: form.branch_id || "",
+          ministry: audienceTeams.length ? audienceTeams.join(", ") : form.ministry,
+          registration_categories: form.registration_categories || [],
+          audience_teams: audienceTeams,
+          worker_code: form.worker_code || "",
+          participant_code: form.participant_code || "",
+          worker_position: form.worker_position || "",
+          availability: form.availability || "",
+          meeting_sept_4: form.meeting_sept_4 || "",
+          meeting_sept_5: form.meeting_sept_5 || "",
+          absence_reason: form.absence_reason || "",
+          convention_group: form.convention_group || "",
+          age_range: form.age_range || "",
+          whatsapp: form.whatsapp || "",
+          attended_before: form.attended_before || "",
+          expectations: form.expectations || "",
+          medical_need: form.medical_need || "",
+        },
+      });
+      toast.success("Verification email sent to the primary account. The beneficiary is added after they enter the code.");
+    } else if (sendingCode) {
+      await requestEmailOtp({
+        email: form.email,
+        purpose: "admin_membership",
+        payload: {
+          ...person,
+          phone: form.phone,
+          gender: form.gender,
+          date_of_birth: form.date_of_birth || "",
+          address: form.address,
+          city: form.city,
+          state: form.state,
+          country: form.country,
+          role_ids: form.role_ids,
+          branch_id: form.branch_id || "",
+          ministry: audienceTeams.length ? audienceTeams.join(", ") : form.ministry,
+          registration_categories: form.registration_categories || [],
+          audience_teams: audienceTeams,
+          worker_code: form.worker_code || "",
+          participant_code: form.participant_code || "",
+          worker_position: form.worker_position || "",
+          availability: form.availability || "",
+          meeting_sept_4: form.meeting_sept_4 || "",
+          meeting_sept_5: form.meeting_sept_5 || "",
+          absence_reason: form.absence_reason || "",
+          convention_group: form.convention_group || "",
+          age_range: form.age_range || "",
+          whatsapp: form.whatsapp || "",
+          attended_before: form.attended_before || "",
+          expectations: form.expectations || "",
+          medical_need: form.medical_need || "",
+          baptism_status: form.baptism_status,
+          marital_status: form.marital_status,
+          occupation: form.occupation,
+          emergency_contact_name: form.emergency_contact_name,
+          emergency_contact_phone: form.emergency_contact_phone,
+          notes: form.notes,
+          form_data: payload.form_data,
+        },
+      });
+      toast.success("Verification email sent. This member appears in the list after they enter the code.");
     } else {
       const result = await authApi.registerChurchMember({
         p_full_name: person.full_name,
         p_name_title: person.name_title,
         p_first_name: person.first_name,
         p_last_name: person.last_name,
-        p_email: form.email,
+        p_email: householdChoice === "beneficiary" && usePrimaryEmail ? "" : (form.email || ""),
         p_phone: form.phone,
         p_gender: form.gender,
         p_date_of_birth: form.date_of_birth || null,
@@ -236,7 +403,7 @@ export default function ChurchMembersPage() {
         p_country: form.country,
         p_role_id: form.role_ids[0],
         p_role_ids: form.role_ids,
-        p_branch_id: form.branch_id,
+        p_branch_id: form.branch_id || null,
         p_ministry: form.audience_teams?.length ? form.audience_teams.join(", ") : form.ministry,
         p_registration_categories: form.registration_categories || [],
         p_audience_teams: form.audience_teams || [],
@@ -261,29 +428,52 @@ export default function ChurchMembersPage() {
         p_emergency_contact_name: form.emergency_contact_name,
         p_emergency_contact_phone: form.emergency_contact_phone,
         p_notes: form.notes,
-        p_form_data: form.form_data || {},
+        p_form_data: payload.form_data,
       });
-      try {
-        await sendChurchMembershipEmails({
-          ...person,
-          ...form,
-          formData: form.form_data || {},
-          roleName: result.roleName || memberRoleLabel({ role_ids: form.role_ids }, roles),
-          branchName: result.branchName,
-          status: "pending",
-          adminEmail: settings.notificationEmail,
-          secondaryEmails: settings.secondaryNotificationEmails,
-        });
-        await authApi.markChurchMemberEmailed(result.id);
-      } catch (err) {
-        toast.warning("Saved but email failed: " + err.message);
+      if (form.email && !(householdChoice === "beneficiary" && usePrimaryEmail)) {
+        try {
+          await sendChurchMembershipEmails({
+            ...person,
+            ...form,
+            formData: form.form_data || {},
+            roleName: result.roleName || memberRoleLabel({ role_ids: form.role_ids }, roles),
+            branchName: result.branchName,
+            status: "approved",
+            adminEmail: settings.notificationEmail,
+            secondaryEmails: settings.secondaryNotificationEmails,
+          });
+          await authApi.markChurchMemberEmailed(result.id);
+        } catch (err) {
+          toast.warning("Saved but email failed: " + err.message);
+        }
+      }
+      if (householdChoice === "beneficiary" && found[0] && result?.id) {
+        await authApi.setHouseholdLink(found[0].id, result.id, relationship, relationshipOther, "approved", usePrimaryEmail);
       }
       toast.success("Member registered");
     }
     setFormOpen(false);
     setEditRow(null);
+    setSendOtp(false);
+    setErrors({});
     setForm(emptyForm);
     load();
+    } catch (err) {
+      const message = formatApiError(err.message);
+      if (isDuplicateError(message)) {
+        setDuplicateError(message);
+        duplicates.check();
+        focusFirstInvalid({ duplicate: message });
+        return;
+      }
+      if (err.suggestion) {
+        setSuggestion(err.suggestion);
+        setErrors({ email: message });
+        focusFirstInvalid({ email: message });
+      } else {
+        toast.error(message);
+      }
+    }
   };
 
   const startEdit = (row) => {
@@ -299,6 +489,9 @@ export default function ChurchMembersPage() {
       emergency_contact_phone: row.emergency_contact_phone || "",
       notes: row.notes || "", status: row.status || "pending",
       form_data: row.form_data || {},
+      email_priority: Boolean(row.email_priority),
+      email_verified: Boolean(row.email_verified),
+      email_verified_at: row.email_verified_at || null,
       registration_categories: categoryIds(row),
       audience_teams: teamsFromRow(row),
       worker_code: row.worker_code || "",
@@ -315,6 +508,9 @@ export default function ChurchMembersPage() {
       expectations: row.expectations || "",
       medical_need: row.medical_need || "",
     });
+    setErrors({});
+    setSuggestion("");
+    setSendOtp(false);
     setFormOpen(true);
   };
 
@@ -417,7 +613,7 @@ export default function ChurchMembersPage() {
           </Button>
         ))}
         right={canEdit ? (
-          <Button className="bg-red-600 hover:bg-red-700" onClick={() => { setEditRow(null); setForm(emptyForm); setFormOpen(true); }}>
+          <Button className="bg-red-600 hover:bg-red-700" onClick={() => { setEditRow(null); setForm(emptyForm); setErrors({}); setSuggestion(""); setSendOtp(false); setFormOpen(true); }}>
             <Plus size={16} className="mr-2" />
             Register member
           </Button>
@@ -436,7 +632,31 @@ export default function ChurchMembersPage() {
           </Select>
         </div>
         <div className="space-y-1 w-64">
-          <BranchSelect value={branchFilter} onChange={setBranchFilter} required={false} label="Filter by branch" />
+          <BranchSelect value={branchFilter} onChange={setBranchFilter} required={false} label="Filter by branch" field="branch_filter" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Email verification</Label>
+          <Select value={verifiedFilter} onValueChange={setVerifiedFilter}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="verified">Verified</SelectItem>
+              <SelectItem value="unverified">Unverified</SelectItem>
+              <SelectItem value="none">No email</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Household</Label>
+          <Select value={householdFilter} onValueChange={setHouseholdFilter}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All households</SelectItem>
+              <SelectItem value="primary">Primary accounts</SelectItem>
+              <SelectItem value="beneficiary">Beneficiaries</SelectItem>
+              <SelectItem value="shared">Shared email</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Category</Label>
@@ -468,23 +688,70 @@ export default function ChurchMembersPage() {
       </div>
 
       {formOpen && canEdit && (
-        <form onSubmit={save} className="mb-6 rounded-2xl border bg-white p-5 grid md:grid-cols-2 gap-4">
+        <form onSubmit={save} noValidate className="mb-6 rounded-2xl border bg-white p-5 grid md:grid-cols-2 gap-4">
           <div className="md:col-span-2 font-semibold">{editRow ? "Edit member" : "Register member (admin)"}</div>
           <div className="md:col-span-2 grid md:grid-cols-3 gap-4">
-            <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} />
+            <PersonNameFields
+              value={form}
+              onChange={(next) => setForm({ ...form, ...next })}
+              requireTitle={false}
+              requireLast={false}
+              errors={errors}
+            />
           </div>
+          <EmailField
+            id="admin-member-email"
+            label="Email"
+            required={!editRow && sendOtp}
+            value={form.email}
+            onChange={(email) => { setForm({ ...form, email }); setHouseholdChoice(""); }}
+            onBlur={duplicates.schedule}
+            error={errors.email}
+            suggestion={suggestion}
+            onUseSuggestion={(next) => {
+              setForm({ ...form, email: next });
+              setSuggestion("");
+              setErrors((prev) => ({ ...prev, email: "" }));
+            }}
+          />
           {[
-            ["email", "Email"],
             ["date_of_birth", "Date of birth", "date"],
             ["address", "Address"], ["city", "City"],
             ["emergency_contact_name", "Emergency contact name"],
           ].map(([key, label, type]) => (
             <div key={key} className="space-y-2">
               <Label>{label}</Label>
-              <Input type={type || "text"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} required={["email"].includes(key)} />
+              <Input type={type || "text"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
             </div>
           ))}
-          <PhoneField id="admin-member-phone" label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} required />
+          <PhoneField id="admin-member-phone" label="Phone" value={form.phone} onChange={(v) => { setForm({ ...form, phone: v }); setHouseholdChoice(""); }} onBlur={duplicates.schedule} required error={errors.phone} />
+          {duplicates.matches.length ? (
+            <div className="md:col-span-2">
+              <DuplicateMatchCard
+                matches={duplicates.matches}
+                mode={householdChoice === "beneficiary" ? "beneficiary" : householdChoice}
+                relationship={relationship}
+                relationshipOther={relationshipOther}
+                usePrimaryEmail={usePrimaryEmail}
+                onRelationship={setRelationship}
+                onRelationshipOther={setRelationshipOther}
+                onUsePrimaryEmail={setUsePrimaryEmail}
+                error={duplicateError}
+                onThatsMe={() => setDuplicateError("Ask them to use the public join form and choose That's me. Admins can save a shared address or link a beneficiary.")}
+                onBeneficiary={() => {
+                  setHouseholdChoice("beneficiary");
+                  setDuplicateError("");
+                  setUsePrimaryEmail(duplicates.matches[0]?.match_on !== "phone" || !String(form.email || "").trim());
+                }}
+                onUseDifferent={() => {
+                  setForm({ ...form, email: "" });
+                  setHouseholdChoice("");
+                  duplicates.setMatches([]);
+                }}
+                onShareAnyway={() => { setHouseholdChoice("share"); setDuplicateError(""); }}
+              />
+            </div>
+          ) : null}
           <ManagedSelect catalogs={catalogs} fieldKey="gender" label="Gender" value={form.gender} onChange={(v) => setForm({ ...form, gender: v })} />
           <ManagedSelect catalogs={catalogs} fieldKey="state" label="State" value={form.state} onChange={(v) => setForm({ ...form, state: v })} />
           <ManagedSelect catalogs={catalogs} fieldKey="country" label="Country" value={form.country} onChange={(v) => setForm({ ...form, country: v })} />
@@ -521,7 +788,8 @@ export default function ChurchMembersPage() {
           ))}
           <PhoneField id="admin-member-emergency-phone" label="Emergency contact phone" value={form.emergency_contact_phone} onChange={(v) => setForm({ ...form, emergency_contact_phone: v })} />
           <div className="md:col-span-2">
-            <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} />
+            <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} required={false} error={errors.branch_id} />
+            {!editRow ? null : <p className="text-xs text-gray-500 mt-1">Title and branch can stay blank on older records. Saving still works.</p>}
           </div>
           <div className="space-y-2 md:col-span-2">
             <RoleMultiSelect
@@ -529,7 +797,26 @@ export default function ChurchMembersPage() {
               value={form.role_ids}
               onChange={(role_ids) => setForm({ ...form, role_ids })}
               required
+              error={errors.role_ids}
             />
+          </div>
+          {!editRow ? (
+            <div className="md:col-span-2 flex items-start gap-3 rounded-xl border border-gray-100 p-3">
+              <Switch id="send-otp" checked={sendOtp} onCheckedChange={setSendOtp} />
+              <div>
+                <Label htmlFor="send-otp">Send OTP to verify email</Label>
+                <p className="text-xs text-gray-500 mt-1">Off by default. The member is saved immediately and marked unverified. Turn this on to email a code and add them only after they confirm it.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="md:col-span-2 text-sm text-gray-600">
+              Email verification: {form.email_verified ? `Verified${form.email_verified_at ? ` (${new Date(form.email_verified_at).toLocaleString("en-GB")})` : ""}` : "Unverified"}
+              {form.email ? ". Changing the address clears verification until a new code is confirmed." : ""}
+            </div>
+          )}
+          <div className="md:col-span-2 flex items-center gap-3">
+            <Switch id="email-priority" checked={Boolean(form.email_priority)} onCheckedChange={(v) => setForm({ ...form, email_priority: Boolean(v) })} />
+            <Label htmlFor="email-priority">Email priority</Label>
           </div>
           <div className="space-y-2">
             <Label>Status</Label>
@@ -581,7 +868,7 @@ export default function ChurchMembersPage() {
             <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
           </div>
           <div className="md:col-span-2 flex gap-2">
-            <Button type="submit" className="bg-red-600 hover:bg-red-700">{editRow ? "Save" : "Register & email"}</Button>
+            <Button type="submit" className="bg-red-600 hover:bg-red-700">{editRow ? "Save" : sendOtp ? "Send verification code" : "Register"}</Button>
             <Button type="button" variant="outline" onClick={() => { setFormOpen(false); setEditRow(null); }}>Cancel</Button>
           </div>
         </form>
@@ -597,6 +884,7 @@ export default function ChurchMembersPage() {
               <th className="px-4 py-3">Roles</th>
               <th className="px-4 py-3">Branch</th>
               <th className="px-4 py-3">Contact</th>
+              <th className="px-4 py-3">Email check</th>
               <th className="px-4 py-3">Location</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Registered</th>
@@ -611,7 +899,16 @@ export default function ChurchMembersPage() {
                 <td className="px-4 py-3 text-gray-700">{teamsFromRow(row).join(", ") || "—"}</td>
                 <td className="px-4 py-3">{memberRoleLabel(row, roles) || "—"}</td>
                 <td className="px-4 py-3 text-gray-600">{row.branch_name || "—"}</td>
-                <td className="px-4 py-3"><div>{row.email}</div><div className="text-xs text-gray-500">{row.phone}</div></td>
+                <td className="px-4 py-3"><div>{row.email || "—"}</div><div className="text-xs text-gray-500">{row.phone}</div></td>
+                <td className="px-4 py-3">
+                  <div>{!row.email ? "No email" : row.email_verified ? "Verified" : "Unverified"}</div>
+                  {row.email_priority ? <div className="text-xs text-red-600">Priority</div> : null}
+                  {row.household_of ? (
+                    <div className="text-xs text-amber-700">Beneficiary of {row.household_of}{row.household_relationship ? ` (${row.household_relationship})` : ""}</div>
+                  ) : row.household_role === "primary" ? (
+                    <div className="text-xs text-gray-400">Primary</div>
+                  ) : null}
+                </td>
                 <td className="px-4 py-3 text-gray-600">{[row.city, row.state].filter(Boolean).join(", ")}</td>
                 <td className="px-4 py-3 capitalize">{row.status}</td>
                 <td className="px-4 py-3 text-gray-500">{formatDate(row.created_at)}</td>
@@ -648,7 +945,7 @@ export default function ChurchMembersPage() {
                 </td>
               </tr>
             ))}
-            {paged.total === 0 && <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-500">No members found.</td></tr>}
+            {paged.total === 0 && <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-500">No members found.</td></tr>}
           </tbody>
         </table>
         <TablePagination {...paged} onPageChange={paged.setPage} />
@@ -659,7 +956,10 @@ export default function ChurchMembersPage() {
         onOpenChange={(o) => { if (!o) setViewRow(null); }}
         title={viewRow?.full_name || "Member"}
         fields={viewRow ? [
+          { label: "Household", value: viewRow.household_of ? `Beneficiary of ${viewRow.household_of} (${viewRow.household_relationship || "linked"}, ${viewRow.household_status || ""})` : "Primary account" },
           { label: "Email", value: viewRow.email },
+          { label: "Email verified", value: viewRow.email_verified ? `Yes${viewRow.email_verified_at ? ` (${formatDate(viewRow.email_verified_at)})` : ""}` : "No" },
+          { label: "Email priority", value: viewRow.email_priority ? "Yes" : "No" },
           { label: "Phone", value: viewRow.phone },
           { label: "Gender", value: viewRow.gender },
           { label: "Date of birth", value: viewRow.date_of_birth },
@@ -695,6 +995,79 @@ export default function ChurchMembersPage() {
           { label: "Extra form data", value: viewRow.form_data },
           { label: "Registered", value: formatDate(viewRow.created_at) },
         ] : []}
+        children={household ? (
+          <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-amber-800">Household</p>
+            {(household.as_beneficiary || []).map((link) => (
+              <p key={link.id} className="text-sm">Beneficiary of {link.full_name} ({link.relationship}) — {link.status}</p>
+            ))}
+            {(household.beneficiaries || []).map((link) => (
+              <div key={link.id} className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <span className="min-w-0 break-words">{link.full_name} · {link.status}</span>
+                {canEdit ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select
+                      value={link.relationship || "child"}
+                      onValueChange={async (next) => {
+                        try {
+                          await authApi.setHouseholdLink(viewRow.id, link.member_id, next, link.relationship_other || "", link.status || "approved", link.use_primary_email !== false);
+                          toast.success("Relationship updated");
+                          authApi.memberHousehold(viewRow.id).then(setHousehold).catch(() => setHousehold(null));
+                          load();
+                        } catch (err) {
+                          toast.error(formatApiError(err.message));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-40 bg-white"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {RELATIONSHIPS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="sm" onClick={async () => {
+                      await authApi.removeHouseholdLink(link.id);
+                      toast.success("Household link removed");
+                      authApi.memberHousehold(viewRow.id).then(setHousehold).catch(() => setHousehold(null));
+                      load();
+                    }}>Remove</Button>
+                  </div>
+                ) : (
+                  <span>{link.relationship}</span>
+                )}
+              </div>
+            ))}
+            {canEdit ? (
+              <div className="flex flex-col gap-2 border-t border-amber-100 pt-2 sm:flex-row sm:items-center">
+                <Select value={linkMemberId || undefined} onValueChange={setLinkMemberId}>
+                  <SelectTrigger className="h-8 bg-white sm:w-56"><SelectValue placeholder="Link an existing member" /></SelectTrigger>
+                  <SelectContent>
+                    {rows.filter((row) => row.id !== viewRow?.id && !(household.beneficiaries || []).some((link) => link.member_id === row.id)).map((row) => (
+                      <SelectItem key={row.id} value={row.id}>{row.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={linkRelationship} onValueChange={setLinkRelationship}>
+                  <SelectTrigger className="h-8 w-40 bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {RELATIONSHIPS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button type="button" size="sm" className="bg-red-600 hover:bg-red-700" disabled={!linkMemberId} onClick={async () => {
+                  try {
+                    await authApi.setHouseholdLink(viewRow.id, linkMemberId, linkRelationship, "", "approved", true);
+                    toast.success("Household link added");
+                    setLinkMemberId("");
+                    authApi.memberHousehold(viewRow.id).then(setHousehold).catch(() => setHousehold(null));
+                    load();
+                  } catch (err) {
+                    toast.error(formatApiError(err.message));
+                  }
+                }}>Add link</Button>
+              </div>
+            ) : null}
+            {!household.as_beneficiary?.length && !household.beneficiaries?.length ? <p className="text-sm text-gray-600">No linked members yet. Add one here, or convert a shared-email group from Duplicate contacts.</p> : null}
+          </div>
+        ) : null}
         footer={viewRow ? (
           <div className="flex flex-wrap justify-end gap-2">
             <Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>

@@ -849,6 +849,34 @@ export const authApi = {
       p_token: getAdminToken(),
       p_filters: filters || {},
     }),
+  listEmailPriority: () => rpc("admin_list_email_priority", { p_token: getAdminToken() }),
+  setMemberEmailPriority: (id, priority) =>
+    rpc("admin_set_member_email_priority", { p_token: getAdminToken(), p_id: id, p_priority: priority }),
+  resyncEmailPriority: () => rpc("admin_resync_email_priority", { p_token: getAdminToken() }),
+  getEmailSendSettings: () => rpc("admin_get_email_send_settings", { p_token: getAdminToken() }),
+  updateEmailSendSettings: (data) =>
+    rpc("admin_update_email_send_settings", { p_token: getAdminToken(), p_data: data || {} }),
+  previewEmailSend: () => rpc("admin_preview_email_send", { p_token: getAdminToken() }),
+  memberHousehold: (id) => rpc("admin_member_household", { p_token: getAdminToken(), p_id: id }),
+  setHouseholdLink: (primaryId, beneficiaryId, relationship, other = "", status = "approved", usePrimary = true) =>
+    rpc("admin_set_household_link", {
+      p_token: getAdminToken(),
+      p_primary: primaryId,
+      p_beneficiary: beneficiaryId,
+      p_relationship: relationship,
+      p_other: other,
+      p_status: status,
+      p_use_primary: usePrimary,
+    }),
+  reviewHouseholdLink: (id, decision) =>
+    rpc("admin_review_household_link", { p_token: getAdminToken(), p_id: id, p_decision: decision }),
+  removeHouseholdLink: (id) => rpc("admin_remove_household_link", { p_token: getAdminToken(), p_id: id }),
+  listPendingHouseholdLinks: () => rpc("admin_list_pending_household_links", { p_token: getAdminToken() }),
+  listContactDuplicates: () => rpc("admin_list_contact_duplicates", { p_token: getAdminToken() }),
+  mergeMembers: (primaryId, duplicateIds) =>
+    rpc("admin_merge_members", { p_token: getAdminToken(), p_primary: primaryId, p_duplicate_ids: duplicateIds }),
+  convertHousehold: (primaryId, links) =>
+    rpc("admin_convert_household", { p_token: getAdminToken(), p_primary: primaryId, p_links: links }),
   upsertMemberNotification: (id, data) =>
     rpc("admin_upsert_member_notification", {
       p_token: getAdminToken(),
@@ -1461,6 +1489,7 @@ export async function submitVolunteerApplication(slug, payload) {
     p_experience_level: payload.experience_level || "",
     p_availability: payload.availability || "",
     p_notes: payload.notes || "",
+    p_form_data: payload.form_data || {},
   });
 }
 

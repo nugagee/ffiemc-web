@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Checkbox } from "../ui/checkbox";
 import { CORE_COUNTRIES, DEFAULT_COUNTRY } from "../../data/countries";
 import { AGE_BRACKETS, ageOptionsFor, isAgeField } from "../../data/ageBrackets";
+import { invalidInputClass } from "../../lib/formErrors";
+import { FieldMessage } from "../forms/FieldMessage";
 
 const BASE_FIELDS = new Set(["full_name", "first_name", "last_name", "name_title", "title", "email", "phone", "church", "home_church"]);
 
@@ -32,7 +34,7 @@ function countryOptionsFor(field, current) {
 }
 
 /** Render dynamic form fields from program/membership config. */
-export function DynamicFormFields({ fields = [], values = {}, onChange, idPrefix = "field" }) {
+export function DynamicFormFields({ fields = [], values = {}, onChange, idPrefix = "field", errors = {} }) {
   const customFields = (fields || []).filter((f) => !BASE_FIELDS.has(f.name));
 
   return (
@@ -56,29 +58,29 @@ export function DynamicFormFields({ fields = [], values = {}, onChange, idPrefix
 
         if (field.type === "textarea") {
           return (
-            <div key={field.name} className="space-y-2">
+            <div key={field.name} className="space-y-2" data-field={field.name}>
               <Label htmlFor={id}>{field.label}{required ? " *" : ""}</Label>
               <Textarea
                 id={id}
                 value={value}
-                required={required}
                 rows={3}
                 onChange={(e) => onChange(field.name, e.target.value)}
-                className="focus:border-red-500"
+                className={invalidInputClass(Boolean(errors[field.name]), "focus:border-red-500")}
               />
+              <FieldMessage message={errors[field.name]} />
             </div>
           );
         }
 
         if (asSelect) {
           return (
-            <div key={field.name} className="space-y-2">
+            <div key={field.name} className="space-y-2" data-field={field.name}>
               <Label>{field.label}{required ? " *" : ""}</Label>
               <Select
                 value={selectValue || undefined}
                 onValueChange={(v) => onChange(field.name, v)}
               >
-                <SelectTrigger>
+                <SelectTrigger className={errors[field.name] ? "border-red-500 ring-1 ring-red-200" : ""}>
                   <SelectValue placeholder={asAge ? "Select age bracket" : `Select ${field.label}`} />
                 </SelectTrigger>
                 <SelectContent>
@@ -87,16 +89,7 @@ export function DynamicFormFields({ fields = [], values = {}, onChange, idPrefix
                   ))}
                 </SelectContent>
               </Select>
-              {required && (
-                <input
-                  tabIndex={-1}
-                  aria-hidden
-                  className="sr-only"
-                  value={selectValue}
-                  onChange={() => {}}
-                  required
-                />
-              )}
+              <FieldMessage message={errors[field.name]} />
             </div>
           );
         }
@@ -115,16 +108,16 @@ export function DynamicFormFields({ fields = [], values = {}, onChange, idPrefix
         }
 
         return (
-          <div key={field.name} className="space-y-2">
+          <div key={field.name} className="space-y-2" data-field={field.name}>
             <Label htmlFor={id}>{field.label}{required ? " *" : ""}</Label>
             <Input
               id={id}
               type={field.type === "number" ? "number" : field.type === "email" ? "email" : field.type === "tel" ? "tel" : field.type === "date" ? "date" : "text"}
               value={value}
-              required={required}
               onChange={(e) => onChange(field.name, e.target.value)}
-              className="focus:border-red-500"
+              className={invalidInputClass(Boolean(errors[field.name]), "focus:border-red-500")}
             />
+            <FieldMessage message={errors[field.name]} />
           </div>
         );
       })}

@@ -1,5 +1,6 @@
 import { Label } from "../ui/label";
 import { Checkbox } from "../ui/checkbox";
+import { FieldMessage } from "./FieldMessage";
 
 export function RoleMultiSelect({
   roles = [],
@@ -8,6 +9,7 @@ export function RoleMultiSelect({
   required = false,
   label = "Church roles",
   hint = "Select every role this person holds in the church.",
+  error = "",
 }) {
   const ids = Array.isArray(value) ? value.filter(Boolean) : value ? [value] : [];
 
@@ -17,13 +19,13 @@ export function RoleMultiSelect({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-field="role_ids">
       <Label>
         {label}
         {required ? " *" : ""}
       </Label>
       {hint ? <p className="text-xs text-gray-500">{hint}</p> : null}
-      <div className="rounded-xl border border-gray-200 p-3 grid sm:grid-cols-2 gap-2">
+      <div className={`rounded-xl border p-3 grid sm:grid-cols-2 gap-2 ${error ? "border-red-500 ring-1 ring-red-200" : "border-gray-200"}`}>
         {roles.length === 0 ? (
           <p className="text-sm text-gray-500 col-span-2">No roles yet. Add them under Programs → Church roles.</p>
         ) : (
@@ -35,6 +37,7 @@ export function RoleMultiSelect({
           ))
         )}
       </div>
+      <FieldMessage message={error} />
     </div>
   );
 }

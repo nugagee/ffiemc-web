@@ -11,7 +11,6 @@ import { exportToCsv, filterRows } from "../../../lib/exportCsv";
 import { DynamicFormFields, buildFormData } from "../../../components/programs/DynamicFormFields";
 import { BranchSelect } from "../../../components/programs/BranchSelect";
 import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
 import { TableActions } from "../../../components/admin/TableActions";
@@ -21,6 +20,9 @@ import { PageToolbar } from "../../../components/admin/PageToolbar";
 import { PersonNameFields } from "../../../components/forms/PersonNameFields";
 import { PhoneField } from "../../../components/forms/PhoneField";
 import { personFromRow, withPersonPayload } from "../../../lib/personName";
+import { registrationFieldErrors } from "../../../lib/emailValidation";
+import { focusFirstInvalid, hasFieldErrors } from "../../../lib/formErrors";
+import { EmailField } from "../../../components/forms/EmailField";
 import { requestOrApply } from "../../../lib/changeRequests";
 import { Plus } from "lucide-react";
 
@@ -49,6 +51,8 @@ export default function ProgramRegistrationsPage() {
   const [editRow, setEditRow] = useState(null);
   const [viewRow, setViewRow] = useState(null);
   const [form, setForm] = useState({ name_title: "", first_name: "", last_name: "", email: "", phone: "", branch_id: "", status: "registered", extras: {} });
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [emailSuggestion, setEmailSuggestion] = useState("");
 
   const activeProgram = programs.find((p) => p.id === selectedProgram);
 
@@ -98,9 +102,27 @@ export default function ProgramRegistrationsPage() {
     ]);
   };
 
+  const validateAdminForm = () => {
+    const { errors: next, suggestion } = registrationFieldErrors(form, {
+      requireTitle: false,
+      requireLast: false,
+      requireEmail: true,
+      requirePhone: true,
+      requireBranch: false,
+    });
+    setFieldErrors(next);
+    setEmailSuggestion(suggestion);
+    if (hasFieldErrors(next)) {
+      focusFirstInvalid(next);
+      return false;
+    }
+    return true;
+  };
+
   const submitRegister = async (e) => {
     e.preventDefault();
     if (!activeProgram) return toast.error("Select a program first");
+    if (!validateAdminForm()) return;
     const person = withPersonPayload(form);
     const form_data = buildFormData(activeProgram.form_fields, form.extras);
     const result = await authApi.registerProgramParticipant(activeProgram.slug, {
@@ -141,6 +163,7 @@ export default function ProgramRegistrationsPage() {
   };
 
   const saveEdit = async () => {
+    if (!validateAdminForm()) return;
     const person = withPersonPayload(form);
     const payload = {
       ...person,
@@ -224,22 +247,31 @@ export default function ProgramRegistrationsPage() {
 
       {(registerOpen || editRow) && canEdit && (
         <form
+          noValidate
           className="mb-6 rounded-2xl border bg-white p-5 space-y-4"
           onSubmit={(e) => { e.preventDefault(); editRow ? saveEdit() : submitRegister(e); }}
         >
           <h3 className="font-semibold">{editRow ? "Edit registration" : `Register for ${activeProgram?.title}`}</h3>
           <div className="grid md:grid-cols-3 gap-4">
-            <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} />
-            <div className="space-y-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
+            <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} requireTitle={false} requireLast={false} errors={fieldErrors} />
+            <EmailField
+              id="admin-program-email"
+              value={form.email}
+              onChange={(email) => setForm({ ...form, email })}
+              error={fieldErrors.email}
+              suggestion={emailSuggestion}
+              onUseSuggestion={(next) => setForm({ ...form, email: next })}
+            />
             <PhoneField
               id="admin-program-phone"
               label="Phone"
               value={form.phone}
               onChange={(v) => setForm({ ...form, phone: v })}
               required
+              error={fieldErrors.phone}
             />
           </div>
-          <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} />
+          <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} required={false} error={fieldErrors.branch_id} />
           {!editRow && activeProgram && (
             <DynamicFormFields
               fields={activeProgram.form_fields}
