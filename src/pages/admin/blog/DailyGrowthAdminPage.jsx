@@ -239,7 +239,7 @@ export default function DailyGrowthAdminPage() {
               <Sparkles className="h-6 w-6 text-red-600" /> Daily Growth
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Queue traits, prophecies, facts, and riddles. Cron publishes one per category daily and can email members.
+              Prefers your queued items; if a category queue is empty, cron auto-fills from bible-api.com, publishes one per category daily, and can email members.
               Public:{" "}
               <a href="/blog?tab=daily-growth" className="text-red-600 hover:underline" target="_blank" rel="noreferrer">
                 /blog?tab=daily-growth

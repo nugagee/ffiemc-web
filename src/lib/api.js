@@ -636,6 +636,69 @@ export const authApi = {
   },
   publicListDailyGrowth: (category = null) =>
     rpc("public_list_daily_growth", { p_category: category || null }),
+  getContentEmailSettings: () =>
+    rpc("admin_get_content_email_settings", { p_token: getAdminToken() }),
+  updateContentEmailSettings: (data) =>
+    rpc("admin_update_content_email_settings", {
+      p_token: getAdminToken(),
+      p_data: data,
+    }),
+  listReminderImages: (kind = null) =>
+    rpc("admin_list_reminder_images", {
+      p_token: getAdminToken(),
+      p_kind: kind || null,
+    }),
+  upsertReminderImage: (id, data) =>
+    rpc("admin_upsert_reminder_image", {
+      p_token: getAdminToken(),
+      p_id: id || null,
+      p_data: data || {},
+    }),
+  deleteReminderImage: (id) =>
+    rpc("admin_delete_reminder_image", {
+      p_token: getAdminToken(),
+      p_id: id,
+    }),
+  listContentEmailRuns: (limit = 20) =>
+    rpc("admin_list_content_email_runs", {
+      p_token: getAdminToken(),
+      p_limit: limit,
+    }),
+  triggerMemberContentEmails: async ({
+    job = "digest",
+    force = true,
+    dryRun = false,
+  } = {}) => {
+    const supabaseUrl = String(process.env.REACT_APP_SUPABASE_URL || "").replace(/\/$/, "");
+    const base =
+      process.env.REACT_APP_MEMBER_EMAILS_URL ||
+      (supabaseUrl ? `${supabaseUrl}/functions/v1/member-content-emails` : "");
+    const secret =
+      process.env.REACT_APP_MEMBER_EMAILS_CRON_SECRET ||
+      process.env.REACT_APP_GROWTH_CRON_SECRET ||
+      process.env.REACT_APP_NEWS_CRON_SECRET ||
+      "";
+    if (!base) {
+      throw new Error("Set REACT_APP_SUPABASE_URL for member content emails");
+    }
+    const params = new URLSearchParams();
+    params.set("job", job);
+    if (secret) params.set("secret", secret);
+    if (force) params.set("force", "1");
+    if (dryRun) params.set("dry_run", "1");
+    const url = `${base}?${params.toString()}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(secret ? { "x-cron-secret": secret } : {}),
+      },
+      body: JSON.stringify({ job }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || body.message || `Member email job failed (${res.status})`);
+    return body;
+  },
   upsertChurchResource: (id, data) =>
     rpc("admin_upsert_church_resource", {
       p_token: getAdminToken(),

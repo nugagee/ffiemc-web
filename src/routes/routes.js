@@ -53,6 +53,7 @@ import BlogCommentsPage from "../pages/admin/blog/BlogCommentsPage";
 import ChurchResourcesPage from "../pages/admin/blog/ChurchResourcesPage";
 import ChristianNewsAdminPage from "../pages/admin/blog/ChristianNewsAdminPage";
 import DailyGrowthAdminPage from "../pages/admin/blog/DailyGrowthAdminPage";
+import MemberEmailsAdminPage from "../pages/admin/MemberEmailsAdminPage";
 import SpecialProgramsPage from "../pages/admin/blog/SpecialProgramsPage";
 import SpecialProgramItemsPage from "../pages/admin/blog/SpecialProgramItemsPage";
 import PrayerInboxPage from "../pages/admin/PrayerInboxPage";
@@ -190,6 +191,14 @@ const AllPages = () => (
                 element={
                   <RequirePermission feature="experience_surveys">
                     <ExperienceSurveysPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="member-emails"
+                element={
+                  <RequirePermission feature="blog.posts" action="edit">
+                    <MemberEmailsAdminPage />
                   </RequirePermission>
                 }
               />

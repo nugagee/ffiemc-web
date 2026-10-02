@@ -1,6 +1,12 @@
 # Daily Growth (traits, prophecies, facts, riddles)
 
-Spools one queued item per enabled category each morning (Africa/Lagos), publishes them on the Blog **Daily Growth** tab, and optionally emails a short digest to approved/active church members.
+Each morning (Africa/Lagos) the `spool-daily-growth` edge function:
+
+1. **Auto-fills the queue** when a category has no queued items — picks a rotating seed and loads the verse text from [bible-api.com](https://bible-api.com) (KJV).
+2. **Publishes one item per enabled category** (trait, prophecy, fact, riddle).
+3. **Emails** a short digest to approved/active church members (optional; controlled in settings).
+
+You can still pre-queue your own items in admin; the Bible API path only runs when a category’s queue is empty.
 
 ## Database
 
@@ -24,7 +30,7 @@ Publish only (no email):
 curl -X POST "https://YOUR_PROJECT.supabase.co/functions/v1/spool-daily-growth?secret=YOUR_GROWTH_CRON_SECRET&skip_email=1&force=1"
 ```
 
-Publish + email digest:
+Publish + email digest (also auto-fills from Bible API if queue empty):
 
 ```bash
 curl -X POST "https://YOUR_PROJECT.supabase.co/functions/v1/spool-daily-growth?secret=YOUR_GROWTH_CRON_SECRET&force=1"
@@ -49,8 +55,6 @@ Jobs created by migration `20261028_schedule_edge_crons.sql`:
 
 Config row: `public.edge_cron_config` (`project_url`, secrets). No public RLS access.
 
-You can also schedule in Supabase Dashboard → **Edge Functions** → function → **Schedules**.
-
 Manual catch-up from admin:
 
 - Blog → Daily Growth → **Run spool now** / **Send digest**
@@ -64,11 +68,12 @@ REACT_APP_GROWTH_CRON_SECRET=your-long-random-secret
 ```
 
 If omitted, admin derives the URL from `REACT_APP_SUPABASE_URL` and can fall back to `REACT_APP_NEWS_CRON_SECRET`. Restart `npm start` after adding new `REACT_APP_*` vars.
+
 ## Admin
 
 **Blog → Daily Growth** (`/admin/blog/daily-growth`)
 
-- Build a queue of draft/queued items
+- Optionally build a queue of draft/queued items (overrides auto-fill for that category)
 - Toggle spool + email + categories
 - Run spool now / send digest
 
