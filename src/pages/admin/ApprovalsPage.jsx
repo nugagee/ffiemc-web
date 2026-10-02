@@ -60,6 +60,7 @@ export default function ApprovalsPage({ mine = false }) {
   const canInbox = isSuperadmin || can("approvals", "view");
 
   const [rows, setRows] = useState([]);
+  const [householdLinks, setHouseholdLinks] = useState([]);
   const [note, setNote] = useState("");
   const [comment, setComment] = useState("");
   const [viewRow, setViewRow] = useState(null);
@@ -72,6 +73,14 @@ export default function ApprovalsPage({ mine = false }) {
       mine ? "mine" : "inbox"
     );
     setRows(list || []);
+    if (!mine && canInbox) {
+      try {
+        const links = await authApi.listPendingHouseholdLinks();
+        setHouseholdLinks(Array.isArray(links) ? links : []);
+      } catch {
+        setHouseholdLinks([]);
+      }
+    }
   };
 
   useEffect(() => {
@@ -80,6 +89,16 @@ export default function ApprovalsPage({ mine = false }) {
   }, [feature, status, mine]);
 
   const paged = usePagedRows(rows);
+
+  const reviewLink = async (id, decision) => {
+    try {
+      await authApi.reviewHouseholdLink(id, decision);
+      toast.success(decision === "approved" ? "Household link approved" : "Household link rejected");
+      load();
+    } catch (err) {
+      toast.error(formatApiError(err.message));
+    }
+  };
 
   const goFeature = (id) => {
     const base = mine ? "/admin/approvals/mine" : "/admin/approvals";
@@ -199,6 +218,27 @@ export default function ApprovalsPage({ mine = false }) {
           ? "Track every change you submitted, read reviewer feedback, add a note, or withdraw a pending request."
           : "Review changes submitted by other admins. Approve to apply them, reject with a note, or reply with feedback."}
       </p>
+
+      {!mine && householdLinks.length ? (
+        <section className="mt-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+          <h2 className="font-semibold">Pending household links</h2>
+          {householdLinks.map((link) => (
+            <div key={link.id} className="flex flex-col gap-2 rounded-xl bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm">
+                <span className="font-medium">{link.beneficiary_name}</span>
+                {" "}as {link.relationship} of {link.primary_name}
+                <span className="block text-xs text-gray-500">{link.beneficiary_email || link.beneficiary_phone || "No direct email"}</span>
+              </p>
+              {canReview ? (
+                <div className="flex gap-2">
+                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => reviewLink(link.id, "approved")}>Approve</Button>
+                  <Button size="sm" variant="outline" onClick={() => reviewLink(link.id, "rejected")}>Reject</Button>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       <PageToolbar
         left={APPROVAL_FEATURES.map((f) => (

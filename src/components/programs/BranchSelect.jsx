@@ -3,9 +3,10 @@ import { Label } from "../ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "../ui/select";
 import { listPublicChurchBranches, listPublicChurchDistricts } from "../../lib/api";
 import { CHURCH_BRANCHES, CHURCH_DISTRICTS, groupChurchNetwork, normalizeBranch, normalizeDistrict } from "../../data/churchBranches";
+import { FieldMessage } from "../forms/FieldMessage";
 
 /** Reusable church branch picker — grouped by district, type, and international. */
-export function BranchSelect({ value, onChange, required = true, label = "Church branch", id = "branch" }) {
+export function BranchSelect({ value, onChange, required = true, label = "Church branch", id = "branch", error = "", field = "branch_id" }) {
   const [branches, setBranches] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,12 +28,12 @@ export function BranchSelect({ value, onChange, required = true, label = "Church
   const groups = useMemo(() => groupChurchNetwork(branches, districts), [branches, districts]);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-field={field}>
       {label ? (
         <Label htmlFor={id}>{label}{required ? " *" : ""}</Label>
       ) : null}
-      <Select value={value || (required ? undefined : "all")} onValueChange={(v) => onChange(v === "all" ? "" : v)} required={required} disabled={loading}>
-        <SelectTrigger id={id || undefined} className="focus:border-red-500">
+      <Select value={value || (required ? undefined : "all")} onValueChange={(v) => onChange(v === "all" ? "" : v)} disabled={loading}>
+        <SelectTrigger id={id || undefined} className={error ? "border-red-500 ring-1 ring-red-200" : "focus:border-red-500"}>
           <SelectValue placeholder={loading ? "Loading branches…" : required ? "Select your branch" : "All branches"} />
         </SelectTrigger>
         <SelectContent>
@@ -86,9 +87,10 @@ export function BranchSelect({ value, onChange, required = true, label = "Church
           )}
         </SelectContent>
       </Select>
-      {required && (
+      {required && !error ? (
         <p className="text-xs text-gray-500">Select your Fire-Fire branch, assembly, or campus fellowship.</p>
-      )}
+      ) : null}
+      <FieldMessage message={error} />
     </div>
   );
 }

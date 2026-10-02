@@ -21,7 +21,11 @@ import { AGE_BRACKETS } from "../data/ageBrackets";
 import { Send } from "lucide-react";
 import { PhoneField } from "../components/forms/PhoneField";
 import { PersonNameFields } from "../components/forms/PersonNameFields";
+import { EmailField } from "../components/forms/EmailField";
 import { withPersonPayload } from "../lib/personName";
+import { registrationFieldErrors } from "../lib/emailValidation";
+import { focusFirstInvalid, hasFieldErrors } from "../lib/formErrors";
+import { useRegistrationDuplicate } from "../components/forms/useRegistrationDuplicate";
 
 export function VolunteerRegisterPage() {
   const { slug } = useParams();
@@ -30,6 +34,8 @@ export function VolunteerRegisterPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [suggestion, setSuggestion] = useState("");
   const [form, setForm] = useState({
     name_title: "",
     first_name: "",
@@ -52,16 +58,39 @@ export function VolunteerRegisterPage() {
       .catch((e) => setError(e.message || "Team not found"));
   }, [slug]);
 
+  const duplicateGate = useRegistrationDuplicate({
+    email: form.email,
+    phone: form.phone,
+    context: "volunteer",
+    onClearContact: () => setForm((prev) => ({ ...prev, email: "", phone: "" })),
+  });
+
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.branch_id) {
-      toast.error("Please select your church branch");
+    const { errors: next, suggestion: nextSuggestion } = registrationFieldErrors(form, {
+      requireTitle: true,
+      requireEmail: true,
+      requirePhone: true,
+      requireBranch: true,
+    });
+    if (!form.age_bracket) next.age_bracket = "Select an age bracket";
+    if (!String(form.role_interest || "").trim()) next.role_interest = "Select a role of interest";
+    setSuggestion(nextSuggestion);
+    setErrors(next);
+    if (hasFieldErrors(next)) {
+      focusFirstInvalid(next);
       return;
     }
+    const gate = await duplicateGate.prepare();
+    if (gate.blocked) return;
     setSubmitting(true);
     try {
       const person = withPersonPayload(form);
-      const result = await submitVolunteerApplication(slug, { ...form, ...person });
+      const result = await submitVolunteerApplication(slug, {
+        ...form,
+        ...person,
+        form_data: gate.formData || {},
+      });
       try {
         await sendVolunteerApplicationEmails({
           fullName: person.full_name,
@@ -139,46 +168,56 @@ export function VolunteerRegisterPage() {
           <CardContent className="p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-1">Register your interest</h2>
             <p className="text-sm text-gray-500 mb-5">Share this page with church groups. Applications stay pending until an assigned admin approves them.</p>
-            <form onSubmit={submit} className="space-y-4">
+            <form onSubmit={submit} noValidate className="space-y-4">
               <div className="grid sm:grid-cols-3 gap-4">
-                <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} />
+                <PersonNameFields value={form} onChange={(next) => setForm({ ...form, ...next })} errors={errors} />
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Email *</Label>
-                  <Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                </div>
+                <EmailField
+                  id="volunteer-email"
+                  value={form.email}
+                  onChange={(email) => setForm({ ...form, email })}
+                  onBlur={duplicateGate.schedule}
+                  error={errors.email}
+                  suggestion={suggestion}
+                  onUseSuggestion={(next) => {
+                    setForm({ ...form, email: next });
+                    setSuggestion("");
+                    setErrors((prev) => ({ ...prev, email: "" }));
+                  }}
+                />
                 <PhoneField
                   id="volunteer-phone"
                   label="Phone"
                   value={form.phone}
                   onChange={(v) => setForm({ ...form, phone: v })}
+                  onBlur={duplicateGate.schedule}
                   required
+                  error={errors.phone}
                 />
-                <div className="space-y-2 sm:col-span-2">
+                <div className="space-y-2 sm:col-span-2" data-field="age_bracket">
                   <Label>Age bracket *</Label>
                   <Select
                     value={form.age_bracket || undefined}
                     onValueChange={(v) => setForm({ ...form, age_bracket: v })}
                   >
-                    <SelectTrigger><SelectValue placeholder="Select age bracket" /></SelectTrigger>
+                    <SelectTrigger className={errors.age_bracket ? "border-red-500 ring-1 ring-red-200" : ""}><SelectValue placeholder="Select age bracket" /></SelectTrigger>
                     <SelectContent>
                       {AGE_BRACKETS.map((b) => (
                         <SelectItem key={b} value={b}>{b}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {!form.age_bracket ? (
-                    <input tabIndex={-1} aria-hidden className="sr-only" value="" onChange={() => {}} required />
-                  ) : null}
+                  {errors.age_bracket ? <p className="text-sm text-red-600" role="alert">{errors.age_bracket}</p> : null}
                 </div>
               </div>
-              <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} />
-              <div className="space-y-2">
+              {duplicateGate.panel}
+              <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} error={errors.branch_id} />
+              <div className="space-y-2" data-field="role_interest">
                 <Label>Role of interest *</Label>
                 {roles.length ? (
                   <Select value={form.role_interest || undefined} onValueChange={(v) => setForm({ ...form, role_interest: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
+                    <SelectTrigger className={errors.role_interest ? "border-red-500 ring-1 ring-red-200" : ""}><SelectValue placeholder="Select a role" /></SelectTrigger>
                     <SelectContent>
                       {roles.map((r) => (
                         <SelectItem key={r} value={r}>{r}</SelectItem>
@@ -186,8 +225,9 @@ export function VolunteerRegisterPage() {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Input required value={form.role_interest} onChange={(e) => setForm({ ...form, role_interest: e.target.value })} />
+                  <Input value={form.role_interest} onChange={(e) => setForm({ ...form, role_interest: e.target.value })} className={errors.role_interest ? "border-red-500" : ""} />
                 )}
+                {errors.role_interest ? <p className="text-sm text-red-600" role="alert">{errors.role_interest}</p> : null}
               </div>
               <div className="space-y-2">
                 <Label>Skills</Label>

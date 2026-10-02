@@ -3,6 +3,8 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { DEFAULT_PHONE_ISO, PHONE_COUNTRIES, formatPhone, parsePhone } from "../../data/formDropdowns";
+import { invalidInputClass } from "../../lib/formErrors";
+import { FieldMessage } from "./FieldMessage";
 
 export function PhoneField({
   label = "Phone",
@@ -10,6 +12,9 @@ export function PhoneField({
   onChange,
   required = false,
   id = "phone",
+  error = "",
+  field = "phone",
+  onBlur,
 }) {
   const [iso, setIso] = useState(() => parsePhone(value).iso || DEFAULT_PHONE_ISO);
   const parsed = parsePhone(value, iso);
@@ -32,7 +37,7 @@ export function PhoneField({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-field={field}>
       {label ? <Label htmlFor={id}>{label}{required ? " *" : ""}</Label> : null}
       <div className="flex gap-2">
         <Select value={iso} onValueChange={setCountry}>
@@ -52,13 +57,14 @@ export function PhoneField({
           type="tel"
           inputMode="tel"
           value={local}
-          required={required}
-          minLength={required ? 7 : undefined}
           placeholder="8012345678"
-          className="focus:border-red-500"
+          aria-invalid={Boolean(error)}
+          className={invalidInputClass(Boolean(error), "focus:border-red-500")}
           onChange={(e) => setLocal(e.target.value)}
+          onBlur={onBlur}
         />
       </div>
+      <FieldMessage message={error} />
     </div>
   );
 }

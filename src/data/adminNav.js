@@ -125,6 +125,7 @@ export const ADMIN_NAV = [
           { id: "reg-members-pending", to: "/admin/registrations/members/pending", label: "Pending", icon: "Clock", end: true, feature: "church_members", badgeKey: "members_pending" },
           { id: "reg-members-approved", to: "/admin/registrations/members/approved", label: "Approved", icon: "CheckCircle2", end: true, feature: "church_members" },
           { id: "reg-members-list", to: "/admin/registrations/members", label: "All members", icon: "Users", end: true, feature: "church_members" },
+          { id: "reg-duplicates", to: "/admin/registrations/duplicates", label: "Duplicate contacts", icon: "Users", end: true, feature: "church_members" },
           { id: "reg-form-options", to: "/admin/registrations/form-options", label: "Form dropdowns", icon: "List", end: true, anyOf: [{ feature: "form_dropdowns" }, { feature: "church_members" }] },
         ],
       },
@@ -141,6 +142,7 @@ export const ADMIN_NAV = [
       { feature: "church_branches" },
       { feature: "church_roles" },
       { feature: "member_notifications" },
+      { feature: "church_members" },
     ],
     children: [
       { id: "programs-new", to: "/admin/programs/new", label: "New event page", icon: "Plus", end: true, feature: "programs", action: "edit" },
@@ -149,6 +151,7 @@ export const ADMIN_NAV = [
       { id: "programs-branches", to: "/admin/programs/branches", label: "Branches & districts", icon: "Church", end: true, feature: "church_branches" },
       { id: "programs-roles", to: "/admin/programs/roles", label: "Church roles", icon: "Shield", end: true, feature: "church_roles" },
       { id: "programs-notify", to: "/admin/programs/notifications", label: "Member announcements", icon: "Megaphone", end: true, feature: "member_notifications" },
+      { id: "programs-email-priority", to: "/admin/programs/email-priority", label: "Email priority list", icon: "Mail", end: true, anyOf: [{ feature: "member_notifications" }, { feature: "church_members" }] },
     ],
   },
   {

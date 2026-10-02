@@ -13,6 +13,8 @@ import api, { formatApiError, authApi } from "../lib/api";
 import { sendTestimonySubmissionEmails } from "../lib/email";
 import { useSettings } from "../context/SettingsContext";
 import { BranchSelect } from "../components/programs/BranchSelect";
+import { validateEmail, phoneError } from "../lib/emailValidation";
+import { focusFirstInvalid, hasFieldErrors, invalidInputClass } from "../lib/formErrors";
 
 const emptyForm = {
   name: "",
@@ -31,11 +33,27 @@ export const ShareTestimony = () => {
   const { settings } = useSettings();
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [suggestion, setSuggestion] = useState("");
 
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const submit = async (e) => {
     e.preventDefault();
+    const emailResult = validateEmail(form.email, { required: true });
+    const next = {};
+    if (!String(form.name || "").trim()) next.name = "Enter your name";
+    if (!emailResult.ok) next.email = emailResult.message;
+    const phoneMsg = phoneError(form.phone, true);
+    if (phoneMsg) next.phone = phoneMsg;
+    if (String(form.testimony || "").trim().length < 20) next.testimony = "Share your testimony (at least a few sentences)";
+    if (!form.consent_public) next.consent_public = "Confirm you consent to share your testimony";
+    setErrors(next);
+    setSuggestion(emailResult.suggestion || "");
+    if (hasFieldErrors(next)) {
+      focusFirstInvalid(next);
+      return;
+    }
     if (!form.consent_public) {
       toast.error("Please confirm you consent to share your testimony.");
       return;
@@ -86,20 +104,21 @@ export const ShareTestimony = () => {
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <Card className="shadow-lg border-0">
             <CardContent className="p-6 md:p-8">
-              <form onSubmit={submit} className="space-y-5" data-testid="testimony-form">
+              <form onSubmit={submit} noValidate className="space-y-5" data-testid="testimony-form">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-field="name">
                     <Label htmlFor="name">Full Name *</Label>
                     <Input
                       id="name"
                       name="name"
                       value={form.name}
                       onChange={change}
-                      required
-                      className="focus:border-red-500"
+                      aria-invalid={Boolean(errors.name)}
+                      className={invalidInputClass(Boolean(errors.name), "focus:border-red-500")}
                     />
+                    {errors.name ? <p className="text-sm text-red-600" role="alert">{errors.name}</p> : null}
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-field="email">
                     <Label htmlFor="email">Email *</Label>
                     <Input
                       id="email"
@@ -107,9 +126,15 @@ export const ShareTestimony = () => {
                       type="email"
                       value={form.email}
                       onChange={change}
-                      required
-                      className="focus:border-red-500"
+                      aria-invalid={Boolean(errors.email)}
+                      className={invalidInputClass(Boolean(errors.email), "focus:border-red-500")}
                     />
+                    {suggestion ? (
+                      <button type="button" className="text-sm font-medium text-red-700 underline" onClick={() => { setForm({ ...form, email: suggestion }); setSuggestion(""); setErrors((prev) => ({ ...prev, email: "" })); }}>
+                        Did you mean {suggestion}?
+                      </button>
+                    ) : null}
+                    {errors.email ? <p className="text-sm text-red-600" role="alert">{errors.email}</p> : null}
                     <p className="text-xs text-gray-500">
                       Used for confirmation and if we need to follow up.
                     </p>
@@ -117,7 +142,7 @@ export const ShareTestimony = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-field="phone">
                     <Label htmlFor="phone">Phone *</Label>
                     <Input
                       id="phone"
@@ -125,9 +150,10 @@ export const ShareTestimony = () => {
                       type="tel"
                       value={form.phone}
                       onChange={change}
-                      required
-                      className="focus:border-red-500"
+                      aria-invalid={Boolean(errors.phone)}
+                      className={invalidInputClass(Boolean(errors.phone), "focus:border-red-500")}
                     />
+                    {errors.phone ? <p className="text-sm text-red-600" role="alert">{errors.phone}</p> : null}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="role">How you relate to the church</Label>
@@ -167,7 +193,7 @@ export const ShareTestimony = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2" data-field="testimony">
                   <Label htmlFor="testimony">Your testimony *</Label>
                   <Textarea
                     id="testimony"
@@ -175,11 +201,11 @@ export const ShareTestimony = () => {
                     rows={7}
                     value={form.testimony}
                     onChange={change}
-                    required
-                    minLength={20}
+                    aria-invalid={Boolean(errors.testimony)}
                     placeholder="Share what God has done…"
-                    className="focus:border-red-500"
+                    className={invalidInputClass(Boolean(errors.testimony), "focus:border-red-500")}
                   />
+                  {errors.testimony ? <p className="text-sm text-red-600" role="alert">{errors.testimony}</p> : null}
                 </div>
 
                 <BranchSelect value={form.branch_id} onChange={(v) => setForm({ ...form, branch_id: v })} required={false} label="Church branch (optional)" />
@@ -197,7 +223,7 @@ export const ShareTestimony = () => {
                   </Label>
                 </div>
 
-                <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
+                <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4" data-field="consent_public">
                   <Checkbox
                     id="consent_public"
                     checked={form.consent_public}
@@ -223,6 +249,7 @@ export const ShareTestimony = () => {
                     . *
                   </Label>
                 </div>
+                {errors.consent_public ? <p className="text-sm text-red-600" role="alert">{errors.consent_public}</p> : null}
 
                 <Button
                   type="submit"
