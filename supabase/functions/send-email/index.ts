@@ -122,6 +122,27 @@ Deno.serve(async (req) => {
     if (!subject) return json({ error: "Subject required" }, 400);
     if (!text && !html) return json({ error: "Message body required" }, 400);
 
+    const bulkPurpose = purpose === "member_announcement" || purpose === "meeting_invite";
+    const bulkCompose = (purpose === "compose" || purpose === "") && recipients.length > 1;
+    if (bulkPurpose || bulkCompose) {
+      const claim = await supabase.rpc("claim_bulk_email_slots", { p_count: recipients.length });
+      const missingGuard = claim.error && /claim_bulk_email_slots|schema cache|Could not find the function/i.test(claim.error.message || "");
+      if (claim.error && !missingGuard) {
+        return json({ error: claim.error.message }, 500);
+      }
+      if (!claim.error && Number(claim.data?.granted ?? 0) < recipients.length) {
+        return json(
+          {
+            error: claim.data?.reason || "Daily email budget reached. This send was stopped so OTP and other transactional mail can still go out.",
+            code: "email_budget",
+            granted: Number(claim.data?.granted ?? 0),
+            requested: recipients.length,
+          },
+          429
+        );
+      }
+    }
+
     const primary = await resendSend(resendApiKey, {
       from: fromEmail,
       to: recipients,

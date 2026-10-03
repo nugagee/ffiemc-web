@@ -907,6 +907,8 @@ export const authApi = {
   updateEmailSendSettings: (data) =>
     rpc("admin_update_email_send_settings", { p_token: getAdminToken(), p_data: data || {} }),
   previewEmailSend: () => rpc("admin_preview_email_send", { p_token: getAdminToken() }),
+  previewScheduledRecipients: () =>
+    rpc("admin_preview_scheduled_recipients", { p_token: getAdminToken() }),
   memberHousehold: (id) => rpc("admin_member_household", { p_token: getAdminToken(), p_id: id }),
   setHouseholdLink: (primaryId, beneficiaryId, relationship, other = "", status = "approved", usePrimary = true) =>
     rpc("admin_set_household_link", {

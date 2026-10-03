@@ -16,6 +16,7 @@ export default function EmailPriorityPage() {
   const [addQuery, setAddQuery] = useState("");
   const [settings, setSettings] = useState({ max_recipients: 60, skip_unverified: false, skip_invalid: true });
   const [preview, setPreview] = useState(null);
+  const [scheduledPreview, setScheduledPreview] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
@@ -45,6 +46,8 @@ export default function EmailPriorityPage() {
     try {
       const saved = await authApi.updateEmailSendSettings({
         max_recipients: Number(settings.max_recipients) || 60,
+        daily_quota: Number(settings.daily_quota) || 100,
+        transactional_reserve: Number(settings.transactional_reserve ?? 40),
         skip_unverified: Boolean(settings.skip_unverified),
         skip_invalid: Boolean(settings.skip_invalid),
       });
@@ -69,32 +72,61 @@ export default function EmailPriorityPage() {
     }
   };
 
+  const previewScheduled = async () => {
+    setBusy(true);
+    try {
+      const result = await authApi.previewScheduledRecipients();
+      setScheduledPreview(result);
+    } catch (err) {
+      toast.error(formatApiError(err.message));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Email priority list</h1>
         <p className="mt-2 max-w-3xl text-sm text-gray-500">
           Announcements go to priority members first, then a daily selection of people whose role is Member, up to the maximum.
+          Scheduled mail (what&apos;s new, Bible study, and Sunday) goes only to this priority list.
           Each address is used once, and a household shares one email. Skip unverified is off by default so existing members still receive mail.
         </p>
       </div>
 
-      <section className="grid gap-4 rounded-2xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-1">
-          <Label htmlFor="max-recipients">Max emails per send</Label>
-          <Input id="max-recipients" type="number" min={1} max={500} value={settings.max_recipients ?? 60} onChange={(e) => setSettings({ ...settings, max_recipients: e.target.value })} />
+      <section className="space-y-4 rounded-2xl border bg-white p-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-1">
+            <Label htmlFor="max-recipients">Max emails per send</Label>
+            <Input id="max-recipients" type="number" min={1} max={500} value={settings.max_recipients ?? 60} onChange={(e) => setSettings({ ...settings, max_recipients: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="daily-quota">Resend daily quota</Label>
+            <Input id="daily-quota" type="number" min={1} max={100000} value={settings.daily_quota ?? 100} onChange={(e) => setSettings({ ...settings, daily_quota: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="txn-reserve">Hold back for OTP and one-off mail</Label>
+            <Input id="txn-reserve" type="number" min={0} max={100000} value={settings.transactional_reserve ?? 40} onChange={(e) => setSettings({ ...settings, transactional_reserve: e.target.value })} />
+          </div>
+          <div className="flex items-end">
+            <Button className="bg-red-600 hover:bg-red-700" disabled={!canEdit || busy} onClick={saveSettings}>Save settings</Button>
+          </div>
+          <label className="flex items-center gap-3 text-sm">
+            <Switch checked={Boolean(settings.skip_unverified)} onCheckedChange={(v) => setSettings({ ...settings, skip_unverified: Boolean(v) })} />
+            Skip unverified addresses
+          </label>
+          <label className="flex items-center gap-3 text-sm">
+            <Switch checked={settings.skip_invalid !== false} onCheckedChange={(v) => setSettings({ ...settings, skip_invalid: Boolean(v) })} />
+            Skip invalid addresses
+          </label>
         </div>
-        <label className="flex items-center gap-3 text-sm">
-          <Switch checked={Boolean(settings.skip_unverified)} onCheckedChange={(v) => setSettings({ ...settings, skip_unverified: Boolean(v) })} />
-          Skip unverified addresses
-        </label>
-        <label className="flex items-center gap-3 text-sm">
-          <Switch checked={settings.skip_invalid !== false} onCheckedChange={(v) => setSettings({ ...settings, skip_invalid: Boolean(v) })} />
-          Skip invalid addresses
-        </label>
-        <div className="flex items-end">
-          <Button className="bg-red-600 hover:bg-red-700" disabled={!canEdit || busy} onClick={saveSettings}>Save settings</Button>
-        </div>
+        <p className="text-xs text-gray-500">
+          Scheduled and bulk sends share one UTC-day budget of quota minus the hold-back
+          {" "}(default 100 − 40 = 60). Used today: {settings.scheduled_used_today ?? 0} scheduled, {settings.bulk_used_today ?? 0} announcements.
+          Remaining {settings.scheduled_remaining_today ?? 60}. OTP codes do not use this budget.
+          While the what&apos;s-new digest is on, Daily Growth is published on the site and is not emailed separately.
+        </p>
       </section>
 
       <section className="rounded-2xl border bg-white p-4 space-y-3">
@@ -177,6 +209,32 @@ export default function EmailPriorityPage() {
               ))}
             </ul>
           </>
+        ) : null}
+      </section>
+
+      <section className="rounded-2xl border bg-white p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-semibold">Scheduled recipients</h2>
+          <Button variant="outline" disabled={busy} onClick={previewScheduled}>Preview priority list</Button>
+        </div>
+        <p className="text-xs text-gray-500">
+          Approved and active priority members who can receive a scheduled email today. Opening this preview leaves the daily budget unchanged.
+        </p>
+        {scheduledPreview ? (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-700">
+              {scheduledPreview.email_count || 0} address(es), capped at {scheduledPreview.max_recipients || settings.max_recipients || 60}.
+              {" "}Remaining budget today: {scheduledPreview.scheduled_remaining_today ?? settings.scheduled_remaining_today ?? 60}.
+            </p>
+            <ul className="max-h-80 space-y-1 overflow-auto text-sm">
+              {(scheduledPreview.recipients || []).map((row, index) => (
+                <li key={row.id || row.email} className="flex justify-between gap-3 border-b py-1">
+                  <span>{index + 1}. {row.full_name}</span>
+                  <span className="text-gray-500 break-all">{row.email}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
       </section>
     </div>

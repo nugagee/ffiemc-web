@@ -397,6 +397,7 @@ Deno.serve(async (req) => {
     const emailEnabled = Boolean(spool.email_enabled);
     let emailsSent = 0;
     let emailsFailed = 0;
+    let emailHeld = false;
     const emailErrors: string[] = [];
 
     if (!skipEmail && emailEnabled && items.length > 0) {
@@ -408,6 +409,14 @@ Deno.serve(async (req) => {
         const { data: recipients, error: recErr } = await supabase.rpc("list_daily_growth_digest_recipients");
         if (recErr) throw recErr;
         const list = Array.isArray(recipients) ? recipients : [];
+        if (!list.length) {
+          emailHeld = true;
+          const hold = await supabase.rpc("scheduled_email_hold_reason", { p_job: "daily_growth" });
+          const reason = !hold.error && hold.data?.reason
+            ? String(hold.data.reason)
+            : "No priority recipients or daily email budget is used.";
+          emailErrors.push(reason);
+        }
         const tpl = String(spool.subject_template || "FFIEMC Daily Growth — {{date}}");
         const subject = tpl.replace(/\{\{\s*date\s*\}\}/gi, runDate);
         const { text, html } = buildDigest(items, runDate);
@@ -436,7 +445,7 @@ Deno.serve(async (req) => {
             p_run_id: spool.run_id,
             p_sent: emailsSent,
             p_failed: emailsFailed,
-            p_status: emailsFailed && !emailsSent ? "email_failed" : "ok",
+            p_status: !list.length ? "held" : emailsFailed && !emailsSent ? "email_failed" : "ok",
             p_error: emailErrors.join("; ").slice(0, 500),
           });
         }
@@ -450,7 +459,7 @@ Deno.serve(async (req) => {
       emails_sent: emailsSent,
       emails_failed: emailsFailed,
       email_errors: emailErrors,
-      skipped_email: skipEmail || !emailEnabled || items.length === 0,
+      skipped_email: skipEmail || !emailEnabled || items.length === 0 || emailHeld,
       at: new Date().toISOString(),
     });
   } catch (e) {
