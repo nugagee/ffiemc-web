@@ -30,6 +30,10 @@ RewriteEngine On
   </FilesMatch>
 </IfModule>
 
+# Public JSON of scheduled content emails. The function returns the body;
+# this redirect keeps a stable ffiem.org path for other tools.
+RewriteRule ^feeds/content-emails\.json$ https://mpdvjaotalklzftktuuv.supabase.co/functions/v1/content-email-feed [R=302,L]
+
 # /admin is a React route, not a server folder. If cPanel has an /admin
 # directory, DirectorySlash + !-d would 404 or list files instead of the SPA.
 RewriteRule ^admin(/.*)?$ index.html [L,QSA]

@@ -122,10 +122,10 @@ export default function EmailPriorityPage() {
           </label>
         </div>
         <p className="text-xs text-gray-500">
-          Scheduled and bulk sends share one UTC-day budget of quota minus the hold-back
-          {" "}(default 100 − 40 = 60). Used today: {settings.scheduled_used_today ?? 0} scheduled, {settings.bulk_used_today ?? 0} announcements.
+          Scheduled and bulk sends share one UTC-day budget of the Resend quota minus the hold-back.
+          Daily Growth and the what&apos;s-new digest each stop at the per-send cap, and together they stop at the budget that is left.
+          Used today: {settings.scheduled_used_today ?? 0} scheduled, {settings.bulk_used_today ?? 0} announcements.
           Remaining {settings.scheduled_remaining_today ?? 60}. OTP codes do not use this budget.
-          While the what&apos;s-new digest is on, Daily Growth is published on the site and is not emailed separately.
         </p>
       </section>
 

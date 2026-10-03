@@ -1,5 +1,8 @@
 RewriteEngine On
 
+# Stable public feed. Must run before the build/ rewrite.
+RewriteRule ^feeds/content-emails\.json$ https://mpdvjaotalklzftktuuv.supabase.co/functions/v1/content-email-feed [R=302,L]
+
 # If request already targets build folder, do nothing
 RewriteRule ^build/ - [L]
 

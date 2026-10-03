@@ -440,6 +440,24 @@ Deno.serve(async (req) => {
           await delay(300);
         }
 
+        if (emailsSent > 0) {
+          const feedItems = items.map((item) => ({
+            title: String(item.title || ""),
+            excerpt: stripHtml(String(item.body || "")).slice(0, 400),
+            category: CAT_LABEL[String(item.category || "")] || "Daily Growth",
+            url: "/blog?tab=daily-growth",
+          }));
+          const logged = await supabase.rpc("record_content_email_send", {
+            p_type: "daily-growth",
+            p_items: feedItems,
+          });
+          if (logged.error && emailErrors.length < 5) {
+            emailErrors.push(`Feed log: ${logged.error.message}`);
+          } else if (logged.data && logged.data.ok === false && emailErrors.length < 5) {
+            emailErrors.push(`Feed log: ${logged.data.reason || "not recorded"}`);
+          }
+        }
+
         if (spool.run_id) {
           await supabase.rpc("update_daily_growth_run_email_stats", {
             p_run_id: spool.run_id,
