@@ -200,7 +200,7 @@ export async function sendViaSupabaseEmail({
   let { response, body } = await post(primaryBearer);
 
   // Retry: if preferred bearer failed, try the other one.
-  if (!response.ok) {
+  if (!response.ok && response.status !== 429) {
     const fallback = primaryBearer === anonKey ? adminToken : anonKey;
     if (fallback && fallback !== primaryBearer) {
       ({ response, body } = await post(fallback));
@@ -214,6 +214,10 @@ export async function sendViaSupabaseEmail({
 }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isDailyEmailBudgetError(err) {
+  return /daily email budget/i.test(String(err?.message || err || ""));
+}
 
 export async function sendContactEmails({
   name,
@@ -952,7 +956,21 @@ export async function deliverMemberNotifications({ notification, deliveries, onP
         results.push({ ...base, error_message: "Unknown channel" });
       }
     } catch (err) {
-      results.push({ ...base, error_message: err.message || "Delivery failed" });
+      const message = err.message || "Delivery failed";
+      results.push({ ...base, error_message: message });
+      if (isDailyEmailBudgetError(message)) {
+        for (let j = i + 1; j < deliveries.length; j += 1) {
+          const rest = deliveries[j];
+          results.push({
+            delivery_id: rest.id,
+            channel: rest.channel,
+            status: "failed",
+            error_message: message,
+          });
+        }
+        if (onProgress) onProgress(deliveries.length, deliveries.length);
+        break;
+      }
     }
     if (onProgress) onProgress(i + 1, deliveries.length);
     await delay(row.channel === "email" ? 400 : 400);
@@ -1048,7 +1066,20 @@ export async function deliverMeetingInvites({ meeting, invites, calendarUrl, pag
       });
       results.push({ ...base, status: "sent" });
     } catch (err) {
-      results.push({ ...base, error_message: err.message || "Delivery failed" });
+      const message = err.message || "Delivery failed";
+      results.push({ ...base, error_message: message });
+      if (isDailyEmailBudgetError(message)) {
+        for (let j = i + 1; j < (invites || []).length; j += 1) {
+          const rest = invites[j];
+          results.push({
+            invite_id: rest.id,
+            status: "failed",
+            error_message: message,
+          });
+        }
+        if (onProgress) onProgress(invites.length, invites.length);
+        break;
+      }
     }
     if (onProgress) onProgress(i + 1, invites.length);
     await delay(400);

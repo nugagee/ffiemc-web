@@ -383,11 +383,38 @@ Deno.serve(async (req) => {
       throw new Error("Missing RESEND_API_KEY or FROM_EMAIL");
     }
 
-    const { data: recipients, error: recErr } = await supabase.rpc(
-      "list_member_email_recipients"
-    );
-    if (recErr) throw recErr;
-    const list = Array.isArray(recipients) ? recipients : [];
+    let rec = await supabase.rpc("list_member_email_recipients", { p_job: job });
+    if (rec.error && /p_job|schema cache|Could not find the function/i.test(rec.error.message || "")) {
+      rec = await supabase.rpc("list_member_email_recipients");
+    }
+    if (rec.error) throw rec.error;
+    const list = Array.isArray(rec.data) ? rec.data : [];
+
+    if (!list.length) {
+      let reason = "No priority recipients or daily email budget is used.";
+      const hold = await supabase.rpc("scheduled_email_hold_reason", { p_job: job });
+      if (!hold.error && hold.data?.reason) reason = String(hold.data.reason);
+      await supabase.rpc("record_content_email_run", {
+        p_job: job,
+        p_items: items,
+        p_image_url: imageUrl,
+        p_sent: 0,
+        p_failed: 0,
+        p_status: "held",
+        p_error: reason.slice(0, 500),
+      });
+      return json({
+        ok: true,
+        skipped: true,
+        reason,
+        job,
+        subject,
+        item_count: items.length,
+        recipients: 0,
+        emails_sent: 0,
+        emails_failed: 0,
+      });
+    }
 
     let emailsSent = 0;
     let emailsFailed = 0;
