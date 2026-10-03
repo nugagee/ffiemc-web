@@ -42,7 +42,6 @@ import {
 const DIGEST_KINDS = [
   { id: "blog_post", label: "Articles" },
   { id: "daily_manna", label: "Daily Manna" },
-  { id: "daily_growth", label: "Daily Growth" },
   { id: "bible_study", label: "Monday Bible Study" },
   { id: "sunday_sermon", label: "Sunday sermons" },
   { id: "choir_ministration", label: "Choir" },
@@ -97,6 +96,9 @@ export default function MemberEmailsAdminPage() {
         authApi.listReminderImages(),
         authApi.listContentEmailRuns(20),
       ]);
+      if (set && Array.isArray(set.digest_kinds)) {
+        set.digest_kinds = set.digest_kinds.filter((id) => id !== "daily_growth");
+      }
       setSettings(set || null);
       setImages(Array.isArray(imgs) ? imgs : []);
       setRuns(Array.isArray(runList) ? runList : []);
@@ -130,7 +132,9 @@ export default function MemberEmailsAdminPage() {
       digest_enabled: settings.digest_enabled,
       digest_subject: settings.digest_subject,
       digest_intro: settings.digest_intro,
-      digest_kinds: settings.digest_kinds,
+      digest_kinds: (Array.isArray(settings.digest_kinds) ? settings.digest_kinds : []).filter(
+        (id) => id !== "daily_growth"
+      ),
       bible_study_enabled: settings.bible_study_enabled,
       bible_study_subject: settings.bible_study_subject,
       bible_study_body: settings.bible_study_body,
@@ -253,8 +257,8 @@ export default function MemberEmailsAdminPage() {
               <Mail className="h-6 w-6 text-red-600" /> Member emails
             </h2>
             <p className="text-sm text-gray-500 mt-1 max-w-2xl">
-              Daily content digests (~7:00 AM WAT), Monday Bible Study reminders (4:30 PM WAT),
-              and Saturday Sunday-service reminders (9:30 PM WAT). Images rotate weekly from the pools below.
+              What's new at 4:00 PM UK, Daily Growth at its 6:00 AM UK cron, Monday Bible Study reminders (4:30 PM WAT),
+              and Saturday Sunday-service reminders (9:30 PM WAT). The digest does not include Daily Growth. Images rotate weekly from the pools below.
             </p>
           </div>
         )}

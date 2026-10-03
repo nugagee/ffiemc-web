@@ -330,8 +330,10 @@ Deno.serve(async (req) => {
         { p_since: null }
       );
       if (digErr) throw digErr;
-      items = Array.isArray(digestItems) ? digestItems : [];
-      if (!items.length && !force) {
+      items = (Array.isArray(digestItems) ? digestItems : []).filter(
+        (item) => String((item as { kind?: string }).kind || "") !== "daily_growth"
+      );
+      if (!items.length) {
         await supabase.rpc("record_content_email_run", {
           p_job: "digest",
           p_items: [],
@@ -339,7 +341,7 @@ Deno.serve(async (req) => {
           p_sent: 0,
           p_failed: 0,
           p_status: "skipped",
-          p_error: "No new content since last digest",
+          p_error: "No new website content since last digest",
         });
         return json({ ok: true, skipped: true, reason: "no_new_content", items: [] });
       }
@@ -434,6 +436,24 @@ Deno.serve(async (req) => {
         if (emailErrors.length < 5) emailErrors.push(String((e as Error)?.message || e));
       }
       await delay(300);
+    }
+
+    if (job === "digest" && emailsSent > 0) {
+      const feedItems = items.map((item) => ({
+        title: String(item.title || ""),
+        excerpt: String(item.summary || "").slice(0, 400),
+        category: String(item.kind_label || item.kind || "Update"),
+        url: String(item.url || "/"),
+      }));
+      const logged = await supabase.rpc("record_content_email_send", {
+        p_type: "whats-new",
+        p_items: feedItems,
+      });
+      if (logged.error && emailErrors.length < 5) {
+        emailErrors.push(`Feed log: ${logged.error.message}`);
+      } else if (logged.data && logged.data.ok === false && emailErrors.length < 5) {
+        emailErrors.push(`Feed log: ${logged.data.reason || "not recorded"}`);
+      }
     }
 
     const status =
