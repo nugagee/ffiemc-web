@@ -257,8 +257,9 @@ export default function MemberEmailsAdminPage() {
               <Mail className="h-6 w-6 text-red-600" /> Member emails
             </h2>
             <p className="text-sm text-gray-500 mt-1 max-w-2xl">
-              What's new at 4:00 PM UK, Daily Growth at its 6:00 AM UK cron, Monday Bible Study reminders (4:30 PM WAT),
-              and Saturday Sunday-service reminders (9:30 PM WAT). The digest does not include Daily Growth. Images rotate weekly from the pools below.
+              What's New digest at 7:00 AM UK daily, and Daily Growth as its own email at 6:00 AM UK daily.
+              Monday Bible Study reminders (4:30 PM WAT) and Saturday Sunday-service reminders (9:30 PM WAT).
+              The digest does not include Daily Growth. Images rotate weekly from the pools below.
             </p>
           </div>
         )}
@@ -296,7 +297,7 @@ export default function MemberEmailsAdminPage() {
               <div>
                 <h3 className="font-semibold text-gray-900">Content digest</h3>
                 <p className="text-sm text-gray-500 mt-0.5">
-                  Summaries of newly published posts with Read more links. Cron: daily 07:00 Africa/Lagos.
+                  Summaries of newly published posts with Read more links. What's New digest: 7:00 AM UK daily.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -329,6 +330,9 @@ export default function MemberEmailsAdminPage() {
             </div>
             <div>
               <Label className="mb-2 block">Include content types</Label>
+              <p className="text-xs text-gray-500 mb-2">
+                Daily Growth is sent as its own 6:00 AM UK email and is not included here.
+              </p>
               <div className="flex flex-wrap gap-2">
                 {DIGEST_KINDS.map((k) => {
                   const on = enabledKinds.includes(k.id);

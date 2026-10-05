@@ -5,11 +5,13 @@ Admin: `/admin/member-emails`
 
 ## Jobs
 
-| Job | When (Africa/Lagos) | Cron (UTC) | Purpose |
-|-----|---------------------|------------|---------|
-| `digest` | Daily ~07:00 | `0 6 * * *` | Summary of newly published content + Read more links |
-| `bible_study` | Monday 16:30 | `30 15 * * 1` | Monday Bible Study reminder + shuffled image |
-| `sunday_service` | Saturday 21:30 | `30 20 * * 6` | Sunday Service reminder + shuffled image |
+| Job | When | Cron (UTC) | Purpose |
+|-----|------|------------|---------|
+| `digest` | Daily 07:00 Europe/London | `0 6,7 * * *` via `invoke_digest_at_london_7()` | What's New summary. Daily Growth is not included. Skips, without a budget slot, when nothing else is new. |
+| `bible_study` | Monday 16:30 Africa/Lagos | `30 15 * * 1` | Monday Bible Study reminder + shuffled image |
+| `sunday_service` | Saturday 21:30 Africa/Lagos | `30 20 * * 6` | Sunday Service reminder + shuffled image |
+
+Daily Growth is a separate email at 06:00 Europe/London (`ffiemc-spool-daily-growth`, `0 5,6 * * *` via `invoke_growth_at_london_6()`). It is not one of the jobs above.
 
 pg_cron jobs call `invoke_scheduled_edge_crons(...)` which POSTs the edge function using `edge_cron_config.member_emails_secret`.
 

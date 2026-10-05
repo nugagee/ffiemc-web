@@ -1,7 +1,8 @@
 // Daily Growth spool: ensure queue (Bible API when empty) → publish one/category → email members.
 // Deploy: supabase functions deploy spool-daily-growth --no-verify-jwt
 // Secrets: GROWTH_CRON_SECRET, RESEND_API_KEY, FROM_EMAIL
-// Schedule: 0 5 * * * UTC (~6:00 Africa/Lagos)
+// Schedule: 06:00 Europe/London. pg_cron is 0 5,6 * * * UTC and
+// invoke_growth_at_london_6() sends only when the London hour is 6.
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
