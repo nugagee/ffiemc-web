@@ -1,10 +1,10 @@
 # Daily Growth (traits, prophecies, facts, riddles)
 
-Each morning (Africa/Lagos) the `spool-daily-growth` edge function:
+Each morning at 06:00 Europe/London the `spool-daily-growth` edge function:
 
 1. **Auto-fills the queue** when a category has no queued items — picks a rotating seed and loads the verse text from [bible-api.com](https://bible-api.com) (KJV).
 2. **Publishes one item per enabled category** (trait, prophecy, fact, riddle).
-3. **Emails** a short digest to approved/active church members (optional; controlled in settings).
+3. **Emails** members its own message at 06:00 Europe/London (optional; controlled in settings). This is not part of the What's New digest.
 
 You can still pre-queue your own items in admin; the Bible API path only runs when a category’s queue is empty.
 
@@ -50,7 +50,7 @@ Jobs created by migration `20261028_schedule_edge_crons.sql`:
 
 | Job | Schedule | Action |
 |-----|----------|--------|
-| `ffiemc-spool-daily-growth` | `0 5 * * *` UTC (~6:00 Lagos) | Invoke `spool-daily-growth` |
+| `ffiemc-spool-daily-growth` | `0 5,6 * * *` UTC, sends only when Europe/London hour is 6 (`invoke_growth_at_london_6`) | Invoke `spool-daily-growth` |
 | `ffiemc-fetch-christian-news` | `0 */6 * * *` | Invoke `fetch-christian-news` |
 
 Config row: `public.edge_cron_config` (`project_url`, secrets). No public RLS access.

@@ -239,7 +239,7 @@ export default function DailyGrowthAdminPage() {
               <Sparkles className="h-6 w-6 text-red-600" /> Daily Growth
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Prefers your queued items; if a category queue is empty, cron auto-fills from bible-api.com, publishes one per category daily, and can email members.
+              Prefers your queued items; if a category queue is empty, cron auto-fills from bible-api.com, publishes one per category daily, and can email members at 6:00 AM UK as its own email.
               Public:{" "}
               <a href="/blog?tab=daily-growth" className="text-red-600 hover:underline" target="_blank" rel="noreferrer">
                 /blog?tab=daily-growth
@@ -296,16 +296,10 @@ export default function DailyGrowthAdminPage() {
               />
             </label>
             <div className="space-y-1">
-              <Label className="text-xs">Cron hour (Lagos)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={23}
-                value={settings.cron_hour ?? 6}
-                disabled={!canEdit}
-                onChange={(e) => setSettings({ ...settings, cron_hour: Number(e.target.value) })}
-                onBlur={() => canEdit && saveSettings({ cron_hour: settings.cron_hour })}
-              />
+              <Label className="text-xs">Send time</Label>
+              <p className="text-sm text-gray-800 rounded-md border border-gray-100 bg-white px-3 py-2">
+                6:00 AM UK daily
+              </p>
             </div>
             <div className="space-y-1 sm:col-span-2 lg:col-span-1">
               <Label className="text-xs">Email subject</Label>
