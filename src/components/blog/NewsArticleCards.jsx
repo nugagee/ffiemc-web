@@ -11,6 +11,7 @@ import {
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { compareNewsNewest, newsSortTime } from "../../lib/newsSort";
 
 const CAT_LABEL = {
   christian: "Faith",
@@ -77,10 +78,7 @@ function isPunchImage(item) {
 
 function sortItems(items, sort) {
   const rows = [...items];
-  const time = (r) => {
-    const t = Date.parse(r.published_at || r.fetched_at || "") || 0;
-    return t;
-  };
+  const time = (r) => newsSortTime(r);
   switch (sort) {
     case "oldest":
       return rows.sort((a, b) => time(a) - time(b));
@@ -92,7 +90,7 @@ function sortItems(items, sort) {
       return rows.sort((a, b) => String(a.source_name || "").localeCompare(String(b.source_name || "")));
     case "newest":
     default:
-      return rows.sort((a, b) => time(b) - time(a));
+      return rows.sort(compareNewsNewest);
   }
 }
 
@@ -198,10 +196,12 @@ function NewsCard({ item, layout }) {
             <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
               {CAT_LABEL[item.category] || item.category}
             </Badge>
-            <span className="text-xs text-gray-400">{item.source_name}</span>
-            {item.published_at || item.fetched_at ? (
+            {item.source_name ? (
+              <span className="text-xs text-gray-400">Source: {item.source_name}</span>
+            ) : null}
+            {item.published_at || item.created_at ? (
               <span className="text-xs text-gray-400 ml-auto">
-                {fmtDate(item.published_at || item.fetched_at)}
+                {fmtDate(item.published_at || item.created_at)}
               </span>
             ) : null}
           </div>

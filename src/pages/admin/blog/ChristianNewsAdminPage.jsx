@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { EyeOff, Eye, Newspaper, RefreshCw } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { authApi, formatApiError } from "../../../lib/api";
+import { newsFetchRequest } from "../../../lib/newsFetch";
 import { PageToolbar } from "../../../components/admin/PageToolbar";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
@@ -88,15 +89,14 @@ export default function ChristianNewsAdminPage() {
       toast.error("Set REACT_APP_NEWS_FETCH_URL to your fetch-christian-news function URL");
       return;
     }
+    const request = newsFetchRequest(url, secret);
+    if (!request) {
+      toast.error("Set REACT_APP_NEWS_FETCH_URL to your fetch-christian-news function URL");
+      return;
+    }
     setFetching(true);
     try {
-      const res = await fetch(secret ? `${url}?secret=${encodeURIComponent(secret)}` : url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(secret ? { "x-cron-secret": secret } : {}),
-        },
-      });
+      const res = await fetch(request.url, request.init);
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || `Fetch failed (${res.status})`);
       toast.success(`Fetched ${body.fetched || 0} headlines`);
@@ -117,8 +117,8 @@ export default function ChristianNewsAdminPage() {
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Christian News</h2>
             <p className="text-sm text-gray-500 mt-1 max-w-2xl">
-              Aggregated headlines from Christianity Today (Nigeria), Christian outlets, and Nigerian education news.
-              Visitors open the original publisher — we only store titles and short summaries.
+              Faith headlines from Christianity Today (Nigeria) and Punch, plus education headlines from Legit.ng, Tribune, PM News, BusinessDay, and BBC.
+              Visitors open the original publisher — we only store titles, short summaries, and the source name.
             </p>
             <p className="text-sm text-gray-500 mt-1">
               Public:{" "}

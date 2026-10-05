@@ -174,9 +174,8 @@ export const Blog = () => {
             <>
               <div className="mb-4 text-center max-w-2xl mx-auto">
                 <p className="text-sm text-gray-500">
-                  Faith/church and Nigerian education headlines only — from publishers like
-                  Christianity Today (Nigeria) and Punch Education. Use filter, sort, and layout
-                  controls below. Read full stories on the original website.
+                  Faith and education headlines, with the publisher named on each card.
+                  Use filter, sort, and layout controls below. Read full stories on the original website.
                 </p>
               </div>
               <NewsArticleCards
