@@ -297,6 +297,7 @@ test("christian filter keeps Christian rows and drops Islamic-only rows", () => 
     ["CAN chair tells Tinubu to reduce food prices", "Christian Association of Nigeria"],
     ["Christians and Muslims meet in Kaduna", ""],
     ["Deeper Life holds a crusade", ""],
+    ["Seeking the Saviour for genuine salvation and eternal life", ""],
   ];
   for (const [title, excerpt] of keep) {
     assert.equal(passesChristianContent(title, excerpt), true, title);

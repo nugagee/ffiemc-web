@@ -60,7 +60,7 @@ export const TITLE_STOPWORDS = [
 ];
 
 const CHRISTIAN_STRONG_WORDS =
-  "church(?:es)?|bishops?|pastors?|christians?|christianity|anglicans?|catholics?|gospels?|clergy|dioceses?|synods?|priests?|congregations?|evangelicals?|pentecostals?|rccg|redeemed|baptists?|methodists?|presbyterians?|reverends?|archbishops?|primates?|parishes|parish|sermons?|bibles?|ministries|ministry|popes?|chapels?|cathedrals?|crusades?|revivals?|tithes?|jesus|christ|vatican|cardinals?|communion|choirs?|evangelists?|winners|mfm|deeper life|cac";
+  "church(?:es)?|bishops?|pastors?|christians?|christianity|anglicans?|catholics?|gospels?|clergy|dioceses?|synods?|priests?|congregations?|evangelicals?|pentecostals?|rccg|redeemed|baptists?|methodists?|presbyterians?|reverends?|archbishops?|primates?|parishes|parish|sermons?|bibles?|ministries|ministry|popes?|chapels?|cathedrals?|crusades?|revivals?|tithes?|jesus|christ|saviou?rs?|salvation|vatican|cardinals?|communion|choirs?|evangelists?|winners|mfm|deeper life|cac";
 
 const CHRISTIAN_SOFT_WORDS =
   "pray|prays|prayed|praying|prayer|prayers|worship|worships|worshipper|worshippers|worshipping|worshiped|worshipped|prophet|prophets|apostle|apostles";
