@@ -117,7 +117,7 @@ export default function ChristianNewsAdminPage() {
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Christian News</h2>
             <p className="text-sm text-gray-500 mt-1 max-w-2xl">
-              Faith headlines from Christianity Today (Nigeria) and Punch, plus education headlines from Legit.ng, Tribune, PM News, BusinessDay, and BBC.
+              Nigerian Christian headlines from Nigerian religion desks, plus Nigeria-only items from international Christian wires. Education headlines come from Legit.ng, Tribune, PM News, BusinessDay, and BBC.
               Visitors open the original publisher — we only store titles, short summaries, and the source name.
             </p>
             <p className="text-sm text-gray-500 mt-1">

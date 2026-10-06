@@ -174,7 +174,7 @@ export const Blog = () => {
             <>
               <div className="mb-4 text-center max-w-2xl mx-auto">
                 <p className="text-sm text-gray-500">
-                  Faith and education headlines, with the publisher named on each card.
+                  Nigerian Christian news and education headlines, with the publisher named on each card.
                   Use filter, sort, and layout controls below. Read full stories on the original website.
                 </p>
               </div>

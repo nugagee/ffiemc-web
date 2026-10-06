@@ -1,6 +1,6 @@
 // Pure helpers for fetch-christian-news. No Deno or network calls.
 
-export type FilterMode = "none" | "faith" | "christian";
+export type FilterMode = "none" | "faith" | "christian" | "nigeria_christian";
 /** off: keep source.category. mention: Nigeria wording → nigeria. only: Nigeria wording → nigeria, otherwise drop. */
 export type NigeriaRoute = "off" | "mention" | "only";
 
@@ -60,7 +60,7 @@ export const TITLE_STOPWORDS = [
 ];
 
 const CHRISTIAN_STRONG_WORDS =
-  "church(?:es)?|bishops?|pastors?|christians?|christianity|anglicans?|catholics?|gospels?|clergy|dioceses?|synods?|priests?|congregations?|evangelicals?|pentecostals?|rccg|redeemed|baptists?|methodists?|presbyterians?|reverends?|archbishops?|primates?|parishes|parish|sermons?|bibles?|ministries|ministry|popes?|chapels?|cathedrals?|crusades?|revivals?|tithes?|jesus|christ|saviou?rs?|salvation|vatican|cardinals?|communion|choirs?|evangelists?|winners|mfm|deeper life|cac";
+  "church(?:es)?|bishops?|pastors?|christians?|christianity|anglicans?|catholics?|gospels?|clergy|dioceses?|synods?|priests?|congregations?|evangelicals?|pentecostals?|rccg|redeemed|baptists?|methodists?|presbyterians?|reverends?|archbishops?|primates?|parishes|parish|sermons?|bibles?|ministries|ministry|popes?|chapels?|cathedrals?|crusades?|revivals?|tithes?|jesus|christ|saviou?rs?|salvation|vatican|cardinals?|communion|choirs?|evangelists?|winners|mfm|deeper life|living faith|christ embassy|cac|ecwa|adeboye|oyedepo|kumuyi|olukoya|oyakhilome|idahosa";
 
 const CHRISTIAN_SOFT_WORDS =
   "pray|prays|prayed|praying|prayer|prayers|worship|worships|worshipper|worshippers|worshipping|worshiped|worshipped|prophet|prophets|apostle|apostles";
@@ -265,7 +265,7 @@ export function looksLikeFeed(body: string) {
 
 export function filterMode(source: Source): FilterMode {
   const mode = String(source.filter_mode || "").trim().toLowerCase();
-  if (mode === "none" || mode === "faith" || mode === "christian") return mode;
+  if (mode === "none" || mode === "faith" || mode === "christian" || mode === "nigeria_christian") return mode;
   return "faith";
 }
 
@@ -313,17 +313,45 @@ export function passesSourceFilter(source: Source, title: string, excerpt: strin
 
   if (mode === "christian") return passesChristianContent(title, excerpt);
 
+  // International wires: keep the row only when it is both Nigerian and Christian.
+  if (mode === "nigeria_christian") {
+    if (!mentionsNigeria(title, excerpt)) return false;
+    return passesChristianContent(title, excerpt);
+  }
+
   if (!FAITH_RE.test(hay) && !CHRISTIAN_ACRONYM_RE.test(hay)) return false;
   if (POLITICS_NOISE_RE.test(hay) && !FAITH_RE.test(title) && !CHRISTIAN_ACRONYM_RE.test(title)) return false;
   return true;
 }
 
-const NIGERIA_RE =
-  /\b(?:nigeria|nigerian|nigerians|abuja|lagos|plateau|benue|kaduna|kano|borno|maiduguri|yobe|adamawa|taraba|bauchi|gombe|sokoto|zamfara|katsina|jigawa|kebbi|kwara|kogi|nasarawa|nassarawa|fct|jos|makurdi|enugu|anambra|onitsha|awka|owerri|abia|umuahia|ebonyi|abakaliki|calabar|akwa ibom|uyo|port harcourt|portharcourt|bayelsa|yenagoa|warri|asaba|benin city|ogun|abeokuta|ibadan|osun|osogbo|ondo|akure|ekiti|ado[- ]ekiti|ilorin|minna|lokoja|jalingo|dutse|birnin kebbi|gusau|damaturu|yola|lafia|middle belt|niger state|imo state|rivers state|delta state|cross river|ogun state|oyo state|ondo state|osun state|edo state|boko haram)\b/i;
+const NIGERIA_GEO =
+  "nigeria|nigerian|nigerians|abuja|lagos|plateau|benue|kaduna|kano|borno|maiduguri|yobe|adamawa|taraba|bauchi|gombe|sokoto|zamfara|katsina|jigawa|kebbi|kwara|kogi|nasarawa|nassarawa|fct|jos|makurdi|enugu|anambra|onitsha|awka|owerri|abia|umuahia|ebonyi|abakaliki|calabar|akwa ibom|uyo|port harcourt|portharcourt|bayelsa|yenagoa|warri|asaba|benin city|ogun|abeokuta|ibadan|osun|osogbo|ondo|akure|ekiti|ado[- ]ekiti|ilorin|minna|lokoja|jalingo|dutse|birnin kebbi|gusau|damaturu|yola|lafia|middle belt|niger state|imo state|rivers state|delta state|cross river|ogun state|oyo state|ondo state|osun state|edo state|zaria|kafanchan|nsukka|ogbomoso|ogbomosho|ile[- ]ife|auchi|ekpoma|otukpo|gboko|wukari|mubi|potiskum|bida|suleja|keffi|ikeja|lekki|nnewi|orlu|badagry|sagamu|shagamu|fulanis?|middle[- ]belt|boko haram";
+
+/** Places: Nigeria, the 36 states, FCT, and major cities. Short state names that are also ordinary words stay paired with "state". */
+export const NIGERIA_RE = new RegExp(`\\b(?:${NIGERIA_GEO})\\b`, "i");
+
+const NIGERIA_CHURCH =
+  "deeper life|living faith|winners(?:['’]s?)? chapel|christ apostolic church|redeemed christian church(?: of god)?|redeemed church|mountain of fire(?: and miracles)?|christ embassy|church of nigeria|pentecostal fellowship of nigeria|christian association of nigeria|catholic bishops['’]? conference of nigeria";
+
+/** Nigerian church bodies. Bare "redeemed" and "winners" are not included; those words are common outside Nigeria. */
+export const NIGERIA_CHURCH_RE = new RegExp(`\\b(?:${NIGERIA_CHURCH})\\b`, "i");
+
+export const NIGERIA_LEADER_RE = /\b(?:adeboye|oyedepo|kumuyi|olukoya|oyakhilome|idahosa)\b/i;
+
+/**
+ * Case-sensitive so lowercase "can" in ordinary English does not count.
+ * CAN, PFN, CBCN, RCCG, MFM, CAC, ECWA, and TREM are Nigerian church bodies.
+ */
+export const NIGERIA_ACRONYM_RE = /\b(?:CAN|PFN|CBCN|RCCG|MFM|CAC|ECWA|TREM)\b/;
 
 export function mentionsNigeria(title: string, excerpt: string) {
   const hay = `${title} ${excerpt}`;
-  return NIGERIA_RE.test(hay) || CHRISTIAN_ACRONYM_RE.test(hay);
+  return (
+    NIGERIA_RE.test(hay) ||
+    NIGERIA_CHURCH_RE.test(hay) ||
+    NIGERIA_LEADER_RE.test(hay) ||
+    NIGERIA_ACRONYM_RE.test(hay)
+  );
 }
 
 /**
