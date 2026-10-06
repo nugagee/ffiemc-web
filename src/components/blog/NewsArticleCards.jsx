@@ -20,10 +20,17 @@ const CAT_LABEL = {
 };
 
 const FILTERS = [
-  { id: "christian", label: "Faith / Church" },
+  { id: "christian", label: "Faith" },
   { id: "education", label: "Education" },
-  { id: "nigeria", label: "Faith (Nigeria)" },
 ];
+
+/** Faith is Nigerian Christian news, whether the row was stored as christian or nigeria. */
+function matchesNewsFilter(item, filterId) {
+  if (filterId === "christian" || filterId === "faith") {
+    return item.category === "christian" || item.category === "nigeria";
+  }
+  return item.category === filterId;
+}
 
 const SORTS = [
   { id: "newest", label: "Newest first", icon: CalendarClock },
@@ -272,7 +279,7 @@ export function NewsArticleCards({ items = [], filter: controlledFilter, onFilte
   };
 
   const visible = useMemo(() => {
-    const base = items.filter((i) => i.category === activeFilter);
+    const base = items.filter((i) => matchesNewsFilter(i, activeFilter));
     return sortItems(base, sort);
   }, [items, activeFilter, sort]);
 
@@ -299,7 +306,11 @@ export function NewsArticleCards({ items = [], filter: controlledFilter, onFilte
       />
 
       {visible.length === 0 ? (
-        <p className="text-center text-gray-500 py-10">No stories in this category yet. Try Education or Faith (Nigeria).</p>
+        <p className="text-center text-gray-500 py-10">
+          {activeFilter === "education"
+            ? "No stories in this category yet. Try Faith."
+            : "No stories in this category yet. Try Education."}
+        </p>
       ) : layout === "list" ? (
         <div className="space-y-4">
           {visible.map((item) => (

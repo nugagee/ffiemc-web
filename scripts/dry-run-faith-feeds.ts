@@ -1,6 +1,10 @@
 // Local dry run of the faith RSS parser against live feeds.
 // Does not write to Supabase. Mirrors news_sources rows in
-// 20261107_faith_rss_sources.sql and the rank order in newsParse.ts.
+// 20261108_nigeria_christian_only.sql (international wires) and the Nigerian
+// rows left in place by 20261107_faith_rss_sources.sql.
+//
+// Disabled international feeds are still fetched. Their nigeria_christian_probe
+// counts are not included in the category totals.
 //
 //   node --experimental-strip-types scripts/dry-run-faith-feeds.ts
 
@@ -24,8 +28,8 @@ const SOURCES: Source[] = [
     scrape_url: "",
     category: "christian",
     enabled: true,
-    filter_mode: "none",
-    nigeria_route: "mention",
+    filter_mode: "nigeria_christian",
+    nigeria_route: "off",
   },
   {
     id: "ct-feed",
@@ -34,8 +38,8 @@ const SOURCES: Source[] = [
     feed_url: "https://www.christianitytoday.com/feed/",
     scrape_url: "",
     category: "christian",
-    enabled: true,
-    filter_mode: "none",
+    enabled: false,
+    filter_mode: "nigeria_christian",
     nigeria_route: "off",
   },
   {
@@ -56,8 +60,8 @@ const SOURCES: Source[] = [
     feed_url: "https://www.christianpost.com/rss",
     scrape_url: "",
     category: "christian",
-    enabled: true,
-    filter_mode: "none",
+    enabled: false,
+    filter_mode: "nigeria_christian",
     nigeria_route: "off",
   },
   {
@@ -67,8 +71,8 @@ const SOURCES: Source[] = [
     feed_url: "https://religionnews.com/feed/",
     scrape_url: "",
     category: "christian",
-    enabled: true,
-    filter_mode: "none",
+    enabled: false,
+    filter_mode: "nigeria_christian",
     nigeria_route: "off",
   },
   {
@@ -78,8 +82,8 @@ const SOURCES: Source[] = [
     feed_url: "https://www.ewtnnews.com/rss",
     scrape_url: "",
     category: "christian",
-    enabled: true,
-    filter_mode: "none",
+    enabled: false,
+    filter_mode: "nigeria_christian",
     nigeria_route: "off",
   },
   {
@@ -90,8 +94,8 @@ const SOURCES: Source[] = [
     scrape_url: "",
     category: "christian",
     enabled: true,
-    filter_mode: "none",
-    nigeria_route: "mention",
+    filter_mode: "nigeria_christian",
+    nigeria_route: "off",
   },
   {
     id: "tribune-religion",
@@ -196,6 +200,15 @@ function inLast7Days(article: Article, cutoff: number) {
   return Number.isFinite(ms) && ms >= cutoff;
 }
 
+const INTERNATIONAL = new Set([
+  "christian-today",
+  "ct-feed",
+  "christian-post",
+  "rns",
+  "ewtn-news",
+  "christian-daily",
+]);
+
 const cutoff = Date.now() - DEDUP_WINDOW_MS;
 const ordered = [...SOURCES].sort((a, b) => sourceRank(a.id) - sourceRank(b.id) || a.name.localeCompare(b.name));
 const parsed: Article[] = [];
@@ -205,15 +218,19 @@ for (const source of ordered) {
   try {
     const xml = await fetchFeed(source.feed_url);
     const position = newestRawIndex(xml);
-    const qualified = parseRss(xml, source, 10000);
+    const qualified = source.enabled ? parseRss(xml, source, 10000) : [];
     const articles = qualified.slice(0, RSS_ITEM_LIMIT);
-    parsed.push(...articles);
+    if (source.enabled) parsed.push(...articles);
     const recent = articles.filter((article) => inLast7Days(article, cutoff));
     const recentAll = qualified.filter((article) => inLast7Days(article, cutoff));
     const dated = articles.filter((article) => article.published_at);
     const newest = dated[0]?.published_at || qualified.find((article) => article.published_at)?.published_at || null;
-    rows.push({
+    const row: Record<string, unknown> = {
       source: source.id,
+      enabled: source.enabled,
+      filter_mode: source.filter_mode,
+      nigeria_route: source.nigeria_route,
+      category: source.category,
       raw_items: position.rawItems,
       newest_raw_index: position.newestIndex,
       qualified: qualified.length,
@@ -227,10 +244,25 @@ for (const source of ordered) {
       last7d_before_cap_christian: recentAll.filter((article) => article.category === "christian").length,
       last7d_before_cap_nigeria: recentAll.filter((article) => article.category === "nigeria").length,
       error: null,
-    });
+    };
+    if (INTERNATIONAL.has(source.id)) {
+      const probed = parseRss(
+        xml,
+        { ...source, enabled: true, filter_mode: "nigeria_christian", nigeria_route: "off", category: "christian" },
+        10000
+      );
+      const probedRecent = probed.filter((article) => inLast7Days(article, cutoff));
+      row.nigeria_christian_probe = {
+        qualified: probed.length,
+        last7d: probedRecent.length,
+        last7d_titles: probedRecent.map((article) => article.title),
+      };
+    }
+    rows.push(row);
   } catch (error) {
     rows.push({
       source: source.id,
+      enabled: source.enabled,
       error: error instanceof Error ? error.message : String(error),
     });
   }
@@ -241,7 +273,7 @@ const recentBatch = batch.filter((article) => inLast7Days(article, cutoff));
 const summary = {
   at: new Date().toISOString(),
   window_start: new Date(cutoff).toISOString(),
-  note: "Counts are parser output only. They do not include rows already stored in news_articles. The SQL upsert still skips a different link or title from the last 7 days.",
+  note: "Counts are parser output only. They do not include rows already stored in news_articles. Disabled sources are fetched for nigeria_christian_probe only and are excluded from qualified, kept, and after_cross_source_dedupe. The SQL upsert still skips a different link or title from the last 7 days.",
   per_source: rows,
   after_cross_source_dedupe: {
     kept: batch.length,

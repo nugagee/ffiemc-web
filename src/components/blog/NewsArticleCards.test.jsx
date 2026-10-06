@@ -26,6 +26,41 @@ const items = [
   },
 ];
 
+test("Faith shows Nigerian outlet rows and Nigeria-only international rows together", () => {
+  const faithItems = [
+    {
+      id: "wire",
+      category: "christian",
+      title: "Plateau church attacked overnight",
+      url: "https://www.christiantoday.com/news/plateau",
+      excerpt: "Gunmen attacked a church.",
+      source_name: "Christian Today",
+      published_at: "2026-10-06T09:00:00.000Z",
+      created_at: "2026-10-06T09:00:00.000Z",
+      image_url: "",
+    },
+    {
+      id: "desk",
+      category: "nigeria",
+      title: "CAN meets bishops in Abuja",
+      url: "https://tribuneonlineng.com/can-meets-bishops/",
+      excerpt: "Church leaders gathered.",
+      source_name: "Nigerian Tribune — Religion",
+      published_at: "2026-10-05T09:00:00.000Z",
+      created_at: "2026-10-05T09:00:00.000Z",
+      image_url: "",
+    },
+    ...items,
+  ];
+  render(<NewsArticleCards items={faithItems} filter="christian" />);
+  expect(screen.getByText("Plateau church attacked overnight")).toBeInTheDocument();
+  expect(screen.getByText("CAN meets bishops in Abuja")).toBeInTheDocument();
+  expect(screen.queryByText("Older published story")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Faith" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Faith (Nigeria)" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Faith / Church" })).not.toBeInTheDocument();
+});
+
 test("shows the source and sorts by published_at, then created_at", () => {
   render(<NewsArticleCards items={items} filter="education" />);
   expect(screen.getByText("Source: BBC — Education")).toBeInTheDocument();

@@ -2,11 +2,11 @@
 
 The Blog page includes a **Christian News** tab that shows headlines and short summaries from trusted sources, with the publisher named on each card and a link back to the original article. Full articles are **not** republished.
 
-Only **faith/church** and **education** stories are kept. Nigerian religion desks use a Christian-only keyword filter, so Islamic-only items are left out. Broad politics feeds stay disabled.
+Christian news on the site is **Nigerian Christian news only**. Education stories are unchanged. Nigerian religion desks use a Christian-only keyword filter, so Islamic-only items are left out. International wires keep an item only when the title and excerpt are both Nigerian and Christian. Broad politics feeds stay disabled.
 
 ## Active sources (`news_sources`)
 
-`filter_mode`: `none` (no keyword filter), `faith` (Christian or Islamic wording), or `christian` (Christian wording, Islamic-only rows dropped). `nigeria_route`: `off`, `mention` (Nigeria wording is stored as Faith (Nigeria); other rows keep the source category), or `only` (keep Nigeria wording, drop the rest).
+`filter_mode`: `none` (no keyword filter), `faith` (Christian or Islamic wording), `christian` (Christian wording, Islamic-only rows dropped), or `nigeria_christian` (Nigerian wording and Christian wording; anything else is dropped). Nigerian wording is Nigeria, Nigerian, Abuja, Lagos, the 36 states and major cities, plus Nigerian church bodies and leaders (CAN, PFN, CBCN, RCCG, Winners Chapel, Living Faith, MFM, Deeper Life, CAC, Redeemed Christian Church, ECWA, TREM, Christ Embassy, Adeboye, Oyedepo, Kumuyi, Olukoya, and the same list in the parser). Bare “redeemed” and bare “winners” do not count as Nigeria. `nigeria_route`: `off`, `mention` (Nigeria wording is stored as Faith (Nigeria); other rows keep the source category), or `only` (keep Nigeria wording, drop the rest).
 
 | ID | Focus | How fetched |
 |----|--------|-------------|
@@ -22,18 +22,23 @@ Only **faith/church** and **education** stories are kept. Nigerian religion desk
 | `newtelegraph-faith` | [New Telegraph — Faith](https://newtelegraphng.com/category/faith/) | RSS `https://newtelegraphng.com/category/faith/feed/`. `filter_mode` christian. Often no image. |
 | `leadership-religion` | [Leadership — Religion](https://leadership.ng/religion/) | RSS `https://leadership.ng/religion/feed/`. `filter_mode` christian. Often no image. |
 | `icc` | [International Christian Concern](https://www.persecution.org/) | RSS `https://www.persecution.org/feed/`. `filter_mode` christian. `nigeria_route` only, so non-Nigeria stories are dropped. |
-| `christian-today` | [Christian Today](https://www.christiantoday.com/) | RSS `https://www.christiantoday.com/rss.xml` (~550 items, not date-ordered). `filter_mode` none. Nigeria wording goes to `nigeria`. No images in the feed. |
-| `christian-daily` | [Christian Daily International](https://www.christiandaily.com/) | RSS `https://www.christiandaily.com/rss.xml`. `filter_mode` none. Nigeria wording goes to `nigeria`. |
-| `ct-feed` | [Christianity Today](https://www.christianitytoday.com/) | RSS `https://www.christianitytoday.com/feed/`. `filter_mode` none. |
-| `christian-post` | [The Christian Post](https://www.christianpost.com/) | RSS `https://www.christianpost.com/rss`. `filter_mode` none. `media:content` image. |
-| `rns` | [Religion News Service](https://religionnews.com/) | RSS `https://religionnews.com/feed/`. `filter_mode` none. This wire covers more than Christian news. |
-| `ewtn-news` | [EWTN News](https://www.ewtnnews.com/) | RSS `https://www.ewtnnews.com/rss`. `filter_mode` none. `media:content` image. |
+| `christian-today` | [Christian Today](https://www.christiantoday.com/) | RSS `https://www.christiantoday.com/rss.xml` (~550 items, not date-ordered). `filter_mode` `nigeria_christian`. Kept items stay in category `christian`. No images in the feed. |
+| `christian-daily` | [Christian Daily International](https://www.christiandaily.com/) | RSS `https://www.christiandaily.com/rss.xml`. `filter_mode` `nigeria_christian`. Kept items stay in category `christian`. |
+
+Disabled international wires (a 6 Oct 2026 dry run found no Nigerian item). `filter_mode` is still `nigeria_christian`, so turning one back on does not publish international Christian news:
+
+| ID | Feed |
+|----|------|
+| `ct-feed` | `https://www.christianitytoday.com/feed/` |
+| `christian-post` | `https://www.christianpost.com/rss` |
+| `rns` | `https://religionnews.com/feed/` |
+| `ewtn-news` | `https://www.ewtnnews.com/rss` |
 
 The parser reads every RSS item, drops duplicate links, sorts by `pubDate` descending, then keeps 30. Images use `media:content`, then `media:thumbnail`, then `enclosure`, then the first content image. An empty `image_url` keeps the card gradient.
 
 Education RSS rows have an empty `scrape_url`. Those feeds are not HTML-scraped and are not passed through `EDUCATION_RE`.
 
-Disabled: `punch-faith` (the Punch religion tag has no current stories, and its `/feed/` URL redirects to latest news), `punch-education` (its category RSS returns no items; do **not** use `https://punchng.com/topics/education/feed/`, which redirects to latest news), `guardian-education`.
+Disabled: `ct-feed`, `christian-post`, `rns`, `ewtn-news` (no Nigerian items in the 6 Oct 2026 dry run), `punch-faith` (the Punch religion tag has no current stories, and its `/feed/` URL redirects to latest news), `punch-education` (its category RSS returns no items; do **not** use `https://punchng.com/topics/education/feed/`, which redirects to latest news), `guardian-education`.
 
 The Punch topic scraper still parses `div.meta-time` and `span.post-date` (`October 3, 2026 12:02 am`, Africa/Lagos) if `punch-education` is turned back on, and the education keyword list includes lecturers, professors, graduate, tertiary, and related words.
 
@@ -41,10 +46,12 @@ The same story from two publishers is dropped when the link (tracking params ign
 
 ## Setup
 
-1. Apply migrations through `20261107_faith_rss_sources.sql`.
+1. Apply migrations through `20261108_nigeria_christian_only.sql`.
    `20261106_education_rss_and_cron_header.sql` inserts the five education sources and sets `punch-education.enabled` to false.
    `20261107_faith_rss_sources.sql` disables `punch-faith`, turns the faith RSS rows back on, and adds the sources in the table above. It does not change `news_articles` rows and does not unhide anything.
-2. Deploy the edge function `fetch-christian-news` after that migration. No cPanel frontend deploy is required for the faith-feed change. The Blog page already renders whatever category and image the function stores.
+   `20261108_nigeria_christian_only.sql` allows `filter_mode` `nigeria_christian`, keeps Christian Today and Christian Daily on that filter, and disables Christianity Today’s main feed, Christian Post, Religion News Service, and EWTN. It does not change `news_articles` rows and does not hide or unhide anything.
+   `supabase/scripts/hide_non_nigerian_faith_news.sql` is optional and is **not** a migration. Run it yourself only if existing international faith rows should be hidden. It was not run from this repo.
+2. Deploy the edge function `fetch-christian-news` after that migration. A cPanel frontend deploy is required: the Blog Faith filter now shows both `christian` and `nigeria` rows, and `build/` has to be uploaded.
 
 ```bash
 supabase functions deploy fetch-christian-news --no-verify-jwt
@@ -74,7 +81,8 @@ curl -X POST "https://YOUR_PROJECT.supabase.co/functions/v1/fetch-christian-news
 ## Public UI
 
 - Tab: `/blog?tab=christian-news`
-- **Filter:** Faith / Church · Education · Faith (Nigeria)
+- **Filter:** Faith (categories `christian` and `nigeria` together) · Education
+- Card badges stay **Faith** and **Faith (Nigeria)**, matching the stored category
 - **Sort:** Newest (`published_at`, otherwise `created_at`) · Oldest · Title · Source
 - **Layout:** Columns (grid) or List
 - Each card shows **Source:** and the publisher name

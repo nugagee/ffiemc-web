@@ -10,6 +10,7 @@ import {
   FAITH_RE,
   feedUrlForSource,
   isEducationRssOnly,
+  mentionsNigeria,
   normaliseLink,
   normaliseTitle,
   parseLagosDateTime,
@@ -312,6 +313,50 @@ test("christian filter keeps Christian rows and drops Islamic-only rows", () => 
   for (const [title, excerpt] of drop) {
     assert.equal(passesSourceFilter(desk, title, excerpt, "https://tribuneonlineng.com/story-title-long-enough/"), false, title);
   }
+});
+
+test("nigeria_christian keeps Nigerian Christian rows and drops the rest", () => {
+  const wire = source({
+    id: "christian-post",
+    category: "christian",
+    filter_mode: "nigeria_christian",
+    nigeria_route: "off",
+    homepage_url: "https://www.christianpost.com/",
+    feed_url: "https://www.christianpost.com/rss",
+  });
+  const keep = [
+    ["CAN chair tells Tinubu to reduce food prices", "Christian Association of Nigeria"],
+    ["Pastor Adeboye dedicates the auditorium", ""],
+    ["Church attacked in Plateau", "Gunmen burned the building"],
+    ["Bishop Oyedepo speaks at Winners Chapel", ""],
+    ["Deeper Life holds a crusade", ""],
+    ["Kumuyi urges holiness at the camp", ""],
+    ["RCCG convention opens in Lagos", ""],
+    ["MFM prayer walk holds in Abeokuta", ""],
+    ["CAC leaders meet the governor", ""],
+    ["Fulani militants attack a church", ""],
+    ["Fulanis kill two Christians", ""],
+    ["Winners' Chapel holds a vigil", ""],
+    ["Zaria cathedral reopens after repairs", ""],
+  ];
+  for (const [title, excerpt] of keep) {
+    assert.equal(mentionsNigeria(title, excerpt), true, title);
+    assert.equal(passesSourceFilter(wire, title, excerpt, "https://www.christianpost.com/news/story"), true, title);
+    assert.equal(resolveCategory(wire, title, excerpt), "christian", title);
+  }
+  const drop = [
+    ["Pope leads prayer in the cathedral", "A Vatican liturgy"],
+    ["Imam leads Eid prayer in Kano", "Worshippers filled the mosque"],
+    ["Lagos market fire destroys shops", ""],
+    ["The winners of the award were announced in London", ""],
+    ["You can help the parish this Sunday", ""],
+    ["Chinese pastor detained", "Officials arrested him at home"],
+  ];
+  for (const [title, excerpt] of drop) {
+    assert.equal(passesSourceFilter(wire, title, excerpt, "https://www.christianpost.com/news/story"), false, title);
+  }
+  assert.equal(mentionsNigeria("The winners of the award were announced in London", ""), false);
+  assert.equal(mentionsNigeria("You can help the parish this Sunday", ""), false);
 });
 
 test("filter_mode none skips the keyword gate and Nigeria routing is stable", () => {

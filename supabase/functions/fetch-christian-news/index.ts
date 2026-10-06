@@ -1,10 +1,12 @@
-// Fetch faith / church + education headlines (link aggregation — no full bodies).
+// Fetch Nigerian Christian news and education headlines (link aggregation — no full bodies).
 // Education RSS: Legit.ng, Nigerian Tribune, PM News, BusinessDay, BBC.
-// Faith RSS: Christian Today, Christianity Today, Christian Post, Religion News Service,
-//   EWTN, Christian Daily International. Nigeria mentions from Christian Today,
-//   Christian Daily, and ICC are routed in the parser.
-// Faith (Nigeria) RSS: Christianity Today Nigeria tag, Tribune religion,
-//   Morning Star Nigeria, Daily Post CAN, New Telegraph faith, Leadership religion, ICC.
+// Faith is Nigerian only.
+//   Nigerian desks (category nigeria): CT Nigeria, Tribune religion, Morning Star Nigeria,
+//   Daily Post CAN, New Telegraph faith, Leadership religion, ICC (nigeria_route only).
+//   International wires that still yield Nigerian items (category christian,
+//   filter_mode nigeria_christian): Christian Today, Christian Daily International.
+//   Disabled international wires, same filter if re-enabled: Christianity Today main feed,
+//   Christian Post, Religion News Service, EWTN.
 // punch-faith and punch-education stay in news_sources but disabled.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
