@@ -1,7 +1,11 @@
 // Fetch faith / church + education headlines (link aggregation — no full bodies).
-// Education: Legit.ng, Nigerian Tribune, PM News, BusinessDay, BBC RSS.
-// Faith: Punch religion tag + Christianity Today Nigeria topic page.
-// punch-education stays in news_sources but disabled.
+// Education RSS: Legit.ng, Nigerian Tribune, PM News, BusinessDay, BBC.
+// Faith RSS: Christian Today, Christianity Today, Christian Post, Religion News Service,
+//   EWTN, Christian Daily International. Nigeria mentions from Christian Today,
+//   Christian Daily, and ICC are routed in the parser.
+// Faith (Nigeria) RSS: Christianity Today Nigeria tag, Tribune religion,
+//   Morning Star Nigeria, Daily Post CAN, New Telegraph faith, Leadership religion, ICC.
+// punch-faith and punch-education stay in news_sources but disabled.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import {
