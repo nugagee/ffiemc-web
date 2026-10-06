@@ -1,5 +1,9 @@
 // Pure helpers for fetch-christian-news. No Deno or network calls.
 
+export type FilterMode = "none" | "faith" | "christian";
+/** off: keep source.category. mention: Nigeria wording → nigeria. only: Nigeria wording → nigeria, otherwise drop. */
+export type NigeriaRoute = "off" | "mention" | "only";
+
 export type Source = {
   id: string;
   name: string;
@@ -8,6 +12,10 @@ export type Source = {
   scrape_url: string;
   category: string;
   enabled: boolean;
+  /** Keyword gate. Missing means faith, except education RSS feeds which stay unfiltered. */
+  filter_mode?: FilterMode | string;
+  /** Deterministic category from title + excerpt. Same text always maps to the same category. */
+  nigeria_route?: NigeriaRoute | string;
 };
 
 export type Article = {
@@ -26,8 +34,57 @@ export type Article = {
 export const DEDUP_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 export const DEDUP_TITLE_MIN = 12;
 
-const FAITH_RE =
-  /\b(church|churches|bishop|bishops|pastor|pastors|christian|christians|christianity|anglican|catholic|gospel|clergy|cleric|diocese|synod|priest|congregation|evangelical|pentecostal|rccg|redeemed|baptist|methodist|presbyterian|mosque|imam|islamic|muslim|faith|religion|religious|rev\.|reverend|archbishop|primate|parish|sermon|bible|ministry|ministries)\b/i;
+/**
+ * Newest rows kept per feed after every item is parsed.
+ * Christian Today's rss.xml is ~550 overlapping items and is not date-ordered;
+ * the newest entries sit near the end, so this cap is applied only after sorting.
+ */
+export const RSS_ITEM_LIMIT = 30;
+
+/** Dropped from normalised titles. Kept in sync with news_normalise_title(). */
+export const TITLE_STOPWORDS = [
+  "a",
+  "an",
+  "the",
+  "in",
+  "on",
+  "at",
+  "of",
+  "for",
+  "to",
+  "and",
+  "or",
+  "by",
+  "with",
+  "from",
+];
+
+const CHRISTIAN_STRONG_WORDS =
+  "church(?:es)?|bishops?|pastors?|christians?|christianity|anglicans?|catholics?|gospels?|clergy|dioceses?|synods?|priests?|congregations?|evangelicals?|pentecostals?|rccg|redeemed|baptists?|methodists?|presbyterians?|reverends?|archbishops?|primates?|parishes|parish|sermons?|bibles?|ministries|ministry|popes?|chapels?|cathedrals?|crusades?|revivals?|tithes?|jesus|christ|saviou?rs?|salvation|vatican|cardinals?|communion|choirs?|evangelists?|winners|mfm|deeper life|cac";
+
+const CHRISTIAN_SOFT_WORDS =
+  "pray|prays|prayed|praying|prayer|prayers|worship|worships|worshipper|worshippers|worshipping|worshiped|worshipped|prophet|prophets|apostle|apostles";
+
+/** Christian vocabulary, case-insensitive. Acronyms CAN / PFN / CBCN are separate so they stay case-sensitive. */
+export const CHRISTIAN_RE = new RegExp(
+  `\\b(?:${CHRISTIAN_STRONG_WORDS}|${CHRISTIAN_SOFT_WORDS})\\b|\\brev\\.`,
+  "i"
+);
+
+const CHRISTIAN_STRONG_RE = new RegExp(`\\b(?:${CHRISTIAN_STRONG_WORDS})\\b|\\brev\\.`, "i");
+const CHRISTIAN_SOFT_RE = new RegExp(`\\b(?:${CHRISTIAN_SOFT_WORDS})\\b`, "i");
+
+/** Whole-word, case-sensitive. Lowercase "can" in ordinary English must not match. */
+export const CHRISTIAN_ACRONYM_RE = /\b(?:CAN|PFN|CBCN)\b/;
+
+const ISLAMIC_RE =
+  /\b(?:mosques?|imams?|islamic|islamists?|islam|muslims?|qur['’]?ans?|koran|ramadan|hajj|eids?|shari['’]?a|muhammad|mohammed|mohammad|nscia|muric|sultan)\b/i;
+
+/** Faith-wide gate: Christian terms above, plus general religion and Islamic desks. */
+export const FAITH_RE = new RegExp(
+  `\\b(?:${CHRISTIAN_STRONG_WORDS}|${CHRISTIAN_SOFT_WORDS}|faith|religion|religious|mosques?|imams?|islamic|muslims?|cleric|clerics)\\b|\\brev\\.`,
+  "i"
+);
 
 // Plurals are listed explicitly: \blecturer\b does not match "lecturers".
 export const EDUCATION_RE =
@@ -60,9 +117,21 @@ const SOURCE_RANK: Record<string, number> = {
   "pmnews-education": 30,
   "businessday-education": 40,
   "bbc-education": 50,
-  "punch-faith": 60,
-  "ct-nigeria": 70,
-  "punch-education": 90,
+  "ct-nigeria": 60,
+  "morningstar-nigeria": 62,
+  "tribune-religion": 64,
+  "dailypost-can": 66,
+  "newtelegraph-faith": 68,
+  "leadership-religion": 70,
+  "icc": 72,
+  "christian-today": 80,
+  "christian-daily": 82,
+  "ct-feed": 84,
+  "christian-post": 86,
+  "rns": 88,
+  "ewtn-news": 90,
+  "punch-faith": 94,
+  "punch-education": 96,
 };
 
 const TRACKING_KEYS = new Set([
@@ -194,6 +263,32 @@ export function looksLikeFeed(body: string) {
   return /<(rss|feed|rdf:RDF)\b/i.test(String(body || ""));
 }
 
+export function filterMode(source: Source): FilterMode {
+  const mode = String(source.filter_mode || "").trim().toLowerCase();
+  if (mode === "none" || mode === "faith" || mode === "christian") return mode;
+  return "faith";
+}
+
+function matchesStrongChristian(text: string) {
+  return CHRISTIAN_STRONG_RE.test(text) || CHRISTIAN_ACRONYM_RE.test(text);
+}
+
+/**
+ * Christian gate for mixed religion desks.
+ * A Christian term keeps the row. Prayer/worship/prophet/apostle alone do not keep
+ * an Islamic-only story (mosque, imam, Eid, NSCIA, and similar).
+ */
+export function passesChristianContent(title: string, excerpt: string) {
+  const hay = `${title} ${excerpt}`;
+  const strong = matchesStrongChristian(hay);
+  const soft = CHRISTIAN_SOFT_RE.test(hay);
+  if (ISLAMIC_RE.test(hay) && !strong) return false;
+  if (!strong && !soft) return false;
+  const titleHit = matchesStrongChristian(title) || CHRISTIAN_SOFT_RE.test(title);
+  if (POLITICS_NOISE_RE.test(hay) && !titleHit) return false;
+  return true;
+}
+
 export function passesSourceFilter(source: Source, title: string, excerpt: string, url: string) {
   if (isEducationRssOnly(source)) return true;
 
@@ -206,17 +301,42 @@ export function passesSourceFilter(source: Source, title: string, excerpt: strin
     return true;
   }
 
-  if (source.category === "christian" || source.category === "nigeria" || source.id.includes("faith")) {
-    if (source.id === "ct-nigeria") {
-      return /christianitytoday\.com\/\d{4}\/\d{2}\//i.test(url);
-    }
-    if (source.id.startsWith("punch") && !isPunchArticleUrl(url)) return false;
-    if (!FAITH_RE.test(hay)) return false;
-    if (POLITICS_NOISE_RE.test(hay) && !FAITH_RE.test(title)) return false;
-    return true;
+  const mode = filterMode(source);
+  if (mode === "none") return true;
+
+  if (source.id.startsWith("punch") && !isPunchArticleUrl(url)) return false;
+
+  // Scraped Christianity Today topic pages used to include nav links. RSS items are articles.
+  if (source.id === "ct-nigeria" && !String(source.feed_url || "").trim()) {
+    return /christianitytoday\.com\/\d{4}\/\d{2}\//i.test(url);
   }
 
-  return FAITH_RE.test(hay) || EDUCATION_RE.test(hay);
+  if (mode === "christian") return passesChristianContent(title, excerpt);
+
+  if (!FAITH_RE.test(hay) && !CHRISTIAN_ACRONYM_RE.test(hay)) return false;
+  if (POLITICS_NOISE_RE.test(hay) && !FAITH_RE.test(title) && !CHRISTIAN_ACRONYM_RE.test(title)) return false;
+  return true;
+}
+
+const NIGERIA_RE =
+  /\b(?:nigeria|nigerian|nigerians|abuja|lagos|plateau|benue|kaduna|kano|borno|maiduguri|yobe|adamawa|taraba|bauchi|gombe|sokoto|zamfara|katsina|jigawa|kebbi|kwara|kogi|nasarawa|nassarawa|fct|jos|makurdi|enugu|anambra|onitsha|awka|owerri|abia|umuahia|ebonyi|abakaliki|calabar|akwa ibom|uyo|port harcourt|portharcourt|bayelsa|yenagoa|warri|asaba|benin city|ogun|abeokuta|ibadan|osun|osogbo|ondo|akure|ekiti|ado[- ]ekiti|ilorin|minna|lokoja|jalingo|dutse|birnin kebbi|gusau|damaturu|yola|lafia|middle belt|niger state|imo state|rivers state|delta state|cross river|ogun state|oyo state|ondo state|osun state|edo state|boko haram)\b/i;
+
+export function mentionsNigeria(title: string, excerpt: string) {
+  const hay = `${title} ${excerpt}`;
+  return NIGERIA_RE.test(hay) || CHRISTIAN_ACRONYM_RE.test(hay);
+}
+
+/**
+ * Category is a pure function of the source route plus title/excerpt.
+ * Re-fetching the same text cannot flip the category.
+ * Returns null when the source keeps Nigeria rows only and this one is not Nigeria.
+ */
+export function resolveCategory(source: Source, title: string, excerpt: string): string | null {
+  const route = String(source.nigeria_route || "off").trim().toLowerCase();
+  if (route !== "mention" && route !== "only") return source.category || "christian";
+  if (mentionsNigeria(title, excerpt)) return "nigeria";
+  if (route === "only") return null;
+  return source.category || "christian";
 }
 
 function attr(tag: string, name: string) {
@@ -229,10 +349,17 @@ function allTagAttrs(block: string, tagName: string) {
   return [...block.matchAll(re)].map((match) => match[1] || "");
 }
 
+function usableImage(url: string) {
+  const cleaned = decodeXml(String(url || "")).trim();
+  if (!cleaned || /^data:/i.test(cleaned)) return "";
+  if (/spacer|1x1|pixel\.gif|blank\.gif|feedburner\.com/i.test(cleaned)) return "";
+  return cleaned;
+}
+
 function imageFromMedia(attrs: string) {
   const medium = attr(attrs, "medium");
   const type = attr(attrs, "type");
-  const url = decodeXml(attr(attrs, "url"));
+  const url = usableImage(attr(attrs, "url"));
   if (!url || /video|audio/i.test(medium)) return "";
   const imageLike =
     !medium ||
@@ -250,12 +377,12 @@ export function extractRssImage(block: string, source: Source) {
   }
 
   for (const thumbAttrs of allTagAttrs(block, "media:thumbnail")) {
-    const thumb = decodeXml(attr(thumbAttrs, "url"));
+    const thumb = usableImage(attr(thumbAttrs, "url"));
     if (thumb) return sanitizeImageUrl(absUrl(thumb, source.homepage_url || source.feed_url), source);
   }
 
   for (const enclosureAttrs of allTagAttrs(block, "enclosure")) {
-    const url = decodeXml(attr(enclosureAttrs, "url"));
+    const url = usableImage(attr(enclosureAttrs, "url"));
     const type = attr(enclosureAttrs, "type");
     if (url && (/image/i.test(type) || /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url))) {
       return sanitizeImageUrl(absUrl(url, source.homepage_url || source.feed_url), source);
@@ -265,9 +392,11 @@ export function extractRssImage(block: string, source: Source) {
   const encoded = (block.match(/<content:encoded[^>]*>([\s\S]*?)<\/content:encoded>/i) || [])[1] || "";
   const description = (block.match(/<description[^>]*>([\s\S]*?)<\/description>/i) || [])[1] || "";
   const html = decodeXml(`${description}\n${encoded}`);
-  const img = (html.match(/<img\b[^>]*\bsrc=["']([^"']+)["']/i) || [])[1] || "";
-  if (img) {
-    return sanitizeImageUrl(absUrl(decodeXml(img), source.homepage_url || source.feed_url), source);
+  const imgRe = /<img\b[^>]*\bsrc=["']([^"']+)["']/gi;
+  let imgMatch: RegExpExecArray | null;
+  while ((imgMatch = imgRe.exec(html))) {
+    const img = usableImage(imgMatch[1]);
+    if (img) return sanitizeImageUrl(absUrl(img, source.homepage_url || source.feed_url), source);
   }
   return "";
 }
@@ -337,10 +466,20 @@ function publishedAtNear(html: string, index: number): string | null {
   return null;
 }
 
-export function parseRss(xml: string, source: Source): Article[] {
-  const items: Article[] = [];
+function publishedMs(iso: string | null) {
+  if (!iso) return Number.NEGATIVE_INFINITY;
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? ms : Number.NEGATIVE_INFINITY;
+}
+
+function preferNewer(current: Article, incoming: Article) {
+  return publishedMs(incoming.published_at) > publishedMs(current.published_at) ? incoming : current;
+}
+
+export function parseRss(xml: string, source: Source, limit = RSS_ITEM_LIMIT): Article[] {
   const blocks = xml.match(/<item[\s\S]*?<\/item>/gi) || [];
-  for (const block of blocks.slice(0, 30)) {
+  const byLink = new Map<string, Article>();
+  for (const block of blocks) {
     const title = decodeXml((block.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "");
     const link = decodeXml((block.match(/<link[^>]*>([\s\S]*?)<\/link>/i) || [])[1] || "").trim();
     const descRaw = (block.match(/<description[^>]*>([\s\S]*?)<\/description>/i) || [])[1] || "";
@@ -355,20 +494,28 @@ export function parseRss(xml: string, source: Source): Article[] {
     if (!title || !link) continue;
     const url = absUrl(link, source.homepage_url || source.feed_url);
     if (!passesSourceFilter(source, title, desc, url)) continue;
+    const category = resolveCategory(source, title, desc);
+    if (!category) continue;
 
-    items.push({
+    const article: Article = {
       source_id: source.id,
       source_name: source.name,
-      category: source.category,
+      category,
       title: truncate(stripHtml(title), 220),
       url,
       excerpt: truncate(desc, 280),
       image_url: extractRssImage(block, source),
       author: truncate(stripHtml(author), 120),
       published_at: parseRfc822(pub),
-    });
+    };
+    const key = normaliseLink(url) || url.trim().toLowerCase();
+    const existing = byLink.get(key);
+    byLink.set(key, existing ? preferNewer(existing, article) : article);
   }
-  return items;
+
+  return [...byLink.values()]
+    .sort((a, b) => publishedMs(b.published_at) - publishedMs(a.published_at) || a.url.localeCompare(b.url))
+    .slice(0, Math.max(0, limit));
 }
 
 /** Punch / CT topic pages: collect article links with nearby headings, blurbs, and dates. */
@@ -389,12 +536,14 @@ export function parseTopicHtml(html: string, source: Source): Article[] {
     const p = stripHtml((after.match(/<p[^>]*>([\s\S]*?)<\/p>/i) || [])[1] || "");
     if (!passesSourceFilter(source, title, p, href)) continue;
     if (source.id.startsWith("punch") && !isPunchArticleUrl(href)) continue;
-    if (source.id === "ct-nigeria" && !/christianitytoday\.com\/\d{4}\/\d{2}\//i.test(href)) continue;
+    if (source.id === "ct-nigeria" && !String(source.feed_url || "").trim() && !/christianitytoday\.com\/\d{4}\/\d{2}\//i.test(href)) continue;
+    const category = resolveCategory(source, title, p);
+    if (!category) continue;
     seen.add(href);
     items.push({
       source_id: source.id,
       source_name: source.name,
-      category: source.category,
+      category,
       title,
       url: href,
       excerpt: truncate(p, 280),
@@ -412,15 +561,17 @@ export function parseTopicHtml(html: string, source: Source): Article[] {
       if (!title || title.length < 18) continue;
       if (seen.has(href)) continue;
       if (source.id.startsWith("punch") && !isPunchArticleUrl(href)) continue;
-      if (source.id === "ct-nigeria" && !/christianitytoday\.com\/\d{4}\/\d{2}\//i.test(href)) continue;
+      if (source.id === "ct-nigeria" && !String(source.feed_url || "").trim() && !/christianitytoday\.com\/\d{4}\/\d{2}\//i.test(href)) continue;
       const after = scoped.slice(m.index, m.index + 900);
       const p = stripHtml((after.match(/<p[^>]*>([\s\S]*?)<\/p>/i) || [])[1] || "");
       if (!passesSourceFilter(source, title, p, href)) continue;
+      const category = resolveCategory(source, title, p);
+      if (!category) continue;
       seen.add(href);
       items.push({
         source_id: source.id,
         source_name: source.name,
-        category: source.category,
+        category,
         title,
         url: href,
         excerpt: truncate(p, 280),
@@ -434,12 +585,15 @@ export function parseTopicHtml(html: string, source: Source): Article[] {
   return items;
 }
 
+const TITLE_STOPWORD_SET = new Set(TITLE_STOPWORDS);
+
 export function normaliseTitle(title: string) {
   return stripHtml(title)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+    .split(/\s+/)
+    .filter((word) => word && !TITLE_STOPWORD_SET.has(word))
+    .join(" ");
 }
 
 /** Host + path, www stripped, tracking params removed. Kept in sync with news_normalise_link(). */

@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  CHRISTIAN_ACRONYM_RE,
+  CHRISTIAN_RE,
   cronAuthorized,
   dedupeArticles,
   EDUCATION_RE,
   extractRssImage,
+  FAITH_RE,
   feedUrlForSource,
   isEducationRssOnly,
   normaliseLink,
@@ -13,8 +16,12 @@ import {
   parseRfc822,
   parseRss,
   parseTopicHtml,
+  passesChristianContent,
   passesSourceFilter,
+  resolveCategory,
+  RSS_ITEM_LIMIT,
   shouldScrape,
+  sourceRank,
   type Source,
 } from "./newsParse.ts";
 
@@ -236,6 +243,204 @@ test("dedupes by normalised title and link inside the recent window, and still r
     normaliseLink("https://bbc.co.uk/news/articles/abc")
   );
   assert.equal(normaliseTitle("FG unveils 5-pillar plan!"), normaliseTitle("fg unveils 5 pillar plan"));
+});
+
+test("faith and christian patterns keep church vocabulary and case-sensitive acronyms", () => {
+  for (const word of [
+    "pope",
+    "prayer",
+    "worship",
+    "chapel",
+    "cathedral",
+    "crusade",
+    "revival",
+    "tithe",
+    "prophet",
+    "apostle",
+    "Jesus",
+    "Christ",
+    "Vatican",
+    "cardinal",
+    "communion",
+    "choir",
+    "evangelist",
+    "pastor",
+    "bishop",
+    "church",
+    "gospel",
+    "Winners",
+    "MFM",
+    "Deeper Life",
+    "RCCG",
+    "CAC",
+  ]) {
+    assert.equal(FAITH_RE.test(`Leaders discuss ${word} today`), true, word);
+    assert.equal(CHRISTIAN_RE.test(`Leaders discuss ${word} today`), true, word);
+  }
+  assert.equal(CHRISTIAN_ACRONYM_RE.test("CAN warns churches"), true);
+  assert.equal(CHRISTIAN_ACRONYM_RE.test("PFN president speaks"), true);
+  assert.equal(CHRISTIAN_ACRONYM_RE.test("CBCN meets in Abuja"), true);
+  assert.equal(CHRISTIAN_ACRONYM_RE.test("You can help the parish"), false);
+  assert.equal(CHRISTIAN_ACRONYM_RE.test("the pfn chapter"), false);
+});
+
+test("christian filter keeps Christian rows and drops Islamic-only rows", () => {
+  const desk = source({
+    id: "tribune-religion",
+    category: "nigeria",
+    filter_mode: "christian",
+    homepage_url: "https://tribuneonlineng.com/category/religion/",
+    feed_url: "https://tribuneonlineng.com/category/religion/feed/",
+  });
+  const keep = [
+    ["Pope leads prayer in the cathedral", ""],
+    ["CAN chair tells Tinubu to reduce food prices", "Christian Association of Nigeria"],
+    ["Christians and Muslims meet in Kaduna", ""],
+    ["Deeper Life holds a crusade", ""],
+    ["Seeking the Saviour for genuine salvation and eternal life", ""],
+  ];
+  for (const [title, excerpt] of keep) {
+    assert.equal(passesChristianContent(title, excerpt), true, title);
+    assert.equal(passesSourceFilter(desk, title, excerpt, "https://tribuneonlineng.com/story-title-long-enough/"), true, title);
+  }
+  const drop = [
+    ["Imam leads Eid prayer at the central mosque", ""],
+    ["NSCIA expands its executive council", "The apex Islamic body met in Abuja"],
+    ["Sultan of Sokoto speaks on Ramadan", ""],
+    ["APC rally holds in Lagos tomorrow", ""],
+  ];
+  for (const [title, excerpt] of drop) {
+    assert.equal(passesSourceFilter(desk, title, excerpt, "https://tribuneonlineng.com/story-title-long-enough/"), false, title);
+  }
+});
+
+test("filter_mode none skips the keyword gate and Nigeria routing is stable", () => {
+  const today = source({
+    id: "christian-today",
+    name: "Christian Today",
+    category: "christian",
+    filter_mode: "none",
+    nigeria_route: "mention",
+    homepage_url: "https://www.christiantoday.com/",
+    feed_url: "https://www.christiantoday.com/rss.xml",
+  });
+  assert.equal(
+    passesSourceFilter(today, "Market report for the week ahead", "", "https://www.christiantoday.com/news/markets"),
+    true
+  );
+  assert.equal(resolveCategory(today, "Pope visits Rome", "A Vatican liturgy"), "christian");
+  assert.equal(resolveCategory(today, "Pastor killed in Plateau", "Gunmen attacked a church"), "nigeria");
+  assert.equal(resolveCategory(today, "CAN meets in Abuja", ""), "nigeria");
+  assert.equal(resolveCategory(today, "Pastor killed in Plateau", "Gunmen attacked a church"), "nigeria");
+
+  const icc = source({
+    id: "icc",
+    category: "nigeria",
+    filter_mode: "christian",
+    nigeria_route: "only",
+    homepage_url: "https://www.persecution.org/",
+    feed_url: "https://www.persecution.org/feed/",
+  });
+  assert.equal(resolveCategory(icc, "Chinese pastor detained", "Officials arrested him at home"), null);
+  assert.equal(resolveCategory(icc, "Plateau governor imposes a curfew", "A pastor and 27 others were killed"), "nigeria");
+});
+
+test("parseRss keeps the newest items when the feed is unordered, then caps the list", () => {
+  const feed = source({
+    id: "christian-today",
+    name: "Christian Today",
+    category: "christian",
+    filter_mode: "none",
+    nigeria_route: "mention",
+    homepage_url: "https://www.christiantoday.com/",
+    feed_url: "https://www.christiantoday.com/rss.xml",
+  });
+  const total = RSS_ITEM_LIMIT + 8;
+  const blocks: string[] = [];
+  for (let i = 0; i < total; i += 1) {
+    const day = String((i % 27) + 1).padStart(2, "0");
+    const link = `https://www.christiantoday.com/news/story-${i}`;
+    blocks.push(`<item>
+      <title>Church story number ${i} from the feed</title>
+      <link>${link}</link>
+      <description>A congregation met for worship.</description>
+      <pubDate>${day} Sep 2026 09:00:00 +0000</pubDate>
+    </item>`);
+  }
+  blocks.push(`<item>
+    <title>Plateau church attacked overnight</title>
+    <link>https://www.christiantoday.com/news/plateau-church?utm_source=rss&utm_medium=rss</link>
+    <description>Older copy of the same link.</description>
+    <pubDate>05 Oct 2026 09:57:00 +0000</pubDate>
+  </item>`);
+  blocks.push(`<item>
+    <title>Plateau church attacked overnight</title>
+    <link>https://www.christiantoday.com/news/plateau-church</link>
+    <description>Gunmen attacked a church in Plateau.</description>
+    <pubDate>06 Oct 2026 09:57:00 +0000</pubDate>
+  </item>`);
+  const items = parseRss(`<rss><channel>${blocks.join("")}</channel></rss>`, feed);
+  assert.equal(items.length, RSS_ITEM_LIMIT);
+  assert.equal(items[0].title, "Plateau church attacked overnight");
+  assert.equal(items[0].category, "nigeria");
+  assert.equal(items[0].published_at, "2026-10-06T09:57:00.000Z");
+  assert.equal(items.filter((row) => row.url.includes("plateau-church")).length, 1);
+  assert.equal(items.some((row) => row.url.endsWith("story-0")), false);
+  assert.ok(items.every((row, index) => index === 0 || String(row.published_at) <= String(items[index - 1].published_at)));
+});
+
+test("images fall back to an empty url when the item has none", () => {
+  const feed = source({
+    id: "christian-today",
+    category: "christian",
+    filter_mode: "none",
+    homepage_url: "https://www.christiantoday.com/",
+    feed_url: "https://www.christiantoday.com/rss.xml",
+  });
+  const xml = `<rss><channel><item>
+    <title>Churches connect poverty work with the gospel</title>
+    <link>https://www.christiantoday.com/news/poverty-and-gospel</link>
+    <description>No image in this item.</description>
+    <pubDate>Fri, 02 Oct 2026 12:38:00 +0000</pubDate>
+    <media:content url="https://cdn.example/spacer.gif" medium="image" />
+    <media:content url="https://cdn.example/photo.jpg" medium="image" type="image/jpeg"></media:content>
+    <content:encoded><![CDATA[<img src="https://cdn.example/ignored-because-media-won.jpg" />]]></content:encoded>
+  </item></channel></rss>`;
+  const [item] = parseRss(xml, feed);
+  assert.equal(item.image_url, "https://cdn.example/photo.jpg");
+
+  const bare = `<rss><channel><item>
+    <title>Churches connect poverty work with the gospel</title>
+    <link>https://www.christiantoday.com/news/no-picture</link>
+    <description>No image in this item.</description>
+    <pubDate>Fri, 02 Oct 2026 12:38:00 +0000</pubDate>
+  </item></channel></rss>`;
+  assert.equal(parseRss(bare, feed)[0].image_url, "");
+
+  const encodedOnly = `<item>
+    <content:encoded><![CDATA[<p>Text</p><img src="https://cdn.example/from-encoded.jpg" />]]></content:encoded>
+  </item>`;
+  assert.equal(extractRssImage(encodedOnly, feed), "https://cdn.example/from-encoded.jpg");
+});
+
+test("near-identical titles match once stopwords are dropped", () => {
+  assert.equal(
+    normaliseTitle("Church attacked in the Plateau"),
+    normaliseTitle("Church attacked on Plateau")
+  );
+  assert.equal(normaliseTitle("The choir sings at the cathedral"), "choir sings cathedral");
+  const first = {
+    title: "Church attacked in the Plateau state",
+    url: "https://www.christiantoday.com/news/plateau-a",
+  };
+  const restated = {
+    title: "Church attacked on Plateau state",
+    url: "https://tribuneonlineng.com/church-attacked-plateau/",
+  };
+  const kept = dedupeArticles([first, restated], []);
+  assert.deepEqual(kept.map((row) => row.url), [first.url]);
+  assert.equal(sourceRank("christian-today") < 100, true);
+  assert.equal(sourceRank("icc") < sourceRank("christian-today"), true);
 });
 
 test("cron auth prefers the header and still accepts the query secret briefly", () => {
