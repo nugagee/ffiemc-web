@@ -1,7 +1,12 @@
+DirectoryIndex index.html
+
 RewriteEngine On
 
 # Stable public feed. Must run before the build/ rewrite.
 RewriteRule ^feeds/content-emails\.json$ https://mpdvjaotalklzftktuuv.supabase.co/functions/v1/content-email-feed [R=302,L]
+
+# Homepage: serve the built SPA shell
+RewriteRule ^$ build/index.html [L]
 
 # If request already targets build folder, do nothing
 RewriteRule ^build/ - [L]
