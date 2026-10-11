@@ -1,8 +1,4 @@
 ---
 deployment:
   tasks:
-    - npm install
-    - npm run build
-    - export DEPLOYPATH=/home/ueaqznef/repositories/ffiem-web/public_html/
-    - /bin/cp -R build/* $DEPLOYPATH
- 
+    - /bin/echo "ffiem.org serves the committed build/ from this checkout; Update from Remote is the deploy."
