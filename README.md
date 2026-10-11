@@ -2,6 +2,12 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Committed production build
+
+The live site (cPanel) serves the committed `build/` directory straight from the git checkout. Production client settings live in `.env.production` at the repo root. That file holds only public browser values (Supabase URL and anon key, plus other public `REACT_APP_*` values already committed elsewhere). `npm run build` bakes them into `build/static/js`.
+
+`.gitignore` ignores `.env` and `.env.local`, and keeps `.env.production` tracked (`!.env.production`). Do not commit service-role keys, cron secrets, or other secrets. `.env.production.local` is generated at build time for `REACT_APP_BUILD_VERSION` and stays ignored.
+
 ## Available Scripts
 
 In the project directory, you can run:
