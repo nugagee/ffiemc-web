@@ -1,10 +1,19 @@
-// Daily Growth spool: ensure queue (Bible API when empty) → publish one/category → email members.
+// Daily Growth spool: publish the oldest queued item per category; if a queue is empty, fill from a seed that was not published in the last 365 days, then email members.
 // Deploy: supabase functions deploy spool-daily-growth --no-verify-jwt
 // Secrets: GROWTH_CRON_SECRET, RESEND_API_KEY, FROM_EMAIL
 // Schedule: 06:00 Europe/London. pg_cron is 0 5,6 * * * UTC and
 // invoke_growth_at_london_6() sends only when the London hour is 6.
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import {
+  GROWTH_SEEDS,
+  LOW_QUEUE_DAYS,
+  buildLowQueueAlert,
+  formatDayISO,
+  noEligibleSeedMessage,
+  pickGrowthSeed,
+  rowsToHistory,
+} from "./pickSeed.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,64 +32,6 @@ const CAT_LABEL: Record<string, string> = {
   riddle: "Bible Riddle",
 };
 
-type Seed = {
-  category: "trait" | "prophecy" | "fact" | "riddle";
-  title: string;
-  scripture: string;
-  body: string;
-  answer?: string;
-};
-
-/** Rotating catalog — verse text is filled from bible-api.com at spool time. */
-const GROWTH_SEEDS: Seed[] = [
-  // Traits
-  { category: "trait", title: "Love", scripture: "1 Corinthians 13:4-7", body: "Love is patient and kind. Let this mark how you treat others today." },
-  { category: "trait", title: "Joy", scripture: "Nehemiah 8:10", body: "The joy of the Lord is your strength — choose rejoicing even in pressure." },
-  { category: "trait", title: "Peace", scripture: "Philippians 4:6-7", body: "Trade anxiety for prayer, and God’s peace will guard your heart." },
-  { category: "trait", title: "Patience", scripture: "James 1:2-4", body: "Trials produce steadfastness. Wait on God without complaining." },
-  { category: "trait", title: "Kindness", scripture: "Ephesians 4:32", body: "Be kind and tenderhearted, forgiving as Christ forgave you." },
-  { category: "trait", title: "Faithfulness", scripture: "Luke 16:10", body: "Faithfulness in little things prepares you for greater trust." },
-  { category: "trait", title: "Gentleness", scripture: "Galatians 5:22-23", body: "Gentleness is fruit of the Spirit — respond softly, not harshly." },
-  { category: "trait", title: "Self-control", scripture: "Proverbs 25:28", body: "A person without self-control is like a city without walls." },
-  { category: "trait", title: "Humility", scripture: "Philippians 2:3-4", body: "Count others more significant than yourself; look to their interests." },
-  { category: "trait", title: "Courage", scripture: "Joshua 1:9", body: "Be strong and courageous — the Lord your God is with you." },
-  { category: "trait", title: "Integrity", scripture: "Proverbs 11:3", body: "Integrity guides the upright; walk honestly before God and people." },
-  { category: "trait", title: "Gratitude", scripture: "1 Thessalonians 5:16-18", body: "Rejoice, pray, and give thanks in all circumstances." },
-
-  // Prophecies
-  { category: "prophecy", title: "Born in Bethlehem", scripture: "Micah 5:2", body: "Centuries before Christ, Micah foretold the Messiah’s birthplace — fulfilled in Matthew 2." },
-  { category: "prophecy", title: "A suffering Servant", scripture: "Isaiah 53:5", body: "Isaiah saw One pierced for our transgressions — fulfilled at the cross." },
-  { category: "prophecy", title: "The virgin birth", scripture: "Isaiah 7:14", body: "A virgin would bear a son called Immanuel — God with us." },
-  { category: "prophecy", title: "Triumphal entry", scripture: "Zechariah 9:9", body: "Your King comes humble, riding on a donkey — fulfilled on Palm Sunday." },
-  { category: "prophecy", title: "Betrayed for silver", scripture: "Zechariah 11:12-13", body: "Thirty pieces of silver and the potter’s field — fulfilled in Judas’ betrayal." },
-  { category: "prophecy", title: "Pierced hands and feet", scripture: "Psalm 22:16", body: "David’s psalm describes crucifixion long before Rome practiced it." },
-  { category: "prophecy", title: "Resurrection hope", scripture: "Psalm 16:10", body: "God would not abandon His Holy One to the grave — fulfilled in Christ’s rising." },
-  { category: "prophecy", title: "A new covenant", scripture: "Jeremiah 31:31-33", body: "God promised a new covenant written on hearts — sealed in Jesus’ blood." },
-  { category: "prophecy", title: "Light to the nations", scripture: "Isaiah 49:6", body: "Salvation would reach the ends of the earth through the Servant." },
-  { category: "prophecy", title: "Spirit poured out", scripture: "Joel 2:28-29", body: "God would pour out His Spirit on all flesh — fulfilled at Pentecost." },
-
-  // Facts
-  { category: "fact", title: "Shortest verse", scripture: "John 11:35", body: "“Jesus wept.” — the shortest verse in many English Bibles, showing His compassion." },
-  { category: "fact", title: "Longest chapter", scripture: "Psalm 119:105", body: "Psalm 119 is the longest chapter, celebrating God’s word as a lamp to our feet." },
-  { category: "fact", title: "Creation word", scripture: "Genesis 1:3", body: "God spoke light into being — His word still creates and orders life." },
-  { category: "fact", title: "Two of every kind?", scripture: "Genesis 7:2-3", body: "Noah took more than two of clean animals — provision for sacrifice after the flood." },
-  { category: "fact", title: "The Shema", scripture: "Deuteronomy 6:4-5", body: "Israel’s core confession: the Lord is one — love Him with all your heart." },
-  { category: "fact", title: "Armor of God", scripture: "Ephesians 6:11", body: "Believers are called to put on the whole armor of God against spiritual schemes." },
-  { category: "fact", title: "Fruit of the Spirit", scripture: "Galatians 5:22-23", body: "Nine Spirit-produced virtues mark a life led by God, not the flesh." },
-  { category: "fact", title: "Great Commission", scripture: "Matthew 28:19-20", body: "Jesus sends disciples to all nations, promising His presence to the end of the age." },
-  { category: "fact", title: "New creation", scripture: "2 Corinthians 5:17", body: "In Christ, the old has passed away — a person becomes a new creation." },
-  { category: "fact", title: "Living water", scripture: "John 4:13-14", body: "Jesus offers water that becomes a spring of eternal life within." },
-
-  // Riddles
-  { category: "riddle", title: "A bush that burned", scripture: "Exodus 3:2", body: "What burned with fire yet was not consumed — and spoke God’s call?", answer: "The burning bush (Moses at Horeb)." },
-  { category: "riddle", title: "Stronger than a lion?", scripture: "Judges 14:14", body: "Out of the eater came something to eat; out of the strong came something sweet. What was it?", answer: "Samson’s riddle — honey from the lion’s carcass." },
-  { category: "riddle", title: "What fell but never broke?", scripture: "Acts 9:4", body: "Who fell to the ground on the Damascus road yet rose with a new name and mission?", answer: "Saul of Tarsus (Paul)." },
-  { category: "riddle", title: "Walls without hands", scripture: "Joshua 6:20", body: "Which city walls fell after a shout and trumpet blast, not by siege engines?", answer: "Jericho." },
-  { category: "riddle", title: "Fed by birds", scripture: "1 Kings 17:6", body: "Which prophet was fed bread and meat by ravens beside a brook?", answer: "Elijah at the brook Cherith." },
-  { category: "riddle", title: "Sleeping in a storm", scripture: "Mark 4:38-39", body: "Who slept in a boat during a storm, then stilled wind and waves with a word?", answer: "Jesus." },
-  { category: "riddle", title: "Writing on the wall", scripture: "Daniel 5:5", body: "Whose feast ended when a hand wrote judgment on the palace wall?", answer: "Belshazzar of Babylon." },
-  { category: "riddle", title: "Three in the fire", scripture: "Daniel 3:25", body: "Who walked unbound in a blazing furnace with a fourth like a son of the gods?", answer: "Shadrach, Meshach, and Abednego." },
-];
 
 function authorized(req: Request) {
   const cronSecret = Deno.env.get("GROWTH_CRON_SECRET") || "";
@@ -186,49 +137,85 @@ async function fetchVerse(ref: string): Promise<string> {
   return text;
 }
 
-function pickSeed(category: string, dayIndex: number, usedTitles: Set<string>): Seed | null {
-  const pool = GROWTH_SEEDS.filter((s) => s.category === category);
-  if (!pool.length) return null;
-  for (let i = 0; i < pool.length; i++) {
-    const seed = pool[(dayIndex + i) % pool.length];
-    if (!usedTitles.has(seed.title.toLowerCase())) return seed;
+const GROWTH_CATEGORIES = ["trait", "prophecy", "fact", "riddle"];
+
+type AutofillResult = {
+  created: string[];
+  errors: string[];
+  skipped: { category: string; reason: string }[];
+};
+
+async function loadGrowthHistory(supabase: SupabaseClient) {
+  const pageSize = 1000;
+  const rows: {
+    title?: string;
+    scripture_ref?: string;
+    published_on?: string | null;
+    status?: string;
+    created_at?: string | null;
+  }[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("daily_growth_items")
+      .select("title, scripture_ref, published_on, status, created_at")
+      .in("status", ["queued", "published", "archived"])
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
   }
-  return pool[dayIndex % pool.length];
+  return rows;
 }
 
 async function ensureQueueFromBibleApi(
   supabase: SupabaseClient,
   categories: string[]
-): Promise<{ created: string[]; errors: string[] }> {
+): Promise<AutofillResult> {
   const created: string[] = [];
   const errors: string[] = [];
+  const skipped: { category: string; reason: string }[] = [];
+  const today = formatDayISO(new Date());
   const dayIndex = lagosDayIndex();
 
-  const { data: existingRows } = await supabase
-    .from("daily_growth_items")
-    .select("title, category, status")
-    .in("status", ["queued", "published"]);
-
-  const usedTitles = new Set(
-    (existingRows || [])
-      .filter((r: { status?: string }) => r.status === "published")
-      .map((r: { title?: string }) => String(r.title || "").toLowerCase())
-  );
+  let history;
+  try {
+    history = rowsToHistory(await loadGrowthHistory(supabase), today);
+  } catch (e) {
+    const message = `Could not read publication history: ${String((e as Error)?.message || e)}`;
+    errors.push(message);
+    console.error(`spool-daily-growth ${message}`);
+    return { created, errors, skipped };
+  }
 
   for (const category of categories) {
-    if (!["trait", "prophecy", "fact", "riddle"].includes(category)) continue;
+    if (!GROWTH_CATEGORIES.includes(category)) continue;
 
-    const { count } = await supabase
+    const { count, error: countError } = await supabase
       .from("daily_growth_items")
       .select("id", { count: "exact", head: true })
       .eq("status", "queued")
       .eq("category", category);
-
+    if (countError) {
+      errors.push(`${category}: ${countError.message}`);
+      continue;
+    }
+    // Queued items are published by spool_daily_growth() before any seed is used.
     if ((count || 0) > 0) continue;
 
-    const seed = pickSeed(category, dayIndex, usedTitles);
+    const seed = pickGrowthSeed({
+      category,
+      seeds: GROWTH_SEEDS,
+      history,
+      today,
+      dayIndex,
+    });
     if (!seed) {
-      errors.push(`No seed for ${category}`);
+      const reason = noEligibleSeedMessage(category);
+      errors.push(reason);
+      skipped.push({ category, reason });
+      console.error(`spool-daily-growth ${reason}`);
       continue;
     }
 
@@ -246,14 +233,168 @@ async function ensureQueueFromBibleApi(
       });
       if (error) throw error;
       created.push(`${category}:${seed.title}`);
-      usedTitles.add(seed.title.toLowerCase());
+      history.push({
+        title: seed.title,
+        scripture: seed.scripture,
+        publishedOn: today,
+      });
       await delay(350);
     } catch (e) {
       errors.push(`${category}: ${String((e as Error)?.message || e)}`);
     }
   }
 
-  return { created, errors };
+  return { created, errors, skipped };
+}
+
+function isDuplicateAlert(error: { code?: string; message?: string }) {
+  return error.code === "23505" || /duplicate key|unique constraint/i.test(error.message || "");
+}
+
+async function releaseQueueAlerts(supabase: SupabaseClient, ids: string[]) {
+  if (!ids.length) return;
+  const { error } = await supabase.from("daily_growth_queue_alerts").delete().in("id", ids);
+  if (error) console.error(`spool-daily-growth could not release queue alert: ${error.message}`);
+}
+
+async function alertLowQueues(
+  supabase: SupabaseClient,
+  categories: string[],
+  autofill: AutofillResult,
+  supabaseUrl: string,
+  serviceKey: string
+) {
+  const today = formatDayISO(new Date());
+  const low: { category: string; queued: number; detail: string }[] = [];
+
+  for (const category of categories) {
+    if (!GROWTH_CATEGORIES.includes(category)) continue;
+    const { count, error } = await supabase
+      .from("daily_growth_items")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "queued")
+      .eq("category", category);
+    if (error) return { sent: false, error: error.message, claimed: [] as string[] };
+    const queued = count || 0;
+    if (queued >= LOW_QUEUE_DAYS) continue;
+    const skip = autofill.skipped.find((item) => item.category === category);
+    const failure = autofill.errors.find((item) => item.startsWith(`${category}:`));
+    const detail = [
+      `${queued} queued (below ${LOW_QUEUE_DAYS} days of supply)`,
+      skip?.reason || (!skip && failure ? failure : ""),
+    ]
+      .filter(Boolean)
+      .join(". ");
+    low.push({ category, queued, detail });
+  }
+
+  if (!low.length) return { sent: false, claimed: [] as string[], reason: "queues_ok" };
+
+  const claimed: { id: string; category: string; queued: number; detail: string }[] = [];
+  for (const item of low) {
+    const { data, error } = await supabase
+      .from("daily_growth_queue_alerts")
+      .insert({
+        category: item.category,
+        alert_on: today,
+        queued_count: item.queued,
+        detail: item.detail.slice(0, 500),
+      })
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      if (isDuplicateAlert(error)) continue;
+      await releaseQueueAlerts(supabase, claimed.map((row) => row.id));
+      console.error(`spool-daily-growth queue alert claim failed: ${error.message}`);
+      return {
+        sent: false,
+        error: error.message,
+        claimed: [] as string[],
+        released: claimed.length > 0,
+        hint: "Apply migration 20261109_daily_growth_queue_alerts.sql before alerts can be sent.",
+      };
+    }
+    if (data?.id) claimed.push({ ...item, id: String(data.id) });
+  }
+
+  if (!claimed.length) return { sent: false, claimed: [] as string[], reason: "already_alerted" };
+
+  const mail = buildLowQueueAlert({
+    today,
+    adminUrl: `${SITE_URL}/admin/blog/daily-growth`,
+    lowQueueDays: LOW_QUEUE_DAYS,
+    items: claimed.map((item) => ({
+      category: item.category,
+      label: CAT_LABEL[item.category] || item.category,
+      queued: item.queued,
+      detail: item.detail,
+    })),
+  });
+
+  try {
+    const res = await fetch(`${supabaseUrl.replace(/\/$/, "")}/functions/v1/send-email`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        purpose: "daily_growth_alert",
+        notifyAdmins: true,
+        subject: mail.subject,
+        text: mail.text,
+        html: mail.html,
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || body?.ok === false) {
+      throw new Error(body?.error || body?.message || `send-email ${res.status}`);
+    }
+    console.log(
+      `spool-daily-growth low-queue alert sent for ${claimed.map((item) => item.category).join(", ")}`
+    );
+    return {
+      sent: true,
+      claimed: claimed.map((item) => item.category),
+      recipients: body.recipients || [],
+    };
+  } catch (e) {
+    const message = String((e as Error)?.message || e);
+    console.error(`spool-daily-growth low-queue alert failed: ${message}`);
+    await releaseQueueAlerts(supabase, claimed.map((row) => row.id));
+    return {
+      sent: false,
+      error: message,
+      claimed: claimed.map((item) => item.category),
+      released: true,
+    };
+  }
+}
+
+async function noteRunIssues(
+  supabase: SupabaseClient,
+  runId: unknown,
+  notes: string[]
+) {
+  const extra = notes.map((note) => note.trim()).filter(Boolean);
+  if (!runId || !extra.length) return;
+  const { data, error } = await supabase
+    .from("daily_growth_runs")
+    .select("error")
+    .eq("id", runId)
+    .maybeSingle();
+  if (error) {
+    console.error(`spool-daily-growth could not read run note: ${error.message}`);
+    return;
+  }
+  const prev = String(data?.error || "").trim();
+  const addition = extra.join("; ");
+  if (prev.includes(addition)) return;
+  const errorText = [prev, addition].filter(Boolean).join(" | ").slice(0, 500);
+  if (errorText === prev) return;
+  const updated = await supabase.from("daily_growth_runs").update({ error: errorText }).eq("id", runId);
+  if (updated.error) console.error(`spool-daily-growth could not save run note: ${updated.error.message}`);
 }
 
 async function enabledCategories(supabase: SupabaseClient): Promise<string[]> {
@@ -369,8 +510,9 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    let autofill: { created: string[]; errors: string[] } = { created: [], errors: [] };
+    let autofill: AutofillResult = { created: [], errors: [], skipped: [] };
     let spool: Record<string, unknown> = {};
+    let queueAlert: Record<string, unknown> = { sent: false };
 
     if (!emailOnly) {
       const cats = await enabledCategories(supabase);
@@ -379,6 +521,16 @@ Deno.serve(async (req) => {
       const { data, error } = await supabase.rpc("spool_daily_growth", { p_force: force });
       if (error) throw error;
       spool = (data || {}) as Record<string, unknown>;
+
+      if (String(spool.reason || "") !== "disabled") {
+        try {
+          queueAlert = await alertLowQueues(supabase, cats, autofill, supabaseUrl, serviceKey);
+        } catch (e) {
+          const message = String((e as Error)?.message || e);
+          queueAlert = { sent: false, error: message };
+          console.error(`spool-daily-growth queue alert: ${message}`);
+        }
+      }
     } else {
       const { data: items, error } = await supabase.rpc("list_daily_growth_published_on", { p_date: null });
       if (error) throw error;
@@ -471,10 +623,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    const runNotes = [
+      ...autofill.errors,
+      queueAlert.error ? `Queue alert: ${queueAlert.error}` : "",
+    ];
+    await noteRunIssues(supabase, spool.run_id, runNotes);
+
     return json({
       ok: true,
       autofill,
       spool,
+      queue_alert: queueAlert,
       emails_sent: emailsSent,
       emails_failed: emailsFailed,
       email_errors: emailErrors,

@@ -45,6 +45,20 @@ const CATEGORIES = [
   { id: "riddle", label: "Riddle" },
 ];
 
+// Matches LOW_QUEUE_DAYS in supabase/functions/spool-daily-growth/pickSeed.ts
+const LOW_QUEUE_DAYS = 7;
+
+function queuedForCategory(rows, category) {
+  return rows
+    .filter((row) => row.category === category && row.status === "queued")
+    .slice()
+    .sort((a, b) => {
+      const order = (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0);
+      if (order) return order;
+      return String(a.created_at || "").localeCompare(String(b.created_at || ""));
+    });
+}
+
 const STATUSES = [
   { id: "draft", label: "Draft" },
   { id: "queued", label: "Queued" },
@@ -84,6 +98,7 @@ export default function DailyGrowthAdminPage() {
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const [rows, setRows] = useState([]);
+  const [queuedRows, setQueuedRows] = useState([]);
   const [runs, setRuns] = useState([]);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -98,15 +113,17 @@ export default function DailyGrowthAdminPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [items, set, runList] = await Promise.all([
+      const [items, set, runList, queued] = await Promise.all([
         authApi.listDailyGrowth(
           filterCat === "all" ? null : filterCat,
           filterStatus === "all" ? null : filterStatus
         ),
         authApi.getDailyGrowthSettings(),
         authApi.listDailyGrowthRuns(14),
+        authApi.listDailyGrowth(null, "queued"),
       ]);
       setRows(Array.isArray(items) ? items : []);
+      setQueuedRows(Array.isArray(queued) ? queued : []);
       setSettings(set || null);
       setRuns(Array.isArray(runList) ? runList : []);
     } catch (err) {
@@ -239,7 +256,7 @@ export default function DailyGrowthAdminPage() {
               <Sparkles className="h-6 w-6 text-red-600" /> Daily Growth
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Prefers your queued items; if a category queue is empty, cron auto-fills from bible-api.com, publishes one per category daily, and can email members at 6:00 AM UK as its own email.
+              Publishes your oldest queued item in each category. An empty category is filled from a seed only when that title and scripture were not published in the last 365 days; otherwise that category is skipped. Admins are emailed once a day when a queue drops below 7 days. Members can still get the 6:00 AM UK email.
               Public:{" "}
               <a href="/blog?tab=daily-growth" className="text-red-600 hover:underline" target="_blank" rel="noreferrer">
                 /blog?tab=daily-growth
@@ -335,6 +352,44 @@ export default function DailyGrowthAdminPage() {
             </div>
           </div>
         </Card>
+      ) : null}
+
+      {settings ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          {CATEGORIES.map((category) => {
+            const items = queuedForCategory(queuedRows, category.id);
+            const low = items.length < LOW_QUEUE_DAYS;
+            return (
+              <Card key={category.id} className="p-4 border-0 shadow-sm">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <p className="font-semibold text-gray-900">{category.label}</p>
+                  <Badge className={low ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
+                    {items.length} queued
+                  </Badge>
+                </div>
+                <p className="text-xs text-gray-500 mb-2">
+                  {low
+                    ? `Below ${LOW_QUEUE_DAYS} days of supply`
+                    : `${items.length} days of supply`}
+                </p>
+                {items.length === 0 ? (
+                  <p className="text-xs text-gray-400">
+                    Queue empty. The next run uses an unused seed, or skips this category if every title and scripture was published in the last year.
+                  </p>
+                ) : (
+                  <ol className="text-sm text-gray-700 space-y-1 max-h-40 overflow-y-auto">
+                    {items.map((item, index) => (
+                      <li key={item.id} className="truncate">
+                        <span className="text-gray-400 mr-1">{index + 1}.</span>
+                        {item.title || "Untitled"}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </Card>
+            );
+          })}
+        </div>
       ) : null}
 
       <div className="flex flex-wrap gap-2 mb-4">
