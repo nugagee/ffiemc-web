@@ -79,6 +79,8 @@ Deno.serve(async (req) => {
 
     let allowed = sessionOk;
     const bearerIsAnon = Boolean(anonKey) && (token === anonKey || apiKeyHeader === anonKey);
+    const bearerIsService =
+      Boolean(serviceKey) && (token === serviceKey || apiKeyHeader === serviceKey);
     const jwtRole = jwtRoleOf(token) || jwtRoleOf(apiKeyHeader);
     const looksLikeAnon = bearerIsAnon || jwtRole === "anon";
 
@@ -89,6 +91,12 @@ Deno.serve(async (req) => {
     // Public transactional mail: accept project anon JWT (Authorization or apikey)
     // even if SUPABASE_ANON_KEY env is missing/mismatched in the function runtime.
     if (!allowed && PUBLIC_PURPOSES.has(purposeHint) && (jwtRole === "anon" || jwtRole === "authenticated")) {
+      allowed = true;
+    }
+
+    // spool-daily-growth calls this with the service role to email church admins.
+    // The purpose is not public, so an anon key cannot send it.
+    if (!allowed && bearerIsService && purposeHint === "daily_growth_alert") {
       allowed = true;
     }
 
@@ -103,8 +111,9 @@ Deno.serve(async (req) => {
     if (!allowed) return json({ error: "Unauthorized" }, 401);
 
     const purpose = String(body.purpose || (sessionOk ? "compose" : "")).trim().toLowerCase();
+    const internalAdminAlert = bearerIsService && purpose === "daily_growth_alert";
 
-    if (!sessionOk && !PUBLIC_PURPOSES.has(purpose)) {
+    if (!sessionOk && !internalAdminAlert && !PUBLIC_PURPOSES.has(purpose)) {
       return json({ error: "Purpose not allowed for public sends", purpose }, 403);
     }
 
