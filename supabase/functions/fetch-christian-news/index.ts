@@ -15,6 +15,7 @@ import {
   dedupeArticles,
   DEDUP_WINDOW_MS,
   feedUrlForSource,
+  isTooOld,
   isEducationRssOnly,
   looksLikeFeed,
   parseRss,
@@ -110,12 +111,14 @@ Deno.serve(async (req) => {
 
     for (const source of ordered) {
       const result = await collectFromSource(source);
+      const fresh = result.articles.filter((article) => !isTooOld(article.published_at));
       report.push({
         source: source.id,
         count: result.articles.length,
+        kept: fresh.length,
         error: result.error || null,
       });
-      all.push(...result.articles);
+      all.push(...fresh);
     }
 
     const since = new Date(Date.now() - DEDUP_WINDOW_MS).toISOString().slice(0, 10);

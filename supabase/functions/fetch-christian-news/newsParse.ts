@@ -34,6 +34,16 @@ export type Article = {
 export const DEDUP_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 export const DEDUP_TITLE_MIN = 12;
 
+/** Items published more than this long ago are skipped. Items with no date are kept. */
+export const MAX_ITEM_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+export function isTooOld(publishedAt: string | null | undefined, now = Date.now()) {
+  if (!publishedAt) return false;
+  const ms = Date.parse(publishedAt);
+  if (!Number.isFinite(ms)) return false;
+  return now - ms > MAX_ITEM_AGE_MS;
+}
+
 /**
  * Newest rows kept per feed after every item is parsed.
  * Christian Today's rss.xml is ~550 overlapping items and is not date-ordered;
