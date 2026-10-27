@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Archive,
+  ImageIcon,
   Loader2,
   Mail,
   Play,
@@ -10,6 +11,7 @@ import {
   Save,
   Sparkles,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { authApi, formatApiError } from "../../../lib/api";
@@ -62,9 +64,31 @@ function queuedForCategory(rows, category) {
 const STATUSES = [
   { id: "draft", label: "Draft" },
   { id: "queued", label: "Queued" },
+  { id: "scheduled", label: "Scheduled" },
   { id: "published", label: "Published" },
   { id: "archived", label: "Archived" },
 ];
+
+function lagosDate(offsetDays = 0) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Lagos",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const year = Number(parts.find((part) => part.type === "year")?.value);
+    const month = Number(parts.find((part) => part.type === "month")?.value);
+    const day = Number(parts.find((part) => part.type === "day")?.value);
+    const dt = new Date(Date.UTC(year, month - 1, day));
+    dt.setUTCDate(dt.getUTCDate() + offsetDays);
+    return dt.toISOString().slice(0, 10);
+  } catch {
+    const dt = new Date();
+    dt.setUTCDate(dt.getUTCDate() + offsetDays);
+    return dt.toISOString().slice(0, 10);
+  }
+}
 
 const emptyForm = () => ({
   category: "fact",
@@ -99,7 +123,12 @@ export default function DailyGrowthAdminPage() {
 
   const [rows, setRows] = useState([]);
   const [queuedRows, setQueuedRows] = useState([]);
+  const [scheduledRows, setScheduledRows] = useState([]);
   const [runs, setRuns] = useState([]);
+  const [imageDate, setImageDate] = useState(() => lagosDate(1));
+  const [growthImage, setGrowthImage] = useState(null);
+  const [imageBusy, setImageBusy] = useState(false);
+  const imageInputRef = useRef(null);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -113,7 +142,7 @@ export default function DailyGrowthAdminPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [items, set, runList, queued] = await Promise.all([
+      const [items, set, runList, queued, scheduled] = await Promise.all([
         authApi.listDailyGrowth(
           filterCat === "all" ? null : filterCat,
           filterStatus === "all" ? null : filterStatus
@@ -121,9 +150,11 @@ export default function DailyGrowthAdminPage() {
         authApi.getDailyGrowthSettings(),
         authApi.listDailyGrowthRuns(14),
         authApi.listDailyGrowth(null, "queued"),
+        authApi.listDailyGrowth(null, "scheduled"),
       ]);
       setRows(Array.isArray(items) ? items : []);
       setQueuedRows(Array.isArray(queued) ? queued : []);
+      setScheduledRows(Array.isArray(scheduled) ? scheduled : []);
       setSettings(set || null);
       setRuns(Array.isArray(runList) ? runList : []);
     } catch (err) {
@@ -240,6 +271,77 @@ export default function DailyGrowthAdminPage() {
     }
   };
 
+  useEffect(() => {
+    if (!canEdit) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const row = await authApi.getDailyGrowthImage(imageDate);
+        if (!cancelled) setGrowthImage(row?.image_url ? row : null);
+      } catch (err) {
+        if (!cancelled) {
+          setGrowthImage(null);
+          toast.error(formatApiError(err.message) || "Could not load the Daily Growth image");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [imageDate, canEdit]);
+
+  const onGrowthImageFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setImageBusy(true);
+    try {
+      const previousPath = growthImage?.storage_path || "";
+      const uploaded = await authApi.uploadDailyGrowthImage(file, imageDate);
+      const saved = await authApi.upsertDailyGrowthImage(imageDate, uploaded.url, uploaded.path);
+      setGrowthImage(saved?.image_url ? saved : { image_url: uploaded.url, storage_path: uploaded.path });
+      if (previousPath && previousPath !== uploaded.path) {
+        try {
+          await authApi.removeStoredMedia(previousPath);
+        } catch {
+          /* the new image is already saved; the old file can be cleaned up later */
+        }
+      }
+      toast.success("Daily Growth image saved");
+    } catch (err) {
+      toast.error(formatApiError(err.message) || "Could not upload the image");
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
+  const removeGrowthImage = async () => {
+    const ok = await confirm({
+      title: "Remove this Daily Growth image?",
+      description: "The morning email for this date will send without an image.",
+      confirmLabel: "Remove",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setImageBusy(true);
+    try {
+      const result = await authApi.deleteDailyGrowthImage(imageDate);
+      if (result?.storage_path) {
+        try {
+          await authApi.removeStoredMedia(result.storage_path);
+        } catch {
+          /* the email no longer references the file */
+        }
+      }
+      setGrowthImage(null);
+      toast.success("Image removed");
+    } catch (err) {
+      toast.error(formatApiError(err.message) || "Could not remove the image");
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
   const enabledCats = Array.isArray(settings?.categories_enabled)
     ? settings.categories_enabled
     : ["trait", "prophecy", "fact", "riddle"];
@@ -256,7 +358,7 @@ export default function DailyGrowthAdminPage() {
               <Sparkles className="h-6 w-6 text-red-600" /> Daily Growth
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Publishes your oldest queued item in each category. An empty category is filled from a seed only when that title and scripture were not published in the last 365 days; otherwise that category is skipped. Admins are emailed once a day when a queue drops below 7 days. Members can still get the 6:00 AM UK email.
+              Around 9:00pm Nigeria time the next day&apos;s items are reserved as scheduled and stay off the public page. At 6:00am Nigeria time those reserved items are published and emailed; if a category was not reserved, the oldest queued item is used instead. An empty category is filled from a seed only when that title and scripture were not published in the last 365 days. Admins are emailed once a day when a queue drops below 7 days.
               Public:{" "}
               <a href="/blog?tab=daily-growth" className="text-red-600 hover:underline" target="_blank" rel="noreferrer">
                 /blog?tab=daily-growth
@@ -354,10 +456,71 @@ export default function DailyGrowthAdminPage() {
         </Card>
       ) : null}
 
+      {canEdit ? (
+        <Card className="p-4 mb-6 border-0 shadow-md">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+            <div>
+              <p className="font-semibold text-gray-900 flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-red-600" /> Email image
+              </p>
+              <p className="text-xs text-gray-500 mt-1 max-w-xl">
+                Shown at the top of the 6:00am Nigeria Daily Growth email for the date you pick. If there is no image, or it fails to load, the email still sends. Riddle answers are never included.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Date</Label>
+              <Input
+                type="date"
+                value={imageDate}
+                onChange={(e) => setImageDate(e.target.value)}
+                className="w-[180px]"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4 items-start">
+            <div className="w-full sm:w-64 h-36 rounded-xl border border-dashed border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center">
+              {growthImage?.image_url ? (
+                <img
+                  src={growthImage.image_url}
+                  alt={`Daily Growth ${imageDate}`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <p className="text-xs text-gray-400 px-4 text-center">No image for {imageDate}</p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                className="hidden"
+                onChange={onGrowthImageFile}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={imageBusy || !imageDate}
+                onClick={() => imageInputRef.current?.click()}
+              >
+                {imageBusy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+                {growthImage?.image_url ? "Replace image" : "Upload image"}
+              </Button>
+              {growthImage?.image_url ? (
+                <Button type="button" variant="ghost" className="text-red-600" disabled={imageBusy} onClick={removeGrowthImage}>
+                  <Trash2 className="h-4 w-4 mr-2" /> Remove
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
       {settings ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {CATEGORIES.map((category) => {
             const items = queuedForCategory(queuedRows, category.id);
+            const reserved = scheduledRows.filter((row) => row.category === category.id);
             const low = items.length < LOW_QUEUE_DAYS;
             return (
               <Card key={category.id} className="p-4 border-0 shadow-sm">
@@ -372,6 +535,11 @@ export default function DailyGrowthAdminPage() {
                     ? `Below ${LOW_QUEUE_DAYS} days of supply`
                     : `${items.length} days of supply`}
                 </p>
+                {reserved.length ? (
+                  <p className="text-xs text-sky-700 mb-2">
+                    Scheduled: {reserved.map((item) => `${item.published_on || "next"} · ${item.title || "Untitled"}`).join("; ")}
+                  </p>
+                ) : null}
                 {items.length === 0 ? (
                   <p className="text-xs text-gray-400">
                     Queue empty. The next run uses an unused seed, or skips this category if every title and scripture was published in the last year.
@@ -558,6 +726,16 @@ export default function DailyGrowthAdminPage() {
                 placeholder="e.g. John 11:35"
               />
             </div>
+            {form.status === "scheduled" || form.status === "published" ? (
+              <div className="space-y-1">
+                <Label>{form.status === "scheduled" ? "Scheduled date" : "Published date"}</Label>
+                <Input
+                  type="date"
+                  value={form.published_on || ""}
+                  onChange={(e) => setForm({ ...form, published_on: e.target.value })}
+                />
+              </div>
+            ) : null}
             {form.category === "riddle" ? (
               <div className="space-y-1">
                 <Label>Answer</Label>

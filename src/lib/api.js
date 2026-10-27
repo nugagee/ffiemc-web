@@ -389,6 +389,69 @@ const api = {
   },
 };
 
+async function requestSignedMediaUpload(file, { purpose, imageDate } = {}) {
+  assertConfigured();
+  const base = String(process.env.REACT_APP_SUPABASE_URL || "").replace(/\/$/, "");
+  const anon = process.env.REACT_APP_SUPABASE_ANON_KEY || "";
+  if (!base || !anon) {
+    throw new Error("Supabase is not configured");
+  }
+  const adminToken = purpose === "receipt" ? "" : getAdminToken();
+  if (purpose !== "receipt" && !adminToken) {
+    throw new Error("Please sign in again to upload.");
+  }
+  const res = await fetch(`${base}/functions/v1/media-upload`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: anon,
+      Authorization: `Bearer ${adminToken || anon}`,
+      ...(adminToken ? { "x-admin-token": adminToken } : {}),
+    },
+    body: JSON.stringify({
+      action: "sign",
+      purpose,
+      contentType: file?.type || "",
+      fileName: file?.name || "",
+      size: file?.size || 0,
+      imageDate: imageDate || "",
+    }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || body.message || `Upload failed (${res.status})`);
+  const { error } = await getSupabase()
+    .storage.from("media")
+    .uploadToSignedUrl(body.path, body.token, file, {
+      contentType: body.contentType || file?.type || undefined,
+      upsert: false,
+    });
+  if (error) throw new Error(error.message);
+  if (!body.publicUrl) throw new Error("Could not get file URL");
+  return { url: body.publicUrl, path: body.path };
+}
+
+async function deleteStoredMediaObject(path) {
+  if (!path) return { ok: true };
+  assertConfigured();
+  const base = String(process.env.REACT_APP_SUPABASE_URL || "").replace(/\/$/, "");
+  const anon = process.env.REACT_APP_SUPABASE_ANON_KEY || "";
+  const adminToken = getAdminToken();
+  if (!adminToken) throw new Error("Please sign in again to remove this file.");
+  const res = await fetch(`${base}/functions/v1/media-upload`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: anon,
+      Authorization: `Bearer ${adminToken}`,
+      "x-admin-token": adminToken,
+    },
+    body: JSON.stringify({ action: "delete", path }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || body.message || `Remove failed (${res.status})`);
+  return body;
+}
+
 export const authApi = {
   login: async (email, password) => {
     const data = await rpc("admin_login", {
@@ -607,6 +670,26 @@ export const authApi = {
       p_token: getAdminToken(),
       p_limit: limit,
     }),
+  getDailyGrowthImage: (imageDate) =>
+    rpc("admin_get_daily_growth_image", {
+      p_token: getAdminToken(),
+      p_date: imageDate,
+    }),
+  upsertDailyGrowthImage: (imageDate, url, path) =>
+    rpc("admin_upsert_daily_growth_image", {
+      p_token: getAdminToken(),
+      p_date: imageDate,
+      p_url: url,
+      p_path: path,
+    }),
+  deleteDailyGrowthImage: (imageDate) =>
+    rpc("admin_delete_daily_growth_image", {
+      p_token: getAdminToken(),
+      p_date: imageDate,
+    }),
+  uploadDailyGrowthImage: (file, imageDate) =>
+    requestSignedMediaUpload(file, { purpose: "daily_growth", imageDate }),
+  removeStoredMedia: (path) => deleteStoredMediaObject(path),
   triggerDailyGrowthSpool: async ({ force = true, skipEmail = false, emailOnly = false } = {}) => {
     const supabaseUrl = String(process.env.REACT_APP_SUPABASE_URL || "").replace(/\/$/, "");
     const base =
@@ -636,6 +719,8 @@ export const authApi = {
   },
   publicListDailyGrowth: (category = null) =>
     rpc("public_list_daily_growth", { p_category: category || null }),
+  revealDailyGrowthAnswer: (id) =>
+    rpc("public_reveal_daily_growth_answer", { p_id: id }),
   getContentEmailSettings: () =>
     rpc("admin_get_content_email_settings", { p_token: getAdminToken() }),
   updateContentEmailSettings: (data) =>
@@ -1076,25 +1161,15 @@ export const authApi = {
   getPublicMediaContributionReport: (slug) =>
     rpc("public_media_contribution_report", { p_slug: slug }),
   uploadContributionReceipt: async (file) => {
-    assertConfigured();
     const ext = String(file.name || "receipt").split(".").pop()?.toLowerCase() || "jpg";
     const allowed = ["jpg", "jpeg", "png", "gif", "webp", "pdf"];
-    if (!allowed.includes(ext)) {
-      throw new Error("Upload a JPG, PNG, WEBP, or PDF receipt");
+    if (!allowed.includes(ext) || /svg|html?/i.test(ext)) {
+      throw new Error("Upload a JPG, PNG, WEBP, GIF, or PDF receipt");
     }
     if (file.size > 8 * 1024 * 1024) {
       throw new Error("Receipt must be under 8MB");
     }
-    const path = `contributions/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await getSupabase().storage.from("media").upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: file.type || (ext === "pdf" ? "application/pdf" : `image/${ext}`),
-    });
-    if (error) throw new Error(error.message);
-    const { data } = getSupabase().storage.from("media").getPublicUrl(path);
-    if (!data?.publicUrl) throw new Error("Could not get receipt URL");
-    return { url: data.publicUrl, path };
+    return requestSignedMediaUpload(file, { purpose: "receipt" });
   },
 
   aiQuota: () => rpc("admin_ai_quota", { p_token: getAdminToken() }),
@@ -1185,50 +1260,33 @@ export const authApi = {
     }
   },
   uploadMedia: async (file) => {
-    assertConfigured();
-    const ext = String(file.name || "image").split(".").pop()?.toLowerCase() || "jpg";
-    const safeExt = ["jpg", "jpeg", "png", "gif", "webp", "avif", "svg"].includes(ext) ? ext : "jpg";
-    const path = `blog/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`;
-    const { error } = await getSupabase().storage.from("media").upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: file.type || `image/${safeExt}`,
-    });
-    if (error) throw new Error(error.message);
-    const { data } = getSupabase().storage.from("media").getPublicUrl(path);
-    if (!data?.publicUrl) throw new Error("Could not get image URL");
-    return { url: data.publicUrl, path };
+    const ext = String(file.name || "image").split(".").pop()?.toLowerCase() || "";
+    const type = String(file.type || "").toLowerCase();
+    if (ext === "svg" || type === "image/svg+xml" || /html/.test(type)) {
+      throw new Error("SVG and HTML files are not allowed. Use JPG, PNG, WEBP, GIF, or AVIF.");
+    }
+    const allowed = ["jpg", "jpeg", "png", "gif", "webp", "avif"];
+    if (ext && !allowed.includes(ext)) {
+      throw new Error("Use a JPG, PNG, WEBP, GIF, or AVIF image.");
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      throw new Error("Images must be 8MB or smaller");
+    }
+    return requestSignedMediaUpload(file, { purpose: "image" });
   },
   /** PDF / Word / text documents for Bible Study & church resource attachments. */
   uploadDocument: async (file) => {
-    assertConfigured();
     const name = String(file.name || "document");
     const ext = name.split(".").pop()?.toLowerCase() || "pdf";
-    const allowed = ["pdf", "doc", "docx", "txt", "md", "html", "htm"];
-    if (!allowed.includes(ext)) {
-      throw new Error("Upload a PDF, Word, or text document.");
+    const allowed = ["pdf", "doc", "docx", "txt", "md"];
+    if (!allowed.includes(ext) || ext === "html" || ext === "htm" || ext === "svg") {
+      throw new Error("Upload a PDF, Word, or text document. HTML and SVG are not allowed.");
     }
-    const mime =
-      file.type ||
-      (ext === "pdf"
-        ? "application/pdf"
-        : ext === "doc"
-          ? "application/msword"
-          : ext === "docx"
-            ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            : ext === "html" || ext === "htm"
-              ? "text/html"
-              : "text/plain");
-    const path = `documents/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await getSupabase().storage.from("media").upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: mime,
-    });
-    if (error) throw new Error(error.message);
-    const { data } = getSupabase().storage.from("media").getPublicUrl(path);
-    if (!data?.publicUrl) throw new Error("Could not get document URL");
-    return { url: data.publicUrl, path, name };
+    if (file.size > 25 * 1024 * 1024) {
+      throw new Error("Documents must be under 25MB");
+    }
+    const uploaded = await requestSignedMediaUpload(file, { purpose: "document" });
+    return { ...uploaded, name };
   },
 };
 

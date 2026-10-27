@@ -1062,7 +1062,7 @@ export default function MediaContributionsPage() {
                     {receiptUploading ? "Uploading…" : "Upload JPG, PNG, WEBP or PDF"}
                     <input
                       type="file"
-                      accept="image/*,.pdf,application/pdf"
+                      accept="image/jpeg,image/png,image/webp,image/gif,image/avif,.pdf,application/pdf"
                       className="hidden"
                       disabled={receiptUploading}
                       onChange={onAdminReceiptChange}

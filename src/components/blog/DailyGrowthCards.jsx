@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Eye, EyeOff, Lightbulb, ScrollText, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { looksLikeHtml, sanitizeHtml } from "../../lib/blog";
+import { authApi, formatApiError } from "../../lib/api";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -49,10 +51,36 @@ function fmtDate(d) {
 
 function GrowthCard({ item, highlight }) {
   const [reveal, setReveal] = useState(false);
+  const [answer, setAnswer] = useState(String(item.answer || ""));
+  const [loadingAnswer, setLoadingAnswer] = useState(false);
   const meta = CAT_META[item.category] || CAT_META.fact;
   const Icon = meta.icon;
   const body = item.body || "";
   const html = looksLikeHtml(body);
+  const canReveal = item.category === "riddle" && (Boolean(answer.trim()) || Boolean(item.answer_available));
+
+  const onReveal = async () => {
+    if (reveal) {
+      setReveal(false);
+      return;
+    }
+    if (!answer.trim() && item.answer_available) {
+      setLoadingAnswer(true);
+      try {
+        const row = await authApi.revealDailyGrowthAnswer(item.id);
+        const next = String(row?.answer || "").trim();
+        if (!next) throw new Error("Answer is not available");
+        setAnswer(next);
+        setReveal(true);
+      } catch (err) {
+        toast.error(formatApiError(err.message) || "Could not reveal the answer");
+      } finally {
+        setLoadingAnswer(false);
+      }
+      return;
+    }
+    setReveal(true);
+  };
 
   return (
     <Card
@@ -88,15 +116,15 @@ function GrowthCard({ item, highlight }) {
         ) : (
           <p className="text-gray-700 whitespace-pre-line">{body}</p>
         )}
-        {item.category === "riddle" && item.answer ? (
+        {canReveal ? (
           <div>
-            <Button type="button" size="sm" variant="outline" onClick={() => setReveal((v) => !v)}>
+            <Button type="button" size="sm" variant="outline" onClick={onReveal} disabled={loadingAnswer}>
               {reveal ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-              {reveal ? "Hide answer" : "Reveal answer"}
+              {loadingAnswer ? "Revealing…" : reveal ? "Hide answer" : "Reveal answer"}
             </Button>
-            {reveal ? (
+            {reveal && answer ? (
               <p className="mt-3 rounded-xl bg-sky-50 border border-sky-100 px-3 py-2 text-sm text-sky-900 font-medium">
-                {item.answer}
+                {answer}
               </p>
             ) : null}
           </div>

@@ -1,13 +1,18 @@
-// Daily Growth spool: publish the oldest queued item per category; if a queue is empty, fill from a seed that was not published in the last 365 days, then email members.
+// Daily Growth spool.
+// Morning (06:00 Europe/London): publish today's scheduled row per category,
+// or the oldest queued row if none was reserved, then email members.
+// Evening (20:00 UTC, ?schedule_next=1): reserve tomorrow's rows as scheduled.
+// A per-date image is placed at the top of the email when it loads.
+// Riddle answers are never included in the email.
 // Deploy: supabase functions deploy spool-daily-growth --no-verify-jwt
 // Secrets: GROWTH_CRON_SECRET, RESEND_API_KEY, FROM_EMAIL
-// Schedule: 06:00 Europe/London. pg_cron is 0 5,6 * * * UTC and
-// invoke_growth_at_london_6() sends only when the London hour is 6.
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { buildGrowthDigest, resolveGrowthEmailImage, safeGrowthImageUrl } from "./digest.ts";
 import {
   GROWTH_SEEDS,
   LOW_QUEUE_DAYS,
+  addDaysISO,
   buildLowQueueAlert,
   formatDayISO,
   noEligibleSeedMessage,
@@ -158,7 +163,7 @@ async function loadGrowthHistory(supabase: SupabaseClient) {
     const { data, error } = await supabase
       .from("daily_growth_items")
       .select("title, scripture_ref, published_on, status, created_at")
-      .in("status", ["queued", "published", "archived"])
+      .in("status", ["queued", "scheduled", "published", "archived"])
       .order("id", { ascending: true })
       .range(from, from + pageSize - 1);
     if (error) throw error;
@@ -191,6 +196,19 @@ async function ensureQueueFromBibleApi(
 
   for (const category of categories) {
     if (!GROWTH_CATEGORIES.includes(category)) continue;
+
+    const { count: scheduledCount, error: scheduledError } = await supabase
+      .from("daily_growth_items")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "scheduled")
+      .eq("category", category)
+      .eq("published_on", today);
+    if (scheduledError) {
+      errors.push(`${category}: ${scheduledError.message}`);
+      continue;
+    }
+    // A row already dated for today is published by spool_daily_growth().
+    if ((scheduledCount || 0) > 0) continue;
 
     const { count, error: countError } = await supabase
       .from("daily_growth_items")
@@ -404,59 +422,133 @@ async function enabledCategories(supabase: SupabaseClient): Promise<string[]> {
   return ["trait", "prophecy", "fact", "riddle"];
 }
 
-function buildDigest(items: Record<string, unknown>[], runDate: string) {
-  const lines: string[] = [
-    `FFIEMC Daily Growth — ${runDate}`,
-    "",
-    "Here is today's spiritual growth content. Read, meditate, and share with someone.",
-    "",
-  ];
-  const blocks: string[] = [];
+async function probeGrowthImage(url: string): Promise<{ ok: boolean; contentType: string }> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 4000);
+  try {
+    let res = await fetch(url, { method: "HEAD", signal: ctrl.signal, redirect: "follow" });
+    if (!res.ok || res.status === 405 || res.status === 501) {
+      res = await fetch(url, {
+        method: "GET",
+        headers: { Range: "bytes=0-1023" },
+        signal: ctrl.signal,
+        redirect: "follow",
+      });
+    }
+    const contentType = res.headers.get("content-type") || "";
+    const ok = res.ok || res.status === 206;
+    try {
+      await res.body?.cancel();
+    } catch {
+      /* the probe only needed the headers */
+    }
+    return { ok, contentType };
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
-  for (const item of items) {
-    const cat = String(item.category || "");
-    const label = CAT_LABEL[cat] || "Daily Growth";
-    const title = String(item.title || "");
-    const body = stripHtml(String(item.body || "")).slice(0, 280);
-    const scripture = String(item.scripture_ref || "");
-    lines.push(`• ${label}: ${title}`);
-    if (body) lines.push(`  ${body}`);
-    if (scripture) lines.push(`  Scripture: ${scripture}`);
-    if (cat === "riddle") lines.push("  (Answer on the website)");
-    lines.push("");
+/** Today's image, or empty when it is missing or does not load in time. */
+async function loadGrowthEmailImage(supabase: SupabaseClient, runDate: string): Promise<string> {
+  if (!runDate) return "";
+  try {
+    const { data, error } = await supabase
+      .from("daily_growth_images")
+      .select("image_url")
+      .eq("image_date", runDate)
+      .maybeSingle();
+    if (error) {
+      console.error(`spool-daily-growth image lookup skipped: ${error.message}`);
+      return "";
+    }
+    const candidate = safeGrowthImageUrl(String(data?.image_url || ""));
+    if (!candidate) return "";
+    const probe = await probeGrowthImage(candidate);
+    const url = resolveGrowthEmailImage({
+      imageUrl: candidate,
+      probeOk: probe.ok,
+      contentType: probe.contentType,
+    });
+    if (!url) console.error(`spool-daily-growth image skipped for ${runDate}: not an image or failed to load`);
+    return url;
+  } catch (e) {
+    console.error(`spool-daily-growth image skipped: ${String((e as Error)?.message || e)}`);
+    return "";
+  }
+}
 
-    blocks.push(`
-      <tr><td style="padding:12px 0;border-bottom:1px solid #f3f4f6">
-        <p style="margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#b91c1c;font-weight:700">${label}</p>
-        <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#111">${escapeHtml(title)}</p>
-        <p style="margin:0 0 6px;font-size:14px;line-height:1.5;color:#374151">${escapeHtml(body)}</p>
-        ${scripture ? `<p style="margin:0;font-size:13px;color:#6b7280;font-style:italic">${escapeHtml(scripture)}</p>` : ""}
-        ${cat === "riddle" ? `<p style="margin:6px 0 0;font-size:12px;color:#9ca3af">Answer on the website</p>` : ""}
-      </td></tr>`);
+async function seedScheduledCategories(
+  supabase: SupabaseClient,
+  categories: string[],
+  tomorrow: string
+): Promise<AutofillResult> {
+  const created: string[] = [];
+  const errors: string[] = [];
+  const skipped: { category: string; reason: string }[] = [];
+  if (!categories.length) return { created, errors, skipped };
+
+  let history;
+  try {
+    history = rowsToHistory(await loadGrowthHistory(supabase), tomorrow);
+  } catch (e) {
+    const message = `Could not read publication history: ${String((e as Error)?.message || e)}`;
+    errors.push(message);
+    return { created, errors, skipped };
   }
 
-  lines.push(`Read more: ${BLOG_LINK}`);
-  lines.push("");
-  lines.push("— Fire-Fire International Evangelical Church");
-
-  const html = `<!DOCTYPE html><html><body style="margin:0;background:#f9fafb;font-family:Georgia,serif">
-  <div style="max-width:560px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb">
-    <div style="background:#b91c1c;color:#fff;padding:20px 24px">
-      <p style="margin:0;font-size:12px;opacity:.9;letter-spacing:.08em;text-transform:uppercase">FFIEMC</p>
-      <h1 style="margin:6px 0 0;font-size:22px">Daily Growth</h1>
-      <p style="margin:6px 0 0;font-size:13px;opacity:.9">${escapeHtml(runDate)}</p>
-    </div>
-    <div style="padding:8px 24px 24px">
-      <p style="font-size:14px;color:#374151;line-height:1.5">Here is today's spiritual growth content. Read, meditate, and share with someone.</p>
-      <table width="100%" cellpadding="0" cellspacing="0">${blocks.join("")}</table>
-      <p style="margin:20px 0 0;text-align:center">
-        <a href="${BLOG_LINK}" style="display:inline-block;background:#b91c1c;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600">Open Daily Growth</a>
-      </p>
-    </div>
-  </div>
-  </body></html>`;
-
-  return { text: lines.join("\n"), html };
+  const dayIndex = lagosDayIndex() + 1;
+  for (const category of categories) {
+    if (!GROWTH_CATEGORIES.includes(category)) continue;
+    const { count: already, error: alreadyError } = await supabase
+      .from("daily_growth_items")
+      .select("id", { count: "exact", head: true })
+      .eq("category", category)
+      .eq("published_on", tomorrow)
+      .in("status", ["scheduled", "published"]);
+    if (alreadyError) {
+      errors.push(`${category}: ${alreadyError.message}`);
+      continue;
+    }
+    if ((already || 0) > 0) continue;
+    const seed = pickGrowthSeed({
+      category,
+      seeds: GROWTH_SEEDS,
+      history,
+      today: tomorrow,
+      dayIndex,
+    });
+    if (!seed) {
+      const reason = noEligibleSeedMessage(category);
+      errors.push(reason);
+      skipped.push({ category, reason });
+      continue;
+    }
+    try {
+      const verse = await fetchVerse(seed.scripture);
+      const body = `${seed.body}\n\n“${verse}”`;
+      const { error } = await supabase.from("daily_growth_items").insert({
+        category,
+        title: seed.title,
+        body,
+        scripture_ref: seed.scripture,
+        answer: seed.answer || "",
+        status: "scheduled",
+        published_on: tomorrow,
+        sort_order: 0,
+      });
+      if (error) throw error;
+      created.push(`${category}:${seed.title}`);
+      history.push({
+        title: seed.title,
+        scripture: seed.scripture,
+        publishedOn: tomorrow,
+      });
+      await delay(350);
+    } catch (e) {
+      errors.push(`${category}: ${String((e as Error)?.message || e)}`);
+    }
+  }
+  return { created, errors, skipped };
 }
 
 async function resendSend(
@@ -505,10 +597,42 @@ Deno.serve(async (req) => {
     const force = url.searchParams.get("force") === "1" || url.searchParams.get("force") === "true";
     const skipEmail = url.searchParams.get("skip_email") === "1" || url.searchParams.get("dry_run") === "1";
     const emailOnly = url.searchParams.get("email_only") === "1";
+    const scheduleNext = url.searchParams.get("schedule_next") === "1";
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    if (scheduleNext) {
+      const { data, error } = await supabase.rpc("schedule_next_daily_growth");
+      if (error) throw error;
+      const schedule = (data || {}) as Record<string, unknown>;
+      const tomorrow = String(schedule.run_date || addDaysISO(formatDayISO(new Date()), 1));
+      const missing = Array.isArray(schedule.missing) ? schedule.missing.map(String) : [];
+      let seeded: AutofillResult = { created: [], errors: [], skipped: [] };
+      if (!schedule.skipped && missing.length) {
+        seeded = await seedScheduledCategories(supabase, missing, tomorrow);
+      }
+      let queueAlert: Record<string, unknown> = { sent: false };
+      if (!schedule.skipped) {
+        try {
+          const cats = await enabledCategories(supabase);
+          queueAlert = await alertLowQueues(supabase, cats, seeded, supabaseUrl, serviceKey);
+        } catch (e) {
+          queueAlert = { sent: false, error: String((e as Error)?.message || e) };
+        }
+      }
+      return json({
+        ok: true,
+        schedule_next: true,
+        schedule,
+        seeded,
+        queue_alert: queueAlert,
+        emails_sent: 0,
+        skipped_email: true,
+        at: new Date().toISOString(),
+      });
+    }
 
     let autofill: AutofillResult = { created: [], errors: [], skipped: [] };
     let spool: Record<string, unknown> = {};
@@ -548,6 +672,7 @@ Deno.serve(async (req) => {
     const items = Array.isArray(spool.items) ? (spool.items as Record<string, unknown>[]) : [];
     const runDate = String(spool.run_date || "");
     const emailEnabled = Boolean(spool.email_enabled);
+    let imageIncluded = false;
     let emailsSent = 0;
     let emailsFailed = 0;
     let emailHeld = false;
@@ -572,7 +697,14 @@ Deno.serve(async (req) => {
         }
         const tpl = String(spool.subject_template || "FFIEMC Daily Growth — {{date}}");
         const subject = tpl.replace(/\{\{\s*date\s*\}\}/gi, runDate);
-        const { text, html } = buildDigest(items, runDate);
+        const imageUrl = await loadGrowthEmailImage(supabase, runDate);
+        imageIncluded = Boolean(imageUrl);
+        const { text, html } = buildGrowthDigest({
+          items: items as { category?: string; title?: string; body?: string; scripture_ref?: string; answer?: string }[],
+          runDate,
+          imageUrl,
+          blogLink: BLOG_LINK,
+        });
 
         for (const row of list) {
           const to = String((row as { email?: string }).email || "").trim();
@@ -629,11 +761,18 @@ Deno.serve(async (req) => {
     ];
     await noteRunIssues(supabase, spool.run_id, runNotes);
 
+    const responseItems = items.map((item) => {
+      const copy = { ...item };
+      delete copy.answer;
+      return copy;
+    });
+
     return json({
       ok: true,
       autofill,
-      spool,
+      spool: { ...spool, items: responseItems },
       queue_alert: queueAlert,
+      image_included: imageIncluded,
       emails_sent: emailsSent,
       emails_failed: emailsFailed,
       email_errors: emailErrors,

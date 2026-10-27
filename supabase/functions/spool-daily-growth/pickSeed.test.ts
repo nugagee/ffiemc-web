@@ -144,6 +144,32 @@ test("dash and case differences still count as the same title and scripture", ()
   assert.equal(picked, null);
 });
 
+test("scheduled rows count on their published date and drafts do not", () => {
+  const history = rowsToHistory(
+    [
+      {
+        title: "Love",
+        scripture_ref: "1 Corinthians 13:4-7",
+        status: "scheduled",
+        published_on: "2026-10-17",
+      },
+    ],
+    TODAY
+  );
+  assert.equal(history.length, 1);
+  assert.equal(history[0].publishedOn, "2026-10-17");
+  assert.equal(
+    pickGrowthSeed({
+      category: "trait",
+      seeds: [seed({ category: "trait", title: "Love", scripture: "1 Corinthians 13:4-7" })],
+      history,
+      today: TODAY,
+      dayIndex: 0,
+    }),
+    null
+  );
+});
+
 test("queued rows count as used today, drafts do not", () => {
   const history = rowsToHistory(
     [
