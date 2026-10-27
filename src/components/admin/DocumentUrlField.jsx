@@ -53,7 +53,7 @@ export default function DocumentUrlField({
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.doc,.docx,.txt,.md,.html,application/pdf"
+          accept=".pdf,.doc,.docx,.txt,.md,application/pdf"
           className="hidden"
           onChange={onFile}
         />

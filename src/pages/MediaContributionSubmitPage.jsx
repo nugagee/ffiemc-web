@@ -309,7 +309,7 @@ export default function MediaContributionSubmitPage() {
                         <input
                           id="receipt"
                           type="file"
-                          accept="image/*,.pdf,application/pdf"
+                          accept="image/jpeg,image/png,image/webp,image/gif,image/avif,.pdf,application/pdf"
                           className="hidden"
                           disabled={!month.is_open || uploading}
                           onChange={onReceiptChange}
