@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { authApi, formatApiError } from "../../../lib/api";
+import { sendContributionPaymentUpdatedEmail } from "../../../lib/email";
 import { useAuth } from "../../../context/AuthContext";
 import { PageToolbar } from "../../../components/admin/PageToolbar";
 import { Button } from "../../../components/ui/button";
@@ -34,7 +35,7 @@ import {
 import { useConfirmDialog } from "../../../components/admin/ConfirmDialog";
 import { ContributionProofDetails } from "../../../components/media/ContributionProofDetails";
 import MediaContributionAnalytics from "../../../components/media/MediaContributionAnalytics";
-import { formatContributionShareLine } from "../../../lib/mediaContributions";
+import { formatContributionShareLine, validateContributionPayment } from "../../../lib/mediaContributions";
 
 const money = (n) =>
   `₦${Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
@@ -117,6 +118,8 @@ export default function MediaContributionsPage() {
   const [editingMonth, setEditingMonth] = useState(null);
 
   const [contribDialog, setContribDialog] = useState(false);
+  const [editingContribution, setEditingContribution] = useState(null);
+  const [contribSaving, setContribSaving] = useState(false);
   const [contribForm, setContribForm] = useState({
     team_member_id: "",
     full_name: "",
@@ -124,6 +127,7 @@ export default function MediaContributionsPage() {
     note: "",
     receipt_url: "",
     payment_date: new Date().toISOString().slice(0, 10),
+    month_id: "",
   });
   const [receiptUploading, setReceiptUploading] = useState(false);
   const [receiptName, setReceiptName] = useState("");
@@ -277,11 +281,83 @@ export default function MediaContributionsPage() {
     }
   };
 
+  const emptyContribForm = () => ({
+    team_member_id: "",
+    full_name: "",
+    amount: "",
+    note: "",
+    receipt_url: "",
+    payment_date: new Date().toISOString().slice(0, 10),
+    month_id: selectedMonthId || "",
+  });
+
+  const openAddContribution = () => {
+    setEditingContribution(null);
+    setContribForm(emptyContribForm());
+    setReceiptName("");
+    setContribDialog(true);
+  };
+
+  const openEditContribution = (row) => {
+    setEditingContribution(row);
+    setContribForm({
+      team_member_id: row.team_member_id || "",
+      full_name: row.full_name || "",
+      amount: row.amount ?? "",
+      note: row.note || "",
+      receipt_url: row.receipt_url || "",
+      payment_date: String(row.payment_date || row.created_at || "").slice(0, 10) || new Date().toISOString().slice(0, 10),
+      month_id: row.month_id || selectedMonthId || "",
+    });
+    setReceiptName(row.receipt_url ? "Current receipt" : "");
+    setContribDialog(true);
+  };
+
+  const closeContribDialog = () => {
+    setContribDialog(false);
+    setEditingContribution(null);
+  };
+
+  const reportPaymentEmail = (result) => {
+    const memberSent = Boolean(result?.memberSent);
+    const adminSent = Boolean(result?.adminSent);
+    if (memberSent && adminSent) {
+      toast.success("Update confirmation sent to the member and the admin");
+      return;
+    }
+    if (adminSent && result?.memberReason === "no_email") {
+      toast.warning("Admin notified. This member has no email on file, so they were not emailed.");
+      return;
+    }
+    if (memberSent && !adminSent) {
+      toast.success("Confirmation sent to the member");
+      toast.error("The admin notification could not be sent. The payment update was saved.");
+      return;
+    }
+    if (!memberSent && adminSent) {
+      toast.success("Admin notified");
+      toast.error("The member confirmation could not be sent. The payment update was saved.");
+      return;
+    }
+    toast.error("Payment saved, but the confirmation emails could not be sent.");
+  };
+
   const saveContribution = async () => {
-    if (!selectedMonthId) return;
+    const monthId = editingContribution ? contribForm.month_id || selectedMonthId : selectedMonthId;
+    if (!monthId) return;
+    const problems = validateContributionPayment(
+      { ...contribForm, month_id: monthId },
+      { today: new Date().toISOString().slice(0, 10) }
+    );
+    if (problems.length) {
+      toast.error(problems[0]);
+      return;
+    }
+    setContribSaving(true);
+    let saved;
     try {
-      await authApi.upsertMediaContribution(null, {
-        month_id: selectedMonthId,
+      saved = await authApi.upsertMediaContribution(editingContribution?.id || null, {
+        month_id: monthId,
         team_member_id: contribForm.team_member_id || null,
         full_name: contribForm.full_name,
         amount: contribForm.amount,
@@ -289,21 +365,34 @@ export default function MediaContributionsPage() {
         receipt_url: contribForm.receipt_url || "",
         payment_date: contribForm.payment_date || null,
       });
-      toast.success("Contribution recorded");
-      setContribDialog(false);
-      setContribForm({
-        team_member_id: "",
-        full_name: "",
-        amount: "",
-        note: "",
-        receipt_url: "",
-        payment_date: new Date().toISOString().slice(0, 10),
-      });
-      setReceiptName("");
-      await invalidateAnalytics();
-      await Promise.all([loadDetail(selectedMonthId), loadMonths()]);
     } catch (err) {
       toast.error(formatApiError(err.message));
+      setContribSaving(false);
+      return;
+    }
+
+    const wasEdit = Boolean(editingContribution?.id);
+    toast.success(wasEdit ? "Payment updated" : "Contribution recorded");
+    const editedId = editingContribution?.id;
+    closeContribDialog();
+    setContribForm(emptyContribForm());
+    setReceiptName("");
+    setContribSaving(false);
+
+    if (wasEdit) {
+      try {
+        const mailed = await sendContributionPaymentUpdatedEmail(saved?.id || editedId);
+        reportPaymentEmail(mailed);
+      } catch (err) {
+        toast.error(`Payment saved, but the confirmation email failed: ${formatApiError(err.message)}`);
+      }
+    }
+
+    try {
+      await invalidateAnalytics();
+      await Promise.all([loadMonths(), loadDetail(selectedMonthId || monthId)]);
+    } catch (err) {
+      toast.error(formatApiError(err.message) || "Payment saved, but the list could not be refreshed");
     }
   };
 
@@ -655,18 +744,7 @@ export default function MediaContributionsPage() {
               {canEdit && (
                 <Button
                   className="bg-red-600 hover:bg-red-700"
-                  onClick={() => {
-                    setContribForm({
-                      team_member_id: "",
-                      full_name: "",
-                      amount: "",
-                      note: "",
-                      receipt_url: "",
-                      payment_date: new Date().toISOString().slice(0, 10),
-                    });
-                    setReceiptName("");
-                    setContribDialog(true);
-                  }}
+                  onClick={openAddContribution}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add contribution
                 </Button>
@@ -764,10 +842,20 @@ export default function MediaContributionsPage() {
                       </div>
                       <div className="text-right shrink-0">
                         <p className="font-semibold text-red-700">{money(c.amount)}</p>
+                        <div className="mt-1 flex items-center justify-end gap-2">
+                        {canEdit && (
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 hover:underline"
+                            onClick={() => openEditContribution(c)}
+                          >
+                            Edit
+                          </button>
+                        )}
                         {canDelete && (
                           <button
                             type="button"
-                            className="text-xs text-red-500 hover:underline mt-1"
+                            className="text-xs text-red-500 hover:underline"
                             onClick={async () => {
                               const ok = await confirm({
                                 title: "Delete contribution?",
@@ -785,6 +873,7 @@ export default function MediaContributionsPage() {
                             Delete
                           </button>
                         )}
+                        </div>
                       </div>
                     </li>
                   ))
@@ -976,12 +1065,34 @@ export default function MediaContributionsPage() {
       </Dialog>
 
       {/* Contribution dialog */}
-      <Dialog open={contribDialog} onOpenChange={setContribDialog}>
+      <Dialog open={contribDialog} onOpenChange={(open) => { if (!open) closeContribDialog(); else setContribDialog(true); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add contribution manually</DialogTitle>
+            <DialogTitle>{editingContribution ? "Edit payment" : "Add contribution manually"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            {editingContribution ? (
+              <p className="text-xs text-gray-500">
+                {editingContribution.source === "admin" ? "Added by admin" : "Via payment link"}
+                {editingContribution.updated_at
+                  ? ` · last saved ${new Date(editingContribution.updated_at).toLocaleString()}`
+                  : ""}
+              </p>
+            ) : null}
+            {editingContribution ? (
+              <div className="space-y-1.5">
+                <Label>Month</Label>
+                <select
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={contribForm.month_id}
+                  onChange={(e) => setContribForm({ ...contribForm, month_id: e.target.value })}
+                >
+                  {(months || []).map((m) => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             <div className="space-y-1.5">
               <Label>Team member</Label>
               <select
@@ -989,20 +1100,28 @@ export default function MediaContributionsPage() {
                 value={contribForm.team_member_id}
                 onChange={(e) => {
                   const id = e.target.value;
-                  const member = (detail?.roster || []).find((m) => m.id === id);
+                  const member = (detail?.roster || members || []).find((m) => m.id === id);
                   setContribForm({
                     ...contribForm,
                     team_member_id: id,
-                    full_name: member?.full_name || contribForm.full_name,
+                    full_name: member?.full_name || (id ? contribForm.full_name : ""),
                   });
                 }}
               >
                 <option value="">— Select or type name below —</option>
-                {(detail?.roster || []).map((m) => (
-                  <option key={m.id} value={m.id} disabled={m.paid} className={m.paid ? "text-gray-400" : ""}>
-                    {m.full_name}{m.paid ? " (Paid)" : ""}
-                  </option>
-                ))}
+                {editingContribution?.team_member_id &&
+                !(detail?.roster || []).some((m) => m.id === editingContribution.team_member_id) ? (
+                  <option value={editingContribution.team_member_id}>{editingContribution.full_name}</option>
+                ) : null}
+                {(detail?.roster || []).map((m) => {
+                  const isThisPayment = editingContribution && (m.contribution_id === editingContribution.id || m.id === editingContribution.team_member_id);
+                  const locked = m.paid && !isThisPayment;
+                  return (
+                    <option key={m.id} value={m.id} disabled={locked} className={locked ? "text-gray-400" : ""}>
+                      {m.full_name}{locked ? " (Paid)" : ""}
+                    </option>
+                  );
+                })}
               </select>
             </div>
             {!contribForm.team_member_id && (
@@ -1073,8 +1192,10 @@ export default function MediaContributionsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setContribDialog(false)}>Cancel</Button>
-            <Button className="bg-red-600 hover:bg-red-700" disabled={receiptUploading} onClick={saveContribution}>Save</Button>
+            <Button variant="outline" onClick={closeContribDialog}>Cancel</Button>
+            <Button className="bg-red-600 hover:bg-red-700" disabled={receiptUploading || contribSaving} onClick={saveContribution}>
+              {contribSaving ? "Saving…" : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
