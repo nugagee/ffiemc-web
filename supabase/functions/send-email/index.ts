@@ -3,6 +3,17 @@
 // Secrets: RESEND_API_KEY, FROM_EMAIL (e.g. "FFIEMC <contact@ffiem.org>")
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import {
+  buildContributionPaymentUpdatedMail,
+  readContributionPaymentId,
+  resolveContributionPaymentRecipients,
+} from "./contributionPayment.ts";
+import {
+  CONTRIBUTION_PAYMENT_UPDATED,
+  PUBLIC_PURPOSES,
+  consumesBulkEmailQuota,
+  gatePurpose,
+} from "./policy.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,25 +21,6 @@ const corsHeaders = {
 };
 
 const DEFAULT_ADMIN = "adenugaolajideadewale@gmail.com";
-
-const PUBLIC_PURPOSES = new Set([
-  "contact",
-  "testimony_submit",
-  "testimony_published",
-  "prayer_submit",
-  "prayer_reply",
-  "pastor_assignment",
-  "pastor_credentials",
-  "program_registration",
-  "membership",
-  "membership_approved",
-  "volunteer",
-  "volunteer_followup",
-  "member_announcement",
-  "meeting_invite",
-  "media_contribution",
-  "experience_survey",
-]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -111,10 +103,19 @@ Deno.serve(async (req) => {
     if (!allowed) return json({ error: "Unauthorized" }, 401);
 
     const purpose = String(body.purpose || (sessionOk ? "compose" : "")).trim().toLowerCase();
-    const internalAdminAlert = bearerIsService && purpose === "daily_growth_alert";
+    const gate = gatePurpose({ sessionOk, bearerIsService, purpose });
+    if (!gate.ok) {
+      return json({ error: gate.error, purpose }, gate.status);
+    }
 
-    if (!sessionOk && !internalAdminAlert && !PUBLIC_PURPOSES.has(purpose)) {
-      return json({ error: "Purpose not allowed for public sends", purpose }, 403);
+    if (purpose === CONTRIBUTION_PAYMENT_UPDATED) {
+      return await deliverContributionPaymentUpdated({
+        supabase,
+        token,
+        resendApiKey,
+        fromEmail,
+        contributionId: readContributionPaymentId(body),
+      });
     }
 
     const notifyAdmins = Boolean(body.notifyAdmins);
@@ -131,9 +132,7 @@ Deno.serve(async (req) => {
     if (!subject) return json({ error: "Subject required" }, 400);
     if (!text && !html) return json({ error: "Message body required" }, 400);
 
-    const bulkPurpose = purpose === "member_announcement" || purpose === "meeting_invite";
-    const bulkCompose = (purpose === "compose" || purpose === "") && recipients.length > 1;
-    if (bulkPurpose || bulkCompose) {
+    if (consumesBulkEmailQuota(purpose, recipients.length)) {
       const claim = await supabase.rpc("claim_bulk_email_slots", { p_count: recipients.length });
       const missingGuard = claim.error && /claim_bulk_email_slots|schema cache|Could not find the function/i.test(claim.error.message || "");
       if (claim.error && !missingGuard) {
@@ -188,6 +187,91 @@ Deno.serve(async (req) => {
     return json({ error: err?.message || "Send failed" }, 500);
   }
 });
+
+async function deliverContributionPaymentUpdated(opts: {
+  supabase: ReturnType<typeof createClient>;
+  token: string;
+  resendApiKey: string;
+  fromEmail: string;
+  contributionId: string;
+}) {
+  const id = opts.contributionId.trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return json({ error: "Valid contribution id required" }, 400);
+  }
+
+  const { data, error } = await opts.supabase.rpc("contribution_payment_email_context", {
+    p_token: opts.token,
+    p_id: id,
+  });
+  if (error) {
+    const message = error.message || "Could not load this payment";
+    const status = /permission/i.test(message) ? 403 : /not found/i.test(message) ? 404 : 400;
+    return json({ error: message }, status);
+  }
+
+  const row = (data || {}) as Record<string, unknown>;
+  // Empty body: do not honour adminEmail / to from the browser.
+  const adminEmails = await loadAdminEmails(opts.supabase, {});
+  const resolved = resolveContributionPaymentRecipients({
+    memberEmail: row.member_email,
+    adminEmails,
+  });
+
+  let memberSent = false;
+  let memberReason: string | null = resolved.member ? null : "no_email";
+  let adminSent = false;
+  let adminReason: string | null = resolved.admins.length ? null : "no_admin";
+
+  if (resolved.member) {
+    try {
+      const mail = buildContributionPaymentUpdatedMail(row, "member");
+      await resendSend(opts.resendApiKey, {
+        from: opts.fromEmail,
+        to: [resolved.member],
+        subject: mail.subject,
+        text: mail.text,
+        html: mail.html,
+      });
+      memberSent = true;
+      memberReason = null;
+    } catch {
+      memberSent = false;
+      memberReason = "send_failed";
+    }
+  }
+
+  if (resolved.admins.length) {
+    try {
+      const mail = buildContributionPaymentUpdatedMail(row, "admin");
+      await resendSend(opts.resendApiKey, {
+        from: opts.fromEmail,
+        to: resolved.admins,
+        subject: mail.subject,
+        text: mail.text,
+        html: mail.html,
+      });
+      adminSent = true;
+      adminReason = null;
+    } catch {
+      adminSent = false;
+      adminReason = "send_failed";
+    }
+  }
+
+  const ok = memberSent || adminSent;
+  return json(
+    {
+      ok,
+      purpose: CONTRIBUTION_PAYMENT_UPDATED,
+      memberSent,
+      memberReason,
+      adminSent,
+      adminReason,
+    },
+    ok ? 200 : 502
+  );
+}
 
 function jwtRoleOf(token = "") {
   try {

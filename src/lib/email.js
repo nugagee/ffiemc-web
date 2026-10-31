@@ -128,6 +128,8 @@ function fieldsTable(rows = []) {
  * Prefer admin session token; if the session is stale/invalid and the purpose is public,
  * automatically retry with the anon key so approval emails still go out.
  */
+const ADMIN_ONLY_PURPOSES = new Set(["contribution_payment_updated"]);
+
 export async function sendViaSupabaseEmail({
   purpose,
   to,
@@ -140,6 +142,8 @@ export async function sendViaSupabaseEmail({
   secondaryEmails,
   adminEmails,
   confirm,
+  contributionId,
+  adminOnly = false,
 }) {
   const edgeUrl = process.env.REACT_APP_SUPABASE_URL;
   const anonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -167,21 +171,28 @@ export async function sendViaSupabaseEmail({
     "media_contribution",
     "experience_survey",
   ]);
-  const preferAnon = Boolean(purpose && publicPurposes.has(String(purpose).toLowerCase()));
+  const purposeKey = String(purpose || "").toLowerCase();
+  const lockedToAdmin = adminOnly || ADMIN_ONLY_PURPOSES.has(purposeKey);
+  const preferAnon = Boolean(purpose && publicPurposes.has(purposeKey) && !lockedToAdmin);
   const primaryBearer = preferAnon ? anonKey : adminToken || anonKey;
-  const payload = {
-    purpose,
-    to,
-    subject,
-    text,
-    html,
-    replyTo,
-    notifyAdmins,
-    adminEmail,
-    secondaryEmails,
-    adminEmails,
-    confirm,
-  };
+  if (lockedToAdmin && !adminToken) {
+    throw new Error("Sign in again to send this update");
+  }
+  const payload = lockedToAdmin
+    ? { purpose, contributionId }
+    : {
+        purpose,
+        to,
+        subject,
+        text,
+        html,
+        replyTo,
+        notifyAdmins,
+        adminEmail,
+        secondaryEmails,
+        adminEmails,
+        confirm,
+      };
 
   const post = async (bearer) => {
     const response = await fetch(`${edgeUrl}/functions/v1/send-email`, {
@@ -200,7 +211,8 @@ export async function sendViaSupabaseEmail({
   let { response, body } = await post(primaryBearer);
 
   // Retry: if preferred bearer failed, try the other one.
-  if (!response.ok && response.status !== 429) {
+  // Admin-only purposes must not fall back to the anon key.
+  if (!lockedToAdmin && !response.ok && response.status !== 429) {
     const fallback = primaryBearer === anonKey ? adminToken : anonKey;
     if (fallback && fallback !== primaryBearer) {
       ({ response, body } = await post(fallback));
@@ -1085,6 +1097,16 @@ export async function deliverMeetingInvites({ meeting, invites, calendarUrl, pag
     await delay(400);
   }
   return results;
+}
+
+export async function sendContributionPaymentUpdatedEmail(contributionId) {
+  const id = String(contributionId || "").trim();
+  if (!id) throw new Error("Contribution id is required");
+  return sendViaSupabaseEmail({
+    purpose: "contribution_payment_updated",
+    contributionId: id,
+    adminOnly: true,
+  });
 }
 
 export async function sendMediaContributionSubmissionEmail({
