@@ -35,7 +35,7 @@ import {
 import { useConfirmDialog } from "../../../components/admin/ConfirmDialog";
 import { ContributionProofDetails } from "../../../components/media/ContributionProofDetails";
 import MediaContributionAnalytics from "../../../components/media/MediaContributionAnalytics";
-import { formatContributionShareLine, validateContributionPayment } from "../../../lib/mediaContributions";
+import { buildContributionUpsertData, formatContributionShareLine, validateContributionPayment } from "../../../lib/mediaContributions";
 
 const money = (n) =>
   `₦${Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
@@ -345,10 +345,7 @@ export default function MediaContributionsPage() {
   const saveContribution = async () => {
     const monthId = editingContribution ? contribForm.month_id || selectedMonthId : selectedMonthId;
     if (!monthId) return;
-    const problems = validateContributionPayment(
-      { ...contribForm, month_id: monthId },
-      { today: new Date().toISOString().slice(0, 10) }
-    );
+    const problems = validateContributionPayment({ ...contribForm, month_id: monthId });
     if (problems.length) {
       toast.error(problems[0]);
       return;
@@ -356,15 +353,13 @@ export default function MediaContributionsPage() {
     setContribSaving(true);
     let saved;
     try {
-      saved = await authApi.upsertMediaContribution(editingContribution?.id || null, {
-        month_id: monthId,
-        team_member_id: contribForm.team_member_id || null,
-        full_name: contribForm.full_name,
-        amount: contribForm.amount,
-        note: contribForm.note,
-        receipt_url: contribForm.receipt_url || "",
-        payment_date: contribForm.payment_date || null,
-      });
+      saved = await authApi.upsertMediaContribution(
+        editingContribution?.id || null,
+        buildContributionUpsertData(
+          { ...contribForm, month_id: monthId },
+          { editing: Boolean(editingContribution) }
+        )
+      );
     } catch (err) {
       toast.error(formatApiError(err.message));
       setContribSaving(false);
@@ -1142,7 +1137,6 @@ export default function MediaContributionsPage() {
               <Input
                 type="date"
                 value={contribForm.payment_date}
-                max={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => setContribForm({ ...contribForm, payment_date: e.target.value })}
               />
             </div>
