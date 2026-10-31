@@ -603,6 +603,68 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
+    // One-person catch-up send: ?email_only=1&to_member_id=<uuid>[&date=YYYY-MM-DD][&preview=1]
+    // Sends one edition to exactly one church member. Skips spooling, recipient claims,
+    // run stats and the feed log so nobody else is affected.
+    const toMemberId = (url.searchParams.get("to_member_id") || "").trim();
+    if (toMemberId) {
+      if (!emailOnly) return json({ error: "to_member_id requires email_only=1" }, 400);
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(toMemberId)) {
+        return json({ error: "Invalid to_member_id" }, 400);
+      }
+      const dateParam = (url.searchParams.get("date") || "").trim();
+      if (dateParam && !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+        return json({ error: "Invalid date, expected YYYY-MM-DD" }, 400);
+      }
+      const preview = url.searchParams.get("preview") === "1";
+      const { data: members, error: memErr } = await supabase
+        .from("church_members")
+        .select("id, email, first_name, full_name")
+        .eq("id", toMemberId);
+      if (memErr) throw memErr;
+      const targets = (members || []).filter((m) => String(m.email || "").trim());
+      if (targets.length !== 1) {
+        return json({ error: "Expected exactly one recipient", matched: targets.length }, 400);
+      }
+      const target = targets[0];
+      const to = String(target.email).trim();
+      const { data: oneItems, error: itemsErr } = await supabase.rpc("list_daily_growth_published_on", {
+        p_date: dateParam || null,
+      });
+      if (itemsErr) throw itemsErr;
+      const oneList = (Array.isArray(oneItems) ? oneItems : []) as Record<string, unknown>[];
+      if (!oneList.length) return json({ error: "No published items for that date", date: dateParam || null }, 400);
+      const oneDate = String(oneList[0]?.published_on || dateParam);
+      const oneSubject = "FFIEMC Daily Growth — {{date}}".replace(/\{\{\s*date\s*\}\}/gi, oneDate);
+      const oneImage = await loadGrowthEmailImage(supabase, oneDate);
+      const oneSummary = {
+        recipients: [to],
+        member_id: target.id,
+        date: oneDate,
+        subject: oneSubject,
+        image_included: Boolean(oneImage),
+        items: oneList.map((i) => String(i.title || "")),
+      };
+      if (preview) return json({ ok: true, preview: true, ...oneSummary });
+      const resendApiKey = Deno.env.get("RESEND_API_KEY");
+      const fromEmail = Deno.env.get("FROM_EMAIL") || Deno.env.get("DIGEST_FROM_EMAIL");
+      if (!resendApiKey || !fromEmail) return json({ error: "Missing RESEND_API_KEY or FROM_EMAIL" }, 500);
+      const built = buildGrowthDigest({
+        items: oneList as { category?: string; title?: string; body?: string; scripture_ref?: string; answer?: string }[],
+        runDate: oneDate,
+        imageUrl: oneImage,
+        blogLink: BLOG_LINK,
+      });
+      const name = firstName(target as { first_name?: string; full_name?: string });
+      const personalText = `Dear ${name},\n\n${built.text}`;
+      const personalHtml = built.html.replace(
+        "Here is today's spiritual growth content.",
+        `Dear ${escapeHtml(name)}, here is today's spiritual growth content.`
+      );
+      const sent = await resendSend(resendApiKey, fromEmail, to, oneSubject, personalText, personalHtml);
+      return json({ ok: true, ...oneSummary, from: fromEmail, resend_id: sent?.id || null, at: new Date().toISOString() });
+    }
+
     if (scheduleNext) {
       const { data, error } = await supabase.rpc("schedule_next_daily_growth");
       if (error) throw error;
