@@ -1022,6 +1022,15 @@ export const authApi = {
     }),
   deleteMemberNotification: (id) =>
     rpc("admin_delete_member_notification", { p_token: getAdminToken(), p_id: id }),
+  setMemberNotificationRepeat: (id, { enabled, weekday, time, timezone }) =>
+    rpc("admin_set_member_notification_repeat", {
+      p_token: getAdminToken(),
+      p_id: id,
+      p_enabled: Boolean(enabled),
+      p_weekday: weekday,
+      p_time: time || "",
+      p_timezone: timezone || "Africa/Lagos",
+    }),
   startMemberNotification: (id) =>
     rpc("admin_start_member_notification", { p_token: getAdminToken(), p_id: id }),
   inboxCounts: () => rpc("admin_inbox_counts", { p_token: getAdminToken() }),

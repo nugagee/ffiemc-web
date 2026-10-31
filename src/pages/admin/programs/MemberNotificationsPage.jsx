@@ -47,7 +47,21 @@ const emptyForm = (categoryId = "") => ({
   button_url: "",
   send_email: true,
   send_sms: false,
+  repeat_enabled: false,
+  repeat_weekday: 6,
+  repeat_time: "18:00",
+  repeat_timezone: "Africa/Lagos",
 });
+
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function repeatLabel(row) {
+  if (!row?.repeat_enabled) return "";
+  const day = WEEKDAYS[Number(row.repeat_weekday)] || "Weekly";
+  const time = String(row.repeat_time || "").slice(0, 5);
+  const zone = row.repeat_timezone || "Africa/Lagos";
+  return `Weekly · ${day} ${time} ${zone}`;
+}
 
 const statusTone = {
   draft: "bg-gray-100 text-gray-700",
@@ -168,6 +182,10 @@ export default function MemberNotificationsPage() {
       button_url: media.buttonUrl,
       send_email: row.send_email !== false,
       send_sms: Boolean(row.send_sms),
+      repeat_enabled: Boolean(row.repeat_enabled),
+      repeat_weekday: row.repeat_weekday ?? 6,
+      repeat_time: String(row.repeat_time || "18:00").slice(0, 5),
+      repeat_timezone: row.repeat_timezone || "Africa/Lagos",
     });
     setPreviewCount(null);
     setOpen(true);
@@ -210,6 +228,14 @@ export default function MemberNotificationsPage() {
       toast.error("Select a program for program registrants");
       return;
     }
+    if (form.repeat_enabled && !form.send_email) {
+      toast.error("Turn email on before repeating this announcement");
+      return;
+    }
+    if (form.repeat_enabled && !/^\d{2}:\d{2}$/.test(String(form.repeat_time || ""))) {
+      toast.error("Enter the weekly send time");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -227,6 +253,12 @@ export default function MemberNotificationsPage() {
         send_email: form.send_email,
         send_sms: form.send_sms,
         status: "draft",
+      });
+      await authApi.setMemberNotificationRepeat(saved.id, {
+        enabled: Boolean(form.repeat_enabled),
+        weekday: Number(form.repeat_weekday),
+        time: form.repeat_time || "18:00",
+        timezone: form.repeat_timezone || "Africa/Lagos",
       });
 
       if (publish) {
@@ -357,6 +389,9 @@ export default function MemberNotificationsPage() {
                   </Badge>
                   {row.send_email && <Badge variant="outline">Email</Badge>}
                   {row.send_sms && <Badge variant="outline">SMS</Badge>}
+                  {row.repeat_enabled && (
+                    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{repeatLabel(row)}</Badge>
+                  )}
                   {announcementHasImages(row) && (
                     <Badge variant="outline" className="gap-1">
                       <ImageIcon className="h-3 w-3" />
@@ -374,9 +409,33 @@ export default function MemberNotificationsPage() {
                     : row.recipient_count
                       ? ` · ${row.recipient_count} recipients`
                       : ""}
+                  {row.repeat_last_on ? ` · Last weekly send ${row.repeat_last_on}` : ""}
                 </p>
               </div>
               <div className="flex gap-2 shrink-0">
+                {canEdit && row.repeat_enabled && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={sending}
+                    onClick={async () => {
+                      try {
+                        await authApi.setMemberNotificationRepeat(row.id, {
+                          enabled: false,
+                          weekday: row.repeat_weekday ?? 6,
+                          time: String(row.repeat_time || "18:00").slice(0, 5),
+                          timezone: row.repeat_timezone || "Africa/Lagos",
+                        });
+                        toast.success("Weekly send turned off");
+                        await load();
+                      } catch (err) {
+                        toast.error(formatApiError(err.message) || "Could not turn off the weekly send");
+                      }
+                    }}
+                  >
+                    Turn off weekly
+                  </Button>
+                )}
                 {canEdit && (
                   <>
                     <Button size="icon" variant="outline" onClick={() => openEdit(row)}>
@@ -554,6 +613,52 @@ export default function MemberNotificationsPage() {
                 })
               }
             />
+
+            <div className="rounded-lg border border-gray-100 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Repeat every week</p>
+                  <p className="text-xs text-gray-500">
+                    Resends this email to the current audience. One send per week. SMS stays manual.
+                  </p>
+                </div>
+                <Switch
+                  checked={Boolean(form.repeat_enabled)}
+                  onCheckedChange={(v) => setForm({ ...form, repeat_enabled: Boolean(v) })}
+                />
+              </div>
+              {form.repeat_enabled ? (
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label>Day</Label>
+                    <select
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={String(form.repeat_weekday)}
+                      onChange={(e) => setForm({ ...form, repeat_weekday: Number(e.target.value) })}
+                    >
+                      {WEEKDAYS.map((name, index) => (
+                        <option key={name} value={index}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Time</Label>
+                    <Input
+                      type="time"
+                      value={form.repeat_time}
+                      onChange={(e) => setForm({ ...form, repeat_time: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Timezone</Label>
+                    <Input
+                      value={form.repeat_timezone}
+                      onChange={(e) => setForm({ ...form, repeat_timezone: e.target.value })}
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
 
             <div className="rounded-lg border border-gray-100 p-4 space-y-3">
               <p className="text-sm font-medium">Delivery channels</p>
