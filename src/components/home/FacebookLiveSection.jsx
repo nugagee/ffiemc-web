@@ -27,7 +27,7 @@ export function FacebookLiveSection() {
   const sectionRef = useRef(null);
   const config = useMemo(() => getFacebookLiveConfig(settings), [settings]);
   const pageUrl =
-    settings?.socials?.facebook || "https://www.facebook.com/firefireministry";
+    settings?.socials?.facebook || "https://www.facebook.com/firefireministry001";
   const embedSrc = useMemo(
     () => resolveLiveEmbedSrc(config, pageUrl),
     [config, pageUrl]

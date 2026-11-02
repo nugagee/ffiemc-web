@@ -904,7 +904,7 @@ export const DEFAULT_PAGE_CONTENT = {
       email: "info@firefireintl.org",
       notificationEmail: "adenugaolajideadewale@gmail.com",
       secondaryNotificationEmails: "",
-      facebook: "https://www.facebook.com/firefireministry",
+      facebook: "https://www.facebook.com/firefireministry001",
       twitter: "https://x.com/firefiremin",
       instagram: "https://www.instagram.com/firefireministry",
       tiktok: "https://www.tiktok.com/@firefire.ministry",

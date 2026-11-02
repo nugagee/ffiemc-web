@@ -66,7 +66,7 @@ export function FacebookLivePanel({ canEdit = true }) {
     await save({ isLive: false });
   };
 
-  const pageUrl = settings?.socials?.facebook || "https://www.facebook.com/firefireministry";
+  const pageUrl = settings?.socials?.facebook || "https://www.facebook.com/firefireministry001";
 
   return (
     <div className="space-y-5">

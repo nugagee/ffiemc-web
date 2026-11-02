@@ -31,7 +31,7 @@ export function getFacebookLiveConfig(settings) {
 }
 
 export function facebookPagePluginSrc(pageUrl = "", { height = 520 } = {}) {
-  const href = String(pageUrl || "").trim() || "https://www.facebook.com/firefireministry";
+  const href = String(pageUrl || "").trim() || "https://www.facebook.com/firefireministry001";
   const params = new URLSearchParams({
     href,
     tabs: "timeline",
