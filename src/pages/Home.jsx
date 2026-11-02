@@ -728,7 +728,7 @@ export const Home = () => {
                   {
                     key: "facebook",
                     label: "Facebook",
-                    href: settings.socials?.facebook || "https://www.facebook.com/firefireministry",
+                    href: settings.socials?.facebook || "https://www.facebook.com/firefireministry001",
                     icon: Facebook,
                     className: "hover:bg-blue-50 hover:border-blue-500",
                     iconClass: "text-blue-600",
