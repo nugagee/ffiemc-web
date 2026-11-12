@@ -18,6 +18,7 @@ const EVENT_FIELDS = [
   { name: 'title', label: 'Title', type: 'text' },
   { name: 'image', label: 'Event image', type: 'image', hint: 'Shown at the top of the event card on the homepage and events page' },
   { name: 'date', label: 'Date', type: 'date' },
+  { name: 'end_date', label: 'End date', type: 'date', hint: 'Optional. Leave blank for a one-day event. Multi-day events stay under Upcoming until this date.' },
   { name: 'time', label: 'Time', type: 'text' },
   { name: 'location', label: 'Location', type: 'text' },
   { name: 'description', label: 'Description', type: 'textarea' },
@@ -64,7 +65,7 @@ export const EventsCms = () => (
     title="Events"
     path="/events?all=1"
     fields={EVENT_FIELDS}
-    columns={['title', 'date', 'location']}
+    columns={['title', 'date', 'end_date', 'location']}
     feature="events.list"
   />
 );

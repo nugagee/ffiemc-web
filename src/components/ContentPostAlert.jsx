@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, Bell, BookOpen, Church, Mic2, Newspaper, Sparkles, Sun, X } from "lucide-react";
+import { ArrowRight, Bell, BookOpen, CalendarDays, Church, Mic2, Newspaper, Sparkles, Sun, X } from "lucide-react";
 import { useContentAlerts } from "../hooks/useContentAlerts";
 import { dismissContentAlert, filterUndismissedAlerts } from "../lib/contentAlerts";
 import { Button } from "./ui/button";
@@ -18,6 +18,7 @@ const KIND_ICON = {
   bible_study: BookOpen,
   daily_manna: Sun,
   daily_growth: Sparkles,
+  event: CalendarDays,
 };
 
 /**
@@ -106,6 +107,7 @@ export function ContentPostAlert() {
   if (!current) return null;
 
   const Icon = KIND_ICON[current.kind] || Bell;
+  const isEvent = current.kind === "event";
   const href = current.link_path || "/blog";
 
   const card = (
@@ -130,14 +132,18 @@ export function ContentPostAlert() {
         </button>
 
         <div className="flex gap-2.5 p-2.5 pr-9 sm:p-3.5 sm:pr-11 sm:pt-3.5">
-          <div className="hidden sm:flex shrink-0 h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-red-50 text-red-600">
-            <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-          </div>
+          {isEvent && current.image ? (
+            <div className="shrink-0 h-11 w-11 sm:h-12 sm:w-12 overflow-hidden rounded-lg bg-red-50 ring-1 ring-black/5"><img src={current.image} alt="" className="h-full w-full object-cover" /></div>
+          ) : (
+            <div className="hidden sm:flex shrink-0 h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-red-50 text-red-600">
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+          )}
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.12em] text-white">
-                <Bell className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                New Post
+                {isEvent ? <Icon className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> : <Bell className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
+                {isEvent ? (current.badge || "New Event") : "New Post"}
               </span>
               <span className="text-[10px] sm:text-[11px] font-medium text-red-700/80 truncate max-w-[9rem] sm:max-w-none">
                 {current.kind_label || "Update"}

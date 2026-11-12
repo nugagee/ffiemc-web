@@ -8,23 +8,7 @@ import { useCollection } from '../hooks/useCollection';
 import { events as mockEvents } from '../mock';
 import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
-
-const fmtDate = (d) => {
-  try {
-    return new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-  } catch {
-    return d;
-  }
-};
-
-const eventEndDate = (event) => {
-  const raw = event?.endDate || event?.end_date || event?.ends_at || event?.date;
-  if (!raw) return null;
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return null;
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
+import { eventEffectiveEnd, formatEventDateRange } from '../lib/eventDates';
 
 const eventCtaLink = (event) => {
   if (event.registerSlug) return `/register/${event.registerSlug}`;
@@ -50,7 +34,7 @@ function EventCard({ event, past = false }) {
         <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-white">
             <Calendar className="h-4 w-4 shrink-0" />
-            <span className="font-semibold text-sm">{fmtDate(event.date)}</span>
+            <span className="font-semibold text-sm">{formatEventDateRange(event)}</span>
           </div>
           {past ? (
             <Badge className="bg-gray-800/90 text-white border-0">Past</Badge>
@@ -89,16 +73,16 @@ export const Events = () => {
     const upcomingList = [];
     const pastList = [];
     source.forEach((event) => {
-      const end = eventEndDate(event);
+      const end = eventEffectiveEnd(event);
       if (end && end < today) pastList.push(event);
       else upcomingList.push(event);
     });
     const byDateAsc = (a, b) => {
       if (a.featured && !b.featured) return -1;
       if (!a.featured && b.featured) return 1;
-      return (eventEndDate(a)?.getTime() || 0) - (eventEndDate(b)?.getTime() || 0);
+      return (eventEffectiveEnd(a)?.getTime() || 0) - (eventEffectiveEnd(b)?.getTime() || 0);
     };
-    const byDateDesc = (a, b) => (eventEndDate(b)?.getTime() || 0) - (eventEndDate(a)?.getTime() || 0);
+    const byDateDesc = (a, b) => (eventEffectiveEnd(b)?.getTime() || 0) - (eventEffectiveEnd(a)?.getTime() || 0);
     upcomingList.sort(byDateAsc);
     pastList.sort(byDateDesc);
     return { upcoming: upcomingList, past: pastList };
