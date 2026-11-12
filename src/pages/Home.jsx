@@ -13,6 +13,7 @@ import { Calendar, Clock, MapPin, Users, Heart, Flame, ArrowRight, Play, Chevron
 import { useCollection } from '../hooks/useCollection';
 import { useSettings } from '../context/SettingsContext';
 import { pageSection } from '../data/sitePages';
+import { eventEffectiveEnd, formatEventDateRange } from '../lib/eventDates';
 import { publicTestimonyView } from '../lib/testimonyDisplay';
 import {
   heroSlides as mockHeroSlides,
@@ -52,17 +53,9 @@ export const Home = () => {
   const upcomingEvents = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const eventEnd = (e) => {
-      const raw = e.endDate || e.end_date || e.ends_at || e.date;
-      if (!raw) return null;
-      const d = new Date(raw);
-      if (Number.isNaN(d.getTime())) return null;
-      d.setHours(0, 0, 0, 0);
-      return d;
-    };
     return [...events]
       .filter((e) => {
-        const end = eventEnd(e);
+        const end = eventEffectiveEnd(e);
         // Past events (including featured) leave the upcoming strip
         if (end && end < today) return false;
         return true;
@@ -70,8 +63,8 @@ export const Home = () => {
       .sort((a, b) => {
         if (a.featured && !b.featured) return -1;
         if (!a.featured && b.featured) return 1;
-        const da = eventEnd(a) || today;
-        const db = eventEnd(b) || today;
+        const da = eventEffectiveEnd(a) || today;
+        const db = eventEffectiveEnd(b) || today;
         return da - db;
       })
       .slice(0, 3);
@@ -334,9 +327,7 @@ export const Home = () => {
                         {event.featured ? 'Featured' : 'Event'}
                       </Badge>
                       <div className="text-right">
-                        <p className="text-lg font-bold">
-                          {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </p>
+                        <p className="text-sm sm:text-base font-bold leading-tight">{formatEventDateRange(event)}</p>
                         <p className="text-sm text-red-100">{event.time}</p>
                       </div>
                     </div>
